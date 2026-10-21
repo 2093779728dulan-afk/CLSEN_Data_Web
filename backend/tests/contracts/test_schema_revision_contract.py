@@ -179,7 +179,7 @@ def test_powershell_revision_consumers_resolve_the_python_source(
 
 
 def test_compatibility_workflow_checks_the_shared_revision_contract() -> None:
-    source = (REPOSITORY_ROOT / ".github/workflows/compatibility.yml").read_text(
+    source = (REPOSITORY_ROOT / "scripts/public-ci-workflow.yml").read_text(
         encoding="utf-8"
     )
     profile = (REPOSITORY_ROOT / "scripts/run-ci-profile.ps1").read_text(

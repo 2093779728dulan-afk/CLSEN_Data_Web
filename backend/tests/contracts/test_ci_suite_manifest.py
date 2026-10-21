@@ -11,6 +11,7 @@ import yaml  # type: ignore[import-untyped]
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 COMPATIBILITY = REPOSITORY_ROOT / ".github" / "workflows" / "compatibility.yml"
+PUBLIC_PROFILES = REPOSITORY_ROOT / "scripts" / "public-ci-workflow.yml"
 RELEASE = REPOSITORY_ROOT / ".github" / "workflows" / "release-gates.yml"
 MANIFEST = REPOSITORY_ROOT / "scripts" / "ci-suite-manifest.json"
 PROFILE_RUNNER = REPOSITORY_ROOT / "scripts" / "run-ci-profile.ps1"
@@ -37,24 +38,19 @@ def test_compatibility_events_and_concurrency_are_usage_bounded() -> None:
     concurrency = workflow["concurrency"]
     group = concurrency["group"]
     cancel = concurrency["cancel-in-progress"]
-    assert "application-compatibility-pr-" in group
+    assert "public-evidence-pr-" in group
     assert "github.event.pull_request.number" in group
-    assert "application-compatibility-master-" in group
+    assert "public-evidence-master-" in group
     assert "github.sha" in group
     assert "github.event_name == 'pull_request'" in cancel
 
 
 def test_compatibility_has_stable_fail_closed_required_jobs() -> None:
     jobs = _load_workflow(COMPATIBILITY)["jobs"]
-    expected_execution = {
-        "backend-ubuntu",
-        "backend-windows",
-        "frontend",
-        "mysql-84",
-    }
-    assert expected_execution <= set(jobs)
+    expected_execution = {"public-evidence"}
+    assert set(jobs) == expected_execution | {"pr-required", "master-required"}
     assert "mysql-80" not in jobs
-    assert "if" not in jobs["mysql-84"]
+    assert "if" not in jobs["public-evidence"]
     assert set(jobs["pr-required"]["needs"]) == expected_execution
     assert set(jobs["master-required"]["needs"]) == expected_execution
     assert jobs["pr-required"]["if"] == (
@@ -69,12 +65,10 @@ def test_compatibility_has_stable_fail_closed_required_jobs() -> None:
         assert "exit 1" in _job_source(job)
         script = job["steps"][0]["run"]
         for results in (
-            {"backend-ubuntu": "success", "backend-windows": "success"},
-            {"backend-ubuntu": "failure", "backend-windows": "skipped"},
-            {"backend-ubuntu": "success", "backend-windows": "cancelled"},
-            {"mysql-84": "failure"},
-            {"mysql-84": "skipped"},
-            {"mysql-84": "cancelled"},
+            {"public-evidence": "success"},
+            {"public-evidence": "failure"},
+            {"public-evidence": "skipped"},
+            {"public-evidence": "cancelled"},
         ):
             completed = subprocess.run(
                 ["pwsh", "-NoProfile", "-NonInteractive", "-Command", script],
@@ -92,10 +86,13 @@ def test_compatibility_has_stable_fail_closed_required_jobs() -> None:
                 key: value for key, value in results.items() if value != "success"
             }
             assert completed.returncode == (1 if failures else 0)
-            for key, result in failures.items():
-                assert f"Required job failed: {key} ({result})" in completed.stderr
+            if failures:
+                assert (
+                    "Required public CI evidence is not successful" in completed.stderr
+                )
+    profiles = _load_workflow(PUBLIC_PROFILES)["jobs"]
     for name in ("mysql-84",):
-        job = jobs[name]
+        job = profiles[name]
         execution = next(step for step in job["steps"] if step.get("id") == "mysql")
         cleanup = job["steps"][-1]
         assert int(job["timeout-minutes"]) > int(execution["timeout-minutes"])
@@ -106,7 +103,7 @@ def test_compatibility_has_stable_fail_closed_required_jobs() -> None:
 
 
 def test_compatibility_jobs_only_select_canonical_profiles() -> None:
-    workflow = _load_workflow(COMPATIBILITY)
+    workflow = _load_workflow(PUBLIC_PROFILES)
     jobs = workflow["jobs"]
     expected_profiles = {
         "backend-ubuntu": "ubuntu-full",
@@ -118,7 +115,7 @@ def test_compatibility_jobs_only_select_canonical_profiles() -> None:
         source = _job_source(jobs[job_name])
         assert "scripts/run-ci-profile.ps1" in source
         assert f"-Profile {profile}" in source
-    whole_source = COMPATIBILITY.read_text(encoding="utf-8")
+    whole_source = PUBLIC_PROFILES.read_text(encoding="utf-8")
     assert 'tests -m "not mysql"' not in whole_source
     assert "tests/integration/test_" not in whole_source
 
@@ -159,17 +156,13 @@ def test_release_workflow_splits_trusted_provenance_from_private_gate() -> None:
 
 
 def test_enabled_workflow_jobs_do_not_select_github_hosted_runners() -> None:
-    windows = _load_workflow(COMPATIBILITY)["jobs"]["backend-windows"]
-    assert "if" not in windows
-    assert windows["runs-on"] == ["self-hosted", "Windows", "X64", "clsen-windows-ci"]
-    assert "actions/setup-python" not in _job_source(windows)
-    runtime = next(
-        step for step in windows["steps"] if step.get("id") == "setup-python"
-    )
-    assert "RUNNER_TOOL_CACHE" in runtime["run"]
-    assert "Python/3.14.8/x64" in runtime["run"]
-    assert "python-path=" in runtime["run"]
-    assert "throw" in runtime["run"]
+    # Only the public, ephemeral Windows VM may use setup-python. Private jobs
+    # do no installation and retain their self-hosted/release separation.
+    windows = _load_workflow(PUBLIC_PROFILES)["jobs"]["backend-windows"]
+    assert windows["runs-on"] == "windows-2025"
+    assert "actions/setup-python" in _job_source(windows)
+    for job in _load_workflow(COMPATIBILITY)["jobs"].values():
+        assert "actions/setup-python" not in _job_source(job)
     release = _load_workflow(RELEASE)["jobs"]["release-gates"]
     assert "clsen-release" in release["runs-on"]
     assert "clsen-windows-ci" not in release["runs-on"]

@@ -6,7 +6,17 @@
 
 2026-10-21用户明确不再要求MySQL8.0测试，当前主用8.4。自本次策略修订后的来源起，PR/master兼容检查及日常矩阵默认只运行8.4，性能producer/证据预检与加密恢复也默认只要求8.4；不减少8.4的测试集合、顺序、采样、来源身份、事务/权限、清理或其他发布门禁。8.0保留为显式可选诊断能力，不再默认验证或承诺其兼容性。已创建的旧CI仍按旧来源执行，不伪记跳过8.0为通过，不取消运行中的8.4。历史正式project-optimization基线的固定双版本证据格式保留溯源，不自动改写或重启该历史流程；如后续要使用它，须先明确其单版本适配，不能用本次CI绿灯冒充该基线完成。
 
-- Pull request 只由 `Application compatibility` 的 PR 事件触发，稳定 required check 为 `pr-required`。它汇总 Ubuntu full、Windows smoke、frontend full 与 Oracle MySQL 8.4；功能分支 push 不再重复运行。
+- Pull request 只由 `Application compatibility` 的 PR 事件触发，稳定 required check 为 `pr-required`。私有仓通过只读轻量 job 校验公开仓四项完整结果，不重复执行 Ubuntu full、Windows smoke、frontend full 与 Oracle MySQL 8.4；功能分支 push 不重复运行。master push 保持稳定 `master-required`，正式 release 的来源/环境/完整门禁不变。
+
+### 公开兼容 CI 与私有来源桥接（2026-10-21用户批准）
+
+公开仓固定为 `2093779728dulan-afk/CLSEN_Data_Web`，仅 `.github/workflows/public-ci.yml` 执行四项完整 profile 和 `public-required`。受审阅的确切工作流另保存为 `scripts/public-ci-workflow.yml`，用于套件、预算、顺序与权限契约测试；私有桥接固定其 canonical Git blob，并核对线上实际工作流，不把参考文件当成已执行证据。只用标准 GitHub 托管 Linux/Windows，MySQL 仅 8.4，原 110 分钟步骤/120 分钟作业和独立 always 清理不减。
+
+每个新私有来源须显式单向发布新快照（沿用任务的 `Sync-PublicCi.ps1 -Revision <完整SHA> -NewSnapshotDirectory <新D盘目录>`），审阅后推送公开 main；本机制不自动导出、push、回写或处理业务数据/凭据。没有对应快照时私有门禁等待最多 40 分钟后拒绝，不自动派发、取消或重跑公开 CI。已有失败直接拒绝，不循环重试。只读校验无需第二账号 PAT 或跨仓写权限；本地可用既有 gh：`python scripts/verify_public_ci.py --source-sha <当前HEAD完整SHA> --event pull_request --gh`。
+
+`scripts/verify_public_ci.py` 从私有 Git 明确白名单独立推导完整文件集合和 blob（不遍历根 data/），校验公开 manifest 的 SHA/tree、线上完整公开 Git tree、仅四个已批准适配文件的差异；额外工作流、漏文件、篡改源码均拒绝。随后按同一公开 push/main/run/attempt/head 核对四个完整作业、来源预检、收尾、MySQL 独立清理及 public-required，任何必需步骤跳过或未成功都不能转绿。每次输出实际私有 SHA/tree、被测试私有 SHA、公开 SHA/run/attempt、所有 job ID 和文件数，私有稳定汇总只接受该校验成功。
+
+PR 必须精确匹配其 head SHA。合并后如新 master 是以已测来源为直接父提交的双亲合并，且**完整 Git tree 完全相同**，可按既有验证复用规则接受该公开结果；记录 `tree_equivalent_merge=true` 及两个不同私有 SHA，而非宣称公开 CI 在新 SHA 重跑。存在冲突处理、其他合入、文档或任何 tree 变化时拒绝，须发布该新 master 的对应快照并验证。正式发布仍由原 `verify-release-source.ps1` 要求当前 master、workflow/input SHA 一致且该 master 的私有 `master-required` 完整成功；公开 green 不直接越过发布、验收或部署门禁。
 - 合并到 `master` 后，稳定 check 为 `master-required`，同样要求上述四类检查（MySQL只要求8.4）。master run 不自动取消。
 - `Product catalog release gates` 只执行 release-only 的 performance、SELECT-only canary、encrypted restore、live、deployment、generated contract 与 workspace boundary，不重复普通 offline、frontend 或 hosted MySQL compatibility。
 

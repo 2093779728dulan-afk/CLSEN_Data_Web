@@ -13,7 +13,9 @@ SESSION_SECRET_SCRIPT = REPOSITORY_ROOT / "scripts" / "ensure-local-session-secr
 AUTHENTICATION_GUIDE = REPOSITORY_ROOT / "docs" / "operations" / "authentication.md"
 MYSQL_MATRIX_SCRIPT = REPOSITORY_ROOT / "scripts" / "test-mysql-matrix.ps1"
 PRIVILEGE_MANIFEST = REPOSITORY_ROOT / "scripts" / "database-privileges.json"
-COMPATIBILITY_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "compatibility.yml"
+# This exact profile workflow is hash-pinned by the private bridge; the active
+# private compatibility.yml verifies it instead of executing the suites again.
+COMPATIBILITY_WORKFLOW = REPOSITORY_ROOT / "scripts" / "public-ci-workflow.yml"
 CI_SUITE_MANIFEST = REPOSITORY_ROOT / "scripts" / "ci-suite-manifest.json"
 CI_PROFILE_RUNNER = REPOSITORY_ROOT / "scripts" / "run-ci-profile.ps1"
 DATABASE_CONTRACT = REPOSITORY_ROOT / "scripts" / "DatabaseContract.psm1"

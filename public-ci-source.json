@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "7076f4b7e69cba0c5af8aa82a7e500aeeafb11ad",
-  "source_tree": "9d34ab2aa87f430648a1d96894bbf867f6989943",
+  "source_sha": "967ad82afea267427c4e1e3487ba50261192a17e",
+  "source_tree": "63baf87fad96f757a6121517ab36b83cba0e572b",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -24,8 +24,8 @@
     },
     {
       "path": ".github/workflows/compatibility.yml",
-      "git_blob": "dda482b985b31897874d327311b814e7883499a0",
-      "sha256": "c240505dd84de5e956730634eeb9f9f7180fbd206df013e6fdbf44de196cf6fd"
+      "git_blob": "c61de5f53c61dfa2c3106cd12253fdc3238920a2",
+      "sha256": "388bb1dfd0673380ac4feaa5b54626b73a0c24a6ef67f6c3f27905323da5208e"
     },
     {
       "path": ".github/workflows/release-gates.yml",
@@ -1179,13 +1179,13 @@
     },
     {
       "path": "backend/tests/contracts/test_ci_suite_manifest.py",
-      "git_blob": "bb20a6681a51a1e7c1782bb6de74ad476fbf63b0",
-      "sha256": "9c692af1b2b9e8bd12d90c1e0622c21f2dfe74b813b2eb8141e1b95878b1abf5"
+      "git_blob": "af497b759f9f0329223c221d7f644430cb4072c3",
+      "sha256": "53ae8453968e99c55c72f1335b84674e7ed02c57c66a385b5f0009ce7d844959"
     },
     {
       "path": "backend/tests/contracts/test_database_bootstrap_script.py",
-      "git_blob": "519da51fe09ca0f046e8eeb9c19e1e9555fe6c08",
-      "sha256": "e92577983806465b02fd9960d13266a566487d39592c6e02e3420c8bca6bf0cd"
+      "git_blob": "b7e96320038320e20af75c98a0316a92ae8ccf41",
+      "sha256": "ecc2219ef00e7496afda1888fcf26f645c2eb263e433b6e91268daf9bf0b8678"
     },
     {
       "path": "backend/tests/contracts/test_maintenance_scripts.py",
@@ -1213,6 +1213,11 @@
       "sha256": "1d05f0f279eb3d196fca85d60b4cf365786a2bc5143c744a381bc4b46b2c15e1"
     },
     {
+      "path": "backend/tests/contracts/test_public_ci_bridge.py",
+      "git_blob": "01c4199b43998b5ce879c80ef5da9045cfd31743",
+      "sha256": "e45d39662aaebaeb361d58c8b6c4b47050183d0b9e3e3528856350995c8d8fed"
+    },
+    {
       "path": "backend/tests/contracts/test_release_evidence_contract.py",
       "git_blob": "dc713551491777503a8a6c57f5807dd39d3937d6",
       "sha256": "48f535f95b6d2f8e6b4291ec36fb0bb0c5e8b23bef58d5c145a21fd51a2f9ff4"
@@ -1224,8 +1229,8 @@
     },
     {
       "path": "backend/tests/contracts/test_schema_revision_contract.py",
-      "git_blob": "7aa7675352c3aad389303207a6e7ba07db7f4302",
-      "sha256": "00b5a8a97066bb604769ff02bdae4cad089d702d7293fb60e00385eb63829b80"
+      "git_blob": "57d4f4abb5bdbf105b641ad3b6a21ec31331cb24",
+      "sha256": "60d6f04b9db6f7bee04735faa7adf39eda52ea5827c3f56f28f3205d91dcf1c9"
     },
     {
       "path": "backend/tests/contracts/test_server_deployment.py",
@@ -2379,8 +2384,8 @@
     },
     {
       "path": "docs/operations/product-catalog-rollout.md",
-      "git_blob": "ddedcbd8b87f46da932e97854e5d1bcd4a84d67f",
-      "sha256": "9498deea4596186a0ef9145c4a55a1ebc42ce0f930fd198aa4b3361bdaebf475"
+      "git_blob": "07a012a481504430cb5bcad73f89d9bb7116d2ec",
+      "sha256": "156e3f47e246687edce06c4364b43c0b6635ac7ee5ad353b79913eef4e1a53dd"
     },
     {
       "path": "docs/operations/project-optimization-baseline-approval-v1.json",
@@ -4498,6 +4503,11 @@
       "sha256": "ebdd0e862db00906aa6b6270aa2594b86c953a15423b24e459eb63b2ce5c14a4"
     },
     {
+      "path": "scripts/public-ci-workflow.yml",
+      "git_blob": "af6790d0a87ec988a0304c6a4a6a134cec347a6e",
+      "sha256": "71cec61836418630809bf4d989e8a7fa3a1c8f968eb25bb88fb7b7c1ac516894"
+    },
+    {
       "path": "scripts/reset-admin-password.ps1",
       "git_blob": "0d585124188948940c42853645866867f6a626bb",
       "sha256": "37abbd0fb8b7947f7e7c6c6516c7c90be2edad0703978f5fa6a5bd1522fb29af"
@@ -4601,6 +4611,11 @@
       "path": "scripts/verify-release-source.ps1",
       "git_blob": "e65428d0ec6d09338bad3d66f39d145a337498af",
       "sha256": "b9e781ef2cc76d15355ddd6bc81efdef66c328a05ab8d2d5b4de9d367ace570a"
+    },
+    {
+      "path": "scripts/verify_public_ci.py",
+      "git_blob": "0678a8cd2efb091b46cac9c417371099ca8b092b",
+      "sha256": "cd0d8f7bf028b76f0221c05d082bc7facba9e39a603deb00a0f7bde27b4a6055"
     },
     {
       "path": "tools/README.md",
