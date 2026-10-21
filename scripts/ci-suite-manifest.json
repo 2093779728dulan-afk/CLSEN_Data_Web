@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "ubuntu-full": {
+      "pytest_paths": ["backend/tests"],
+      "pytest_marker": "not mysql",
+      "pytest_ignores": [
+        "backend/tests/performance/test_project_optimization_baseline.py",
+        "backend/tests/integration/test_product_catalog_canary.py",
+        "backend/tests/integration/test_real_csv_regression.py"
+      ],
+      "baseline_fixture": "backend/tests/fixtures/ci/offline-backend-nodeids.txt"
+    },
+    "windows-smoke": {
+      "baseline_fixture": "backend/tests/fixtures/ci/windows-smoke-nodeids.txt"
+    },
+    "frontend-full": {
+      "commands": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:tokens",
+        "pnpm test --run",
+        "pnpm exec playwright test",
+        "pnpm storybook:build",
+        "pnpm test:a11y",
+        "pnpm test:visual",
+        "VITE_PRODUCT_ANALYTICS_SOURCE=legacy_parser pnpm build",
+        "VITE_PRODUCT_ANALYTICS_SOURCE=p0_catalog pnpm build"
+      ]
+    },
+    "mysql-compatibility": {
+      "versions": ["8.4"],
+      "suites": ["mysql-migrations", "mysql-legacy", "mysql-p0", "mysql-schema-startup", "mysql-worker-observability"],
+      "baseline_fixture": "backend/tests/fixtures/ci/mysql-compatibility-nodeids.txt"
+    },
+    "release-only": {
+      "suites": [
+        "workspace-boundary",
+        "performance",
+        "canary",
+        "restore",
+        "live",
+        "deployment",
+        "generated-contract",
+        "project-optimization-baseline"
+      ]
+    }
+  },
+  "mysql_suites": {
+    "mysql-migrations": [
+      "backend/tests/integration/test_migrations.py"
+    ],
+    "mysql-legacy": [
+      "backend/tests/integration/test_database_constraints.py",
+      "backend/tests/integration/test_stage_five_schema.py",
+      "backend/tests/integration/test_stage_six_schema.py",
+      "backend/tests/integration/test_draft_transactions.py",
+      "backend/tests/integration/test_draft_date_reassignment.py",
+      "backend/tests/integration/test_admin_management_api.py",
+      "backend/tests/integration/test_admin_operation_permissions.py",
+      "backend/tests/integration/test_authentication_api.py",
+      "backend/tests/integration/test_data_calendar_api.py",
+      "backend/tests/integration/test_review_workspace_api.py",
+      "backend/tests/integration/test_review_workflow.py",
+      "backend/tests/integration/test_publication_transactions.py",
+      "backend/tests/integration/test_publication_concurrency.py",
+      "backend/tests/integration/test_published_analytics.py"
+    ],
+    "mysql-p0": [
+      "backend/tests/integration/test_catalog_approval.py",
+      "backend/tests/integration/test_catalog_command_recovery.py",
+      "backend/tests/integration/test_catalog_concurrency.py",
+      "backend/tests/integration/test_catalog_evidence_reveal.py",
+      "backend/tests/integration/test_catalog_export_finalization.py",
+      "backend/tests/integration/test_catalog_grants.py",
+      "backend/tests/integration/test_catalog_identity_reservations.py",
+      "backend/tests/integration/test_catalog_import_workflow.py",
+      "backend/tests/integration/test_catalog_projection_expiry.py",
+      "backend/tests/integration/test_catalog_repository.py",
+      "backend/tests/integration/test_catalog_schema.py",
+      "backend/tests/integration/test_catalog_scope.py",
+      "backend/tests/integration/test_scope_correction.py",
+      "backend/tests/integration/test_catalog_security.py",
+      "backend/tests/integration/test_catalog_snapshot_consistency.py",
+      "backend/tests/integration/test_catalog_source_keys.py",
+      "backend/tests/integration/test_catalog_worker.py",
+      "backend/tests/integration/test_return_dedup.py",
+      "backend/tests/integration/test_return_initialization.py",
+      "backend/tests/integration/test_style_analytics.py",
+      "backend/tests/integration/test_style_analytics_api.py",
+      "backend/tests/integration/test_style_analytics_consistency.py",
+      "backend/tests/integration/test_style_analytics_reconciliation.py",
+      "backend/tests/integration/test_legacy_product_analytics_compatibility.py",
+      "backend/tests/integration/test_product_analytics_cutover.py",
+      "backend/tests/integration/test_product_analytics_reconciliation.py",
+      "backend/tests/integration/test_product_catalog_permissions.py"
+    ],
+    "mysql-schema-startup": [
+      "backend/tests/integration/test_schema_compatibility.py",
+      "backend/tests/integration/test_schema_startup_processes.py"
+    ],
+    "mysql-worker-observability": [
+      "backend/tests/integration/test_worker_observability.py",
+      "backend/tests/integration/test_worker_observability_api.py"
+    ]
+  },
+  "mysql_exclusions": {
+    "backend/tests/integration/test_admin_cli.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_backup_write_barrier.py": "Covered by the release backup and restore gate, not the hosted compatibility baseline.",
+    "backend/tests/integration/test_batch_review_repository.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_review_version_filter.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_review_workflow.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_reviews_api.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_file_ingest.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_outbox_worker.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_parse_workflow.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_export.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_queries.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_scope.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_workbench_import_orchestration.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_workbench_snapshots.py": "Not collected by the approved hosted compatibility workflow before this optimization."
+  },
+  "windows_smoke": {
+    "paths": [
+      "backend/tests/contracts",
+      "backend/tests/unit/catalog/test_ooxml.py",
+      "backend/tests/unit/catalog/test_normalization.py",
+      "backend/tests/unit/imports/test_storage.py",
+      "backend/tests/unit/auth/test_product_catalog_live_harness.py",
+      "backend/tests/unit/deployment/test_entrypoint.py",
+      "backend/tests/unit/maintenance/test_schema_compatibility.py",
+      "backend/tests/unit/maintenance/test_worker_status.py",
+      "backend/tests/unit/test_logging.py",
+      "backend/tests/unit/test_main_schema_compatibility.py",
+      "backend/tests/unit/test_openapi_contract.py",
+      "backend/tests/unit/test_schema_preflight.py",
+      "backend/tests/unit/worker/test_cli.py",
+      "backend/tests/unit/worker/test_heartbeat.py",
+      "backend/tests/unit/worker/test_observability.py",
+      "backend/tests/unit/worker/test_runner.py"
+    ],
+    "pytest_marker": "not mysql",
+    "contract_node_allowlist": [
+      "backend/tests/contracts/test_ci_suite_manifest.py::*",
+      "backend/tests/contracts/test_release_evidence_contract.py::*",
+      "backend/tests/contracts/test_project_optimization_baseline_contract.py::*",
+      "backend/tests/contracts/test_project_optimization_stage2_contract.py::*"
+    ]
+  },
+  "release_suites": {
+    "workspace-boundary": {"pytest_paths": []},
+    "performance": {
+      "pytest_paths": ["backend/tests/performance/test_product_catalog_performance.py"],
+      "runner_paths": [
+        "backend/tests/performance/product_catalog_scale_fixture.py",
+        "backend/tests/performance/test_product_catalog_performance.py",
+        "scripts/run-product-catalog-performance.ps1",
+        "scripts/run-ci-profile.ps1"
+      ]
+    },
+    "canary": {
+      "pytest_paths": ["backend/tests/integration/test_product_catalog_canary.py"]
+    },
+    "restore": {
+      "pytest_paths": ["backend/tests/integration/test_product_catalog_backup_restore.py"]
+    },
+    "live": {"pytest_paths": []},
+    "deployment": {
+      "pytest_paths": ["backend/tests/integration/test_server_deployment_load.py"]
+    },
+    "generated-contract": {"pytest_paths": []},
+    "project-optimization-baseline": {
+      "pytest_paths": ["backend/tests/performance/test_project_optimization_baseline.py"],
+      "runner_paths": [
+        "scripts/project-optimization-baseline-manifest.json",
+        "tools/project_optimization_baseline.py",
+        "backend/tests/performance/project_optimization_baseline.py",
+        "backend/tests/performance/test_project_optimization_baseline.py",
+        "frontend/playwright.baseline.config.ts",
+        "frontend/playwright.config.ts",
+        "frontend/tests/e2e/project-optimization-baseline.spec.ts",
+        "frontend/scripts/project-optimization-bundle-baseline.mjs",
+        "scripts/run-project-optimization-baseline.ps1"
+      ]
+    }
+  }
+}

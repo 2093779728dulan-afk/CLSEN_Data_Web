@@ -1,0 +1,37 @@
+.panel {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
+  color: var(--color-text);
+  text-align: center;
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-primary-strong);
+  background: var(--color-info-bg);
+  border-radius: var(--radius-pill);
+}
+
+.icon svg { width: 22px; height: 22px; }
+.copy { display: grid; gap: var(--space-1); max-width: 52ch; }
+.copy h3,
+.copy p { margin: 0; overflow-wrap: anywhere; }
+.copy h3 { font-size: var(--font-size-lg); line-height: 1.35; }
+.copy p { color: var(--color-text); font-size: var(--font-size-sm); line-height: 1.55; }
+.action { margin-top: var(--space-1); }
+
+.error {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+.error .icon { color: var(--color-danger); background: var(--color-surface-raised); }

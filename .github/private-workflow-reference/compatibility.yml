@@ -1,0 +1,179 @@
+name: Application compatibility
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('application-compatibility-pr-{0}', github.event.pull_request.number) || format('application-compatibility-master-{0}', github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Cost guard: jobs use the Ubuntu VM or dedicated local Windows runner. Do not replace these
+  # labels with GitHub-hosted runners without an explicit quota decision.
+  backend-ubuntu:
+    name: Ubuntu full / Python 3.14
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.14
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Install backend package without resolving dependencies
+        run: python -m pip install --no-deps -e backend
+      - name: Run Ubuntu full profile
+        shell: pwsh
+        run: >-
+          ./scripts/run-ci-profile.ps1
+          -Profile ubuntu-full
+          -PythonExecutable '${{ steps.setup-python.outputs.python-path }}'
+
+  backend-windows:
+    name: Windows smoke / Python 3.14
+    # CI-only label: this runner cannot select private release-gate jobs.
+    runs-on: [self-hosted, Windows, X64, clsen-windows-ci]
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      # The downloaded setup-python Windows installer removes existing host
+      # Python installations/registry keys. Never run it on this shared host.
+      - name: Select pre-provisioned Python 3.14
+        id: setup-python
+        shell: pwsh
+        run: |
+          $pythonDirectory = Join-Path $env:RUNNER_TOOL_CACHE 'Python/3.14.8/x64'
+          $python = Join-Path $pythonDirectory 'python.exe'
+          if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+            throw 'Provision the dedicated Python 3.14.8 tool cache before running Windows CI.'
+          }
+          $version = & $python -c 'import sys; print(sys.version.split()[0])'
+          if ($LASTEXITCODE -ne 0 -or $version -cne '3.14.8') {
+            throw 'The dedicated Windows CI Python runtime must be 3.14.8.'
+          }
+          "python-path=$python" >> $env:GITHUB_OUTPUT
+          $pythonDirectory >> $env:GITHUB_PATH
+          (Join-Path $pythonDirectory 'Scripts') >> $env:GITHUB_PATH
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Install backend package without resolving dependencies
+        run: python -m pip install --no-deps -e backend
+      - name: Run Windows smoke profile
+        shell: pwsh
+        run: >-
+          ./scripts/run-ci-profile.ps1
+          -Profile windows-smoke
+          -PythonExecutable '${{ steps.setup-python.outputs.python-path }}'
+
+  frontend:
+    name: Frontend full / Node 24 / pnpm 11
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frozen frontend dependencies
+        run: pnpm --dir frontend install --frozen-lockfile
+      - name: Install Chromium for browser workflow tests
+        # OS dependencies are provisioned once on the self-hosted VM.
+        run: pnpm --dir frontend exec playwright install chromium
+      - name: Run frontend full profile
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile frontend-full
+
+  mysql-84:
+    name: MySQL 8.4 compatibility / Python 3.14
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    timeout-minutes: 120
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.14
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Install backend package without resolving dependencies
+        run: python -m pip install --no-deps -e backend
+      - name: Run MySQL 8.4 compatibility profile
+        id: mysql
+        timeout-minutes: 110
+        shell: pwsh
+        run: >-
+          ./scripts/run-ci-profile.ps1
+          -Profile mysql-compatibility
+          -MySqlVersion 8.4
+          -PythonExecutable '${{ steps.setup-python.outputs.python-path }}'
+      - name: Clean this job's disposable MySQL container
+        if: always()
+        shell: pwsh
+        env:
+          MATRIX_CONTAINER: ${{ steps.mysql.outputs.mysql_container }}
+          MATRIX_RUN_ID: ${{ steps.mysql.outputs.mysql_run_id }}
+        run: ./scripts/cleanup-ci-mysql.ps1
+
+  pr-required:
+    name: pr-required
+    if: always() && github.event_name == 'pull_request'
+    needs: [backend-ubuntu, backend-windows, frontend, mysql-84]
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    steps:
+      - name: Require every PR profile
+        shell: pwsh
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: |
+          $needs = $env:NEEDS_JSON | ConvertFrom-Json -AsHashtable
+          $failed = @($needs.GetEnumerator() | Where-Object { $_.Value.result -cne "success" })
+          if ($failed.Count -ne 0) {
+            $failed | ForEach-Object {
+              Write-Error "Required job failed: $($_.Key) ($($_.Value.result))" -ErrorAction Continue
+            }
+            exit 1
+          }
+
+  master-required:
+    name: master-required
+    if: always() && github.event_name == 'push'
+    needs: [backend-ubuntu, backend-windows, frontend, mysql-84]
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    steps:
+      - name: Require every master profile
+        shell: pwsh
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: |
+          $needs = $env:NEEDS_JSON | ConvertFrom-Json -AsHashtable
+          $failed = @($needs.GetEnumerator() | Where-Object { $_.Value.result -cne "success" })
+          if ($failed.Count -ne 0) {
+            $failed | ForEach-Object {
+              Write-Error "Required job failed: $($_.Key) ($($_.Value.result))" -ErrorAction Continue
+            }
+            exit 1
+          }

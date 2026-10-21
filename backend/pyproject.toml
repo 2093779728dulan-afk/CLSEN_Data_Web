@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools==83.0.0", "wheel==0.47.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clsen-daily-data-review"
+version = "0.1.0"
+description = "Backend API for the daily data review platform"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "alembic>=1.16,<2",
+    "argon2-cffi>=25,<26",
+    "cryptography>=45,<48",
+    "defusedxml>=0.7,<1",
+    "fastapi>=0.116,<1",
+    "openpyxl>=3.1,<4",
+    "pydantic>=2.13,<3",
+    "pymysql>=1.1,<2",
+    "python-dotenv>=1.1,<2",
+    "sqlalchemy>=2.0,<3",
+    "tzdata>=2025,<2027",
+    "uvicorn>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx2>=2.9,<3",
+    "mypy>=1.17,<2",
+    "pytest>=8.4,<10",
+    "PyYAML>=6,<7",
+    "ruff>=0.12,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.catalog" = ["data/ucd_15_1/*.json", "data/ucd_15_1/*.txt"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "mysql: requires an explicitly enabled disposable MySQL test database",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+# Applied migrations are immutable. This historical revision predates the
+# formatter gate and must not be mechanically rewritten after deployment.
+exclude = ["alembic/versions/0009_review_publication_contracts.py"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+pretty = true
+show_error_codes = true
+warn_unreachable = true
+files = ["app", "tests"]

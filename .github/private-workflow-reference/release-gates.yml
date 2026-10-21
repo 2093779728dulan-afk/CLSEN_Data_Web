@@ -1,0 +1,216 @@
+name: Product catalog release gates
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full master SHA whose master-required check succeeded
+        required: true
+        type: string
+
+concurrency:
+  group: product-catalog-release-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    name: Verify trusted master source
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      source_sha: ${{ steps.verify.outputs.source_sha }}
+    steps:
+      - name: Resolve current remote master
+        id: master
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/master" --jq '.object.sha')"
+          case "$sha" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+            *) echo "Remote master did not resolve to a full SHA." >&2; exit 1 ;;
+          esac
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Check out the resolved trusted master
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.master.outputs.sha }}
+          fetch-depth: 1
+      - name: Verify source and successful master-required gate
+        id: verify
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $verified = ./scripts/verify-release-source.ps1 `
+            -DispatchRef '${{ github.ref }}' `
+            -WorkflowSha '${{ github.workflow_sha }}' `
+            -SourceSha '${{ inputs.source_sha }}' `
+            -MasterSha '${{ steps.master.outputs.sha }}' `
+            -Repository '${{ github.repository }}'
+          if ($verified.Count -ne 1) { throw "Provenance output is ambiguous." }
+          "source_sha=$verified" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  release-gates:
+    name: Release-only gates
+    needs: provenance
+    environment: clsen-release-gates
+    runs-on: [self-hosted, Windows, X64, clsen-release]
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - name: Reject inherited sensitive runner variables
+        shell: pwsh
+        run: |
+          $names = @(
+            "APP_PRODUCT_CATALOG_CANARY_DATABASE_URL",
+            "APP_PRODUCT_CATALOG_MYSQL80_SCALE_EVIDENCE",
+            "APP_PRODUCT_CATALOG_MYSQL84_SCALE_EVIDENCE",
+            "APP_PRODUCT_CATALOG_PRIVATE_MANIFEST",
+            "APP_PRODUCT_CATALOG_PRIVATE_CORPUS_ROOT"
+          )
+          foreach ($scope in @("Process", "User", "Machine")) {
+            foreach ($name in $names) {
+              if (-not [string]::IsNullOrWhiteSpace(
+                [Environment]::GetEnvironmentVariable($name, $scope)
+              )) {
+                throw "Inherited sensitive variable detected: $name ($scope)."
+              }
+            }
+          }
+      - name: Recheck current master before checkout
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $response = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/git/ref/heads/master" `
+            -Headers @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
+          $master = [string]$response.object.sha
+          if ($master -cne '${{ needs.provenance.outputs.source_sha }}') {
+            throw "Remote master moved after provenance approval."
+          }
+      - name: Check out verified source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.provenance.outputs.source_sha }}
+          fetch-depth: 0
+          clean: true
+      - name: Assert exact clean checkout
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -cne '${{ needs.provenance.outputs.source_sha }}') {
+            throw "Checkout HEAD differs from verified source."
+          }
+          if (git status --porcelain) { throw "Release checkout is not clean." }
+
+      - name: Validate workspace boundary
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite workspace-boundary -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate performance inputs
+        shell: pwsh
+        env:
+          APP_PRODUCT_CATALOG_MYSQL84_SCALE_EVIDENCE: ${{ secrets.APP_PRODUCT_CATALOG_MYSQL84_SCALE_EVIDENCE }}
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite performance -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate canary inputs
+        shell: pwsh
+        env:
+          APP_PRODUCT_CATALOG_CANARY_DATABASE_URL: ${{ secrets.APP_PRODUCT_CATALOG_CANARY_DATABASE_URL }}
+          APP_PRODUCT_CATALOG_PRIVATE_MANIFEST: ${{ secrets.APP_PRODUCT_CATALOG_PRIVATE_MANIFEST }}
+          APP_PRODUCT_CATALOG_PRIVATE_CORPUS_ROOT: ${{ secrets.APP_PRODUCT_CATALOG_PRIVATE_CORPUS_ROOT }}
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite canary -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate restore suite
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite restore -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate live suite
+        shell: pwsh
+        env:
+          APP_PRODUCT_ANALYTICS_SOURCE: p0_catalog
+          VITE_PRODUCT_ANALYTICS_SOURCE: p0_catalog
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite live -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate deployment suite
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite deployment -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+      - name: Validate generated contract suite
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite generated-contract -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe -ValidateOnly
+
+      - name: Run workspace boundary
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite workspace-boundary -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+      - name: Run performance gate
+        shell: pwsh
+        env:
+          APP_PRODUCT_CATALOG_MYSQL84_SCALE_EVIDENCE: ${{ secrets.APP_PRODUCT_CATALOG_MYSQL84_SCALE_EVIDENCE }}
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite performance -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+      - name: Run current-database canary gate
+        shell: pwsh
+        env:
+          APP_PRODUCT_CATALOG_CANARY_DATABASE_URL: ${{ secrets.APP_PRODUCT_CATALOG_CANARY_DATABASE_URL }}
+          APP_PRODUCT_CATALOG_PRIVATE_MANIFEST: ${{ secrets.APP_PRODUCT_CATALOG_PRIVATE_MANIFEST }}
+          APP_PRODUCT_CATALOG_PRIVATE_CORPUS_ROOT: ${{ secrets.APP_PRODUCT_CATALOG_PRIVATE_CORPUS_ROOT }}
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite canary -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+      - name: Run encrypted restore gate
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite restore -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+      - name: Run live gate
+        shell: pwsh
+        env:
+          APP_PRODUCT_ANALYTICS_SOURCE: p0_catalog
+          VITE_PRODUCT_ANALYTICS_SOURCE: p0_catalog
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite live -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+      - name: Run deployment verification
+        shell: pwsh
+        run: |
+          $opsRoot = [IO.Path]::GetFullPath((Join-Path $env:GITHUB_WORKSPACE "ops"))
+          $secretRoot = [IO.Path]::GetFullPath((Join-Path $opsRoot "secrets"))
+          $expectedPrefix = $opsRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) +
+            [IO.Path]::DirectorySeparatorChar
+          if (-not $secretRoot.StartsWith(
+            $expectedPrefix,
+            [StringComparison]::OrdinalIgnoreCase
+          )) {
+            throw "Deployment secret path escaped the checked-out ops directory."
+          }
+          if (Test-Path -LiteralPath $secretRoot) {
+            throw "Clean checkout left deployment secret material behind."
+          }
+          try {
+            ./ops/bootstrap-secrets.ps1 -SecretDirectory $secretRoot
+            ./scripts/run-ci-profile.ps1 `
+              -Profile release-only `
+              -ReleaseSuite deployment `
+              -SourceSha '${{ needs.provenance.outputs.source_sha }}' `
+              -PythonExecutable ./.venv/Scripts/python.exe
+          }
+          finally {
+            if (Test-Path -LiteralPath $secretRoot) {
+              Remove-Item -LiteralPath $secretRoot -Recurse -Force
+            }
+          }
+      - name: Run generated contract check
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile release-only -ReleaseSuite generated-contract -SourceSha '${{ needs.provenance.outputs.source_sha }}' -PythonExecutable ./.venv/Scripts/python.exe
+
+      - name: Recheck master and workspace after all gates
+        if: always()
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $response = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/git/ref/heads/master" `
+            -Headers @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
+          $master = [string]$response.object.sha
+          if ($master -cne '${{ needs.provenance.outputs.source_sha }}') {
+            throw "Remote master moved while release gates ran."
+          }
+          if ((git rev-parse HEAD) -cne '${{ needs.provenance.outputs.source_sha }}') {
+            throw "Release checkout drifted."
+          }
+          if (git status --porcelain) { throw "Release workspace drifted." }

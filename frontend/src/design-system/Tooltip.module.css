@@ -1,0 +1,15 @@
+.content {
+  z-index: var(--z-popover);
+  max-width: 280px;
+  padding: 6px 9px;
+  color: var(--color-on-primary);
+  background: var(--color-text);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-raised);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.arrow {
+  fill: var(--color-text);
+}

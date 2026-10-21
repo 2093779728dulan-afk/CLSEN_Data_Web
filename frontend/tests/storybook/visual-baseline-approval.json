@@ -1,0 +1,7 @@
+{
+  "approved_by": "项目负责人管理员",
+  "reason": "确认当前 Storybook 组件在 1280/768/390 三档视口作为初始视觉基线。",
+  "generated_at": "2026-09-07T03:28:22.756Z",
+  "font": "Noto Sans SC Variable 5.3.0",
+  "playwright": "1.62.1"
+}

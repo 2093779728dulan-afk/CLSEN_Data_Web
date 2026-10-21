@@ -1,0 +1,17 @@
+.git
+.venv
+.env
+.env.*
+data
+mysql-data
+ops/secrets
+frontend/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+*.pyc
+*.log

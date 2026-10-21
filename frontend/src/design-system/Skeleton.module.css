@@ -1,0 +1,26 @@
+.group { display: grid; gap: var(--space-2); width: 100%; }
+
+.line {
+  display: block;
+  width: 100%;
+  min-height: 14px;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-control);
+  position: relative;
+}
+
+.line::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--color-shimmer), transparent);
+  transform: translateX(-100%);
+  animation: skeleton-shimmer var(--motion-duration-loop) infinite var(--motion-ease-standard);
+}
+
+@keyframes skeleton-shimmer { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .line::after { animation: none; }
+}

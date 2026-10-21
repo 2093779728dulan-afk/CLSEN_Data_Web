@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "baseline_id": "project-optimization-stage-0-v1",
+  "design_commit": "1495fa0751e206c114a0b32626cb9bbf7a66b52e",
+  "business_baseline_commit": "8e2fb3478aa0cee3f2bcf1f34a02c16c01848826",
+  "roles": ["admin", "data_manager", "viewer"],
+  "page_states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"],
+  "entrypoints": [
+    {"id": "dev-api", "kind": "api", "path": "scripts/dev-backend.ps1", "evidence_token": "app.main:app", "schema_guard": "missing"},
+    {"id": "direct-api", "kind": "api", "path": "backend/app/main.py", "evidence_token": "app = create_app()", "schema_guard": "missing"},
+    {"id": "container-api", "kind": "api", "path": "backend/app/deployment/entrypoint.py", "evidence_token": "uvicorn", "schema_guard": "missing"},
+    {"id": "demo-api", "kind": "api", "path": "scripts/start-stage9-demo.ps1", "evidence_token": "app.main:app", "schema_guard": "missing"},
+    {"id": "live-api", "kind": "api", "path": "scripts/run-product-catalog-live-e2e.ps1", "evidence_token": "app.main:app", "schema_guard": "missing"},
+    {"id": "dev-worker", "kind": "worker", "path": "scripts/run-worker.ps1", "evidence_token": "app.worker.cli", "schema_guard": "missing"},
+    {"id": "direct-worker", "kind": "worker", "path": "backend/app/worker/cli.py", "evidence_token": "def main(", "schema_guard": "missing"},
+    {"id": "container-worker", "kind": "worker", "path": "backend/app/deployment/entrypoint.py", "evidence_token": "app.worker.cli", "schema_guard": "missing"},
+    {"id": "live-worker", "kind": "worker", "path": "scripts/run-product-catalog-live-e2e.ps1", "evidence_token": "app.worker.cli", "schema_guard": "missing"}
+  ],
+  "routes": [
+    {"path": "/", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "查看指定月份的发布概览", "primary_action": "选择日期进入审核或已发布详情", "information_hierarchy": "月份与摘要→日历/指标→日期操作", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; may enter review", "data_manager": "read; may enter review", "viewer": "read"}},
+    {"path": "/ledger/published-details", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "检索已发布明细账", "primary_action": "筛选、分页、授权时导出", "information_hierarchy": "筛选条件→汇总→明细表→分页", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; export when authorized", "data_manager": "read; export when authorized", "viewer": "read; no export when unauthorized"}},
+    {"path": "/products", "kind": "feature-gated", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "浏览商品指标账", "primary_action": "筛选并进入款式详情", "information_hierarchy": "筛选/来源→指标表→分页", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; legacy_parser redirects to /?tab=products", "data_manager": "read; legacy_parser redirects to /?tab=products", "viewer": "read; legacy_parser redirects to /?tab=products"}},
+    {"path": "/products/:style_id", "kind": "feature-gated", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "查看单款趋势和变体", "primary_action": "切换指标/维度", "information_hierarchy": "款式身份→汇总→趋势→变体矩阵", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; legacy_parser redirects to /?tab=products", "data_manager": "read; legacy_parser redirects to /?tab=products", "viewer": "read; legacy_parser redirects to /?tab=products"}},
+    {"path": "/dashboard", "kind": "redirect", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "permission"], "not_applicable_states": ["loading", "empty", "error", "offline", "long-content", "narrow"], "primary_task": "保留旧入口兼容", "primary_action": "自动重定向", "information_hierarchy": "无页面内容", "responsive_contract": "wide+narrow", "redirect_to": "/", "role_behavior": {"admin": "redirect:/", "data_manager": "redirect:/", "viewer": "redirect:/"}},
+    {"path": "/catalog", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "浏览当前目录状态", "primary_action": "搜索或进入款式", "information_hierarchy": "目录摘要→筛选→款式列表", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; write controls by server permission", "data_manager": "read; write controls by server permission", "viewer": "read"}},
+    {"path": "/catalog/styles/:style_id", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "查看目录款式和证据", "primary_action": "查看版本/证据", "information_hierarchy": "款式身份→SKU→来源证据", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read", "data_manager": "read", "viewer": "read"}},
+    {"path": "/catalog/imports/:import_id", "kind": "permission-gated", "roles": ["admin", "data_manager"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "审核目录导入草稿", "primary_action": "校验、提交或批准", "information_hierarchy": "导入状态→问题摘要→分区表→工作流操作", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "validate, submit, or approve", "data_manager": "validate, submit, or approve", "viewer": "redirect:/catalog"}},
+    {"path": "/catalog/unmatched", "kind": "permission-gated", "roles": ["admin", "data_manager"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "处理未匹配标识", "primary_action": "映射或排除", "information_hierarchy": "筛选→候选→证据→决策", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "map or exclude", "data_manager": "map or exclude", "viewer": "redirect:/catalog"}},
+    {"path": "/catalog/maintenance", "kind": "permission-gated", "roles": ["admin", "data_manager"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "维护分类与款式属性", "primary_action": "编辑分类或提交款式变更", "information_hierarchy": "分类树→款式维护→变更预览与批准", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "manage categories and approve style changes", "data_manager": "manage categories and approve style changes", "viewer": "redirect:/catalog"}},
+    {"path": "/catalog/versions", "kind": "permission-gated", "roles": ["admin", "data_manager"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "查看目录版本历史", "primary_action": "选择版本", "information_hierarchy": "当前版本→版本列表→变更摘要", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read", "data_manager": "read", "viewer": "redirect:/catalog"}},
+    {"path": "/review/batch/:runId", "kind": "permission-gated", "roles": ["admin", "data_manager"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "批量推进已确认文件", "primary_action": "确认、暂停、恢复或重试", "information_hierarchy": "任务状态→汇总→文件项→异常与待发布链接", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "confirm, pause, resume, or retry", "data_manager": "confirm, pause, resume, or retry", "viewer": "redirect:/"}},
+    {"path": "/review/:reportDate", "kind": "role-branch", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "审核指定日期或查看已发布结果", "primary_action": "编辑/验证/发布", "information_hierarchy": "日期上下文→工作台→高级发布控制", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "edit, validate, or publish", "data_manager": "edit, validate, or publish", "viewer": "redirect:/published/:reportDate via ViewerReviewRedirect"}},
+    {"path": "/published/:reportDate", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "查看指定日期已发布数据", "primary_action": "浏览明细", "information_hierarchy": "日期工作台→已发布详情", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read", "data_manager": "read", "viewer": "read"}},
+    {"path": "/review-advanced/:reportDate", "kind": "role-branch", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "进入高级审核与发布控制", "primary_action": "验证或发布", "information_hierarchy": "版本状态→检查→发布操作", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "validate or publish; DraftReviewGate server contract", "data_manager": "validate or publish; DraftReviewGate server contract", "viewer": "DraftReviewGate server contract"}},
+    {"path": "/published-details/:reportDate", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "查看日期发布明细", "primary_action": "筛选/导出（若授权）", "information_hierarchy": "日期摘要→明细→操作", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; export when authorized", "data_manager": "read; export when authorized", "viewer": "read; may not export"}},
+    {"path": "/versions", "kind": "business", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "loading", "empty", "error", "offline", "long-content", "narrow"], "not_applicable_states": ["permission"], "primary_task": "检索版本历史", "primary_action": "选择或创建修订", "information_hierarchy": "筛选→版本列表→关系/操作", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "read; create revision when authorized", "data_manager": "read; create revision when authorized", "viewer": "read"}},
+    {"path": "/admin", "kind": "permission-gated", "roles": ["admin"], "states": ["normal", "loading", "empty", "error", "permission", "offline", "long-content", "narrow"], "not_applicable_states": [], "primary_task": "管理用户、站点和维护状态", "primary_action": "执行管理员命令", "information_hierarchy": "管理导航→状态→表单/命令结果", "responsive_contract": "wide+narrow", "role_behavior": {"admin": "administer", "data_manager": "redirect:/", "viewer": "redirect:/"}},
+    {"path": "*", "kind": "redirect", "roles": ["admin", "data_manager", "viewer"], "states": ["normal", "permission"], "not_applicable_states": ["loading", "empty", "error", "offline", "long-content", "narrow"], "primary_task": "保留未知路径行为", "primary_action": "自动重定向", "information_hierarchy": "无页面内容", "responsive_contract": "wide+narrow", "redirect_to": "/", "role_behavior": {"admin": "redirect:/", "data_manager": "redirect:/", "viewer": "redirect:/"}}
+  ],
+  "non_route_states": ["login", "session-restore", "site-loading", "site-error", "offline", "permission-denied", "feature-source-legacy_parser", "feature-source-p0_catalog"],
+  "queues": [
+    {"name": "publication_outbox", "native_states": ["pending", "processing", "completed", "failed"], "claim": "row-lock-and-processing-token", "lease": "stale processing reclaim", "retry": "available_at plus bounded attempts", "current_recovery_gap": null},
+    {"name": "return_dedup", "native_states": ["building", "ready", "failed", "superseded"], "claim": "lease token plus fencing token", "lease": "lease_expires_at", "retry": "failed job restart with revision", "current_recovery_gap": null},
+    {"name": "catalog_import", "native_states": ["uploaded", "parsing", "parse_failed", "needs_attention", "validated", "ready_for_approval", "approved", "rejected", "withdrawn", "superseded"], "claim": "uploaded to parsing plus parse lease/fencing", "lease": "catalog_parse_attempts.lease_expires_at", "retry": "explicit resume after parse_failed", "current_recovery_gap": "expired parsing is not reclaimed by ordinary polling"},
+    {"name": "catalog_export", "native_states": ["building", "ready", "failed"], "claim": "none", "lease": "none", "retry": "none", "current_recovery_gap": "building cannot distinguish waiting from active and has no safe reclaim"}
+  ],
+  "performance_protocol": {"warmups_per_round": 3, "samples_per_round": 20, "rounds": 3, "round_summaries": ["p50", "p95", "max"], "cross_round_aggregate": "median_of_round_p95"},
+  "performance_scenarios": ["api-startup-readiness", "admin-maintenance-api", "queue-publication-outbox-query", "queue-return-dedup-query", "queue-catalog-import-query", "queue-catalog-export-query", "worker-idle-pass", "heartbeat-single-row-update", "heartbeat-long-task", "heartbeat-maintenance-barrier", "ui-dashboard-load", "ui-batch-review-confirm", "ui-admin-maintenance-load", "ui-product-chart-load", "frontend-bundle-legacy_parser", "frontend-bundle-p0_catalog"],
+  "mysql_matrix_scenarios": ["api-startup-readiness", "admin-maintenance-api", "queue-publication-outbox-query", "queue-return-dedup-query", "queue-catalog-import-query", "queue-catalog-export-query", "worker-idle-pass", "heartbeat-single-row-update", "heartbeat-long-task", "heartbeat-maintenance-barrier"],
+  "required_external_evidence": ["analytics_scale_v1:mysql:8.0", "analytics_scale_v1:mysql:8.4"],
+  "timing_candidate": {"heartbeat_seconds": 10, "stale_seconds": 30, "offline_seconds": 60, "refresh_seconds": 15, "offline_visible_seconds": 75, "approval_status": "measurement_required"},
+  "quality_profiles": ["ubuntu-full", "windows-smoke", "frontend-full", "mysql-compatibility-8.0", "mysql-compatibility-8.4", "generated-contract", "project-optimization-baseline"],
+  "pytest_outcome_policy": {
+    "schema_version": 1,
+    "commands": {
+      "ubuntu-full": {
+        "profile": "ubuntu-full",
+        "report_shards": ["pytest"],
+        "skip_allowlist": {
+          "win32": [
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_private_representatives_preserve_shape_quoting_and_identity_semantics", "reason": "private canary corpus is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_current_database_read_only_snapshot_matches_approved_counts", "reason": "SELECT-only current database URL is required", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_real_csv_regression.py::test_private_real_csv_matches_approved_golden_manifest", "reason": "private CSV regression data unavailable: approved manifest is missing", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_managed_directories_and_staged_content_are_private", "reason": "POSIX permission bits are unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_rejects_an_actual_symlink_root_when_supported", "reason": "directory symlinks are unavailable: ", "match": "prefix"}
+          ],
+          "linux": [
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_private_representatives_preserve_shape_quoting_and_identity_semantics", "reason": "private canary corpus is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_current_database_read_only_snapshot_matches_approved_counts", "reason": "SELECT-only current database URL is required", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_real_csv_regression.py::test_private_real_csv_matches_approved_golden_manifest", "reason": "private CSV regression data unavailable: approved manifest is missing", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_fsync_directory_uses_the_windows_flush_adapter", "reason": "Windows directory flush is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_checks_the_windows_storage_volume", "reason": "Windows volume checks are unavailable", "match": "exact"}
+          ],
+          "darwin": [
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_private_representatives_preserve_shape_quoting_and_identity_semantics", "reason": "private canary corpus is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_product_catalog_canary.py::test_current_database_read_only_snapshot_matches_approved_counts", "reason": "SELECT-only current database URL is required", "match": "exact"},
+            {"nodeid": "backend/tests/integration/test_real_csv_regression.py::test_private_real_csv_matches_approved_golden_manifest", "reason": "private CSV regression data unavailable: approved manifest is missing", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_fsync_directory_uses_the_windows_flush_adapter", "reason": "Windows directory flush is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_checks_the_windows_storage_volume", "reason": "Windows volume checks are unavailable", "match": "exact"}
+          ]
+        }
+      },
+      "windows-smoke": {
+        "profile": "windows-smoke",
+        "report_shards": ["pytest"],
+        "skip_allowlist": {
+          "win32": [
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_managed_directories_and_staged_content_are_private", "reason": "POSIX permission bits are unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_rejects_an_actual_symlink_root_when_supported", "reason": "directory symlinks are unavailable: ", "match": "prefix"}
+          ],
+          "linux": [
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_fsync_directory_uses_the_windows_flush_adapter", "reason": "Windows directory flush is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_checks_the_windows_storage_volume", "reason": "Windows volume checks are unavailable", "match": "exact"}
+          ],
+          "darwin": [
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_fsync_directory_uses_the_windows_flush_adapter", "reason": "Windows directory flush is unavailable", "match": "exact"},
+            {"nodeid": "backend/tests/unit/imports/test_storage.py::test_assert_ready_checks_the_windows_storage_volume", "reason": "Windows volume checks are unavailable", "match": "exact"}
+          ]
+        }
+      },
+      "mysql-compatibility-8-0": {"profile": "mysql-compatibility", "report_shards": ["migration", "scoped"], "skip_allowlist": {"win32": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}], "linux": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}], "darwin": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}]}},
+      "mysql-compatibility-8-4": {"profile": "mysql-compatibility", "report_shards": ["migration", "scoped"], "skip_allowlist": {"win32": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}], "linux": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}], "darwin": [{"nodeid": "backend/tests/integration/test_product_catalog_permissions.py::test_canary_identity_is_select_only_when_configured", "reason": "current database canary is verified only by its canonical runner", "match": "exact", "required": true}]}},
+      "stage0-backend-8-0": {"profile": "project-optimization-baseline", "report_shards": ["scoped"], "skip_allowlist": {"win32": [], "linux": [], "darwin": []}},
+      "stage0-backend-8-4": {"profile": "project-optimization-baseline", "report_shards": ["scoped"], "skip_allowlist": {"win32": [], "linux": [], "darwin": []}}
+    }
+  },
+  "mysql_hosted_exclusions": {
+    "backend/tests/integration/test_admin_cli.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_backup_write_barrier.py": "Covered by the release backup and restore gate, not the hosted compatibility baseline.",
+    "backend/tests/integration/test_batch_review_repository.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_review_version_filter.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_review_workflow.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_batch_reviews_api.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_file_ingest.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_outbox_worker.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_parse_workflow.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_export.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_queries.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_published_detail_scope.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_workbench_import_orchestration.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_workbench_snapshots.py": "Not collected by the approved hosted compatibility workflow before this optimization."
+  },
+  "owner_roles": {"stage_owner": "project_owner", "backend_evidence": "backend_maintainer", "frontend_evidence": "frontend_maintainer", "database_safety": "database_operator", "rollback": "change_author"}
+}

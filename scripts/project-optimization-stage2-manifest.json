@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "stage": "project-optimization-stage-2-worker-observability",
+  "schema_revision": "0023",
+  "schema_anchor": "3750ad3",
+  "queue_names": [
+    "return_dedup",
+    "publication_outbox",
+    "catalog_export",
+    "catalog_import"
+  ],
+  "thresholds_seconds": {
+    "heartbeat": 10,
+    "stale": 30,
+    "offline": 60,
+    "refresh": 15
+  },
+  "retention": {
+    "days": 30,
+    "delete_limit": 500
+  },
+  "mysql_versions": ["8.0", "8.4"],
+  "performance_protocol": {
+    "warmups_per_round": 3,
+    "samples_per_round": 20,
+    "rounds": 3,
+    "aggregate": "median_of_round_p95"
+  },
+  "scenario_ceilings_ms": {
+    "admin-maintenance-api": {"8.0": 50, "8.4": 28},
+    "heartbeat-single-row-update": {"8.0": 57, "8.4": 22},
+    "heartbeat-long-task": {"8.0": 12028, "8.4": 12052},
+    "heartbeat-maintenance-barrier": {"8.0": 27, "8.4": 21},
+    "worker-idle-pass": {"8.0": 11, "8.4": 10},
+    "queue-publication-outbox-query": {"8.0": 1, "8.4": 1},
+    "queue-return-dedup-query": {"8.0": 2, "8.4": 1},
+    "queue-catalog-import-query": {"8.0": 2, "8.4": 2},
+    "queue-catalog-export-query": {"8.0": 1, "8.4": 2},
+    "ui-admin-maintenance-load": {"chromium": 283}
+  },
+  "required_evidence": [
+    "source_sha",
+    "schema_revision",
+    "environment_fingerprint",
+    "command",
+    "started_at",
+    "completed_at",
+    "exit_code",
+    "node_count",
+    "node_digest",
+    "suite_results",
+    "mysql_results",
+    "command_records",
+    "performance_results",
+    "explain_plans",
+    "privilege_verification",
+    "backup_restore_rehearsal",
+    "deployment_rehearsal",
+    "administrator_page",
+    "outcome_summary",
+    "redaction"
+  ]
+}

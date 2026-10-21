@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "dev-api",
+      "kind": "api",
+      "source_path": "scripts/dev-backend.ps1",
+      "pre_process_guard": "app.schema_preflight",
+      "in_process_defense": "app.main:app",
+      "failure_boundary": "before uvicorn invocation and port binding"
+    },
+    {
+      "id": "direct-api",
+      "kind": "api",
+      "source_path": "backend/app/main.py",
+      "pre_process_guard": null,
+      "in_process_defense": "app = create_runtime_app()",
+      "failure_boundary": "during lifespan before startup completes"
+    },
+    {
+      "id": "container-api",
+      "kind": "api",
+      "source_path": "backend/app/deployment/entrypoint.py",
+      "pre_process_guard": "schema_preflight_main",
+      "in_process_defense": "app.main:app",
+      "failure_boundary": "before container exec and again during lifespan"
+    },
+    {
+      "id": "demo-api",
+      "kind": "api",
+      "source_path": "scripts/start-stage9-demo.ps1",
+      "pre_process_guard": "app.schema_preflight",
+      "in_process_defense": "app.main:app",
+      "failure_boundary": "before demo uvicorn invocation and port binding"
+    },
+    {
+      "id": "live-api",
+      "kind": "api",
+      "source_path": "scripts/run-product-catalog-live-e2e.ps1",
+      "pre_process_guard": "Invoke-SchemaPreflight",
+      "in_process_defense": "app.main:app",
+      "failure_boundary": "before each runner-owned API process launch"
+    },
+    {
+      "id": "dev-worker",
+      "kind": "worker",
+      "source_path": "scripts/run-worker.ps1",
+      "pre_process_guard": "app.schema_preflight",
+      "in_process_defense": "app.worker.cli",
+      "failure_boundary": "before ready text and worker invocation"
+    },
+    {
+      "id": "direct-worker",
+      "kind": "worker",
+      "source_path": "backend/app/worker/cli.py",
+      "pre_process_guard": null,
+      "in_process_defense": "assert_schema_compatible",
+      "failure_boundary": "before storage, runner construction, heartbeat or claim"
+    },
+    {
+      "id": "container-worker",
+      "kind": "worker",
+      "source_path": "backend/app/deployment/entrypoint.py",
+      "pre_process_guard": "schema_preflight_main",
+      "in_process_defense": "app.worker.cli",
+      "failure_boundary": "before container exec and again before worker construction"
+    },
+    {
+      "id": "live-worker",
+      "kind": "worker",
+      "source_path": "scripts/run-product-catalog-live-e2e.ps1",
+      "pre_process_guard": "Invoke-SchemaPreflight",
+      "in_process_defense": "app.worker.cli",
+      "failure_boundary": "before each runner-owned Worker process launch"
+    }
+  ]
+}

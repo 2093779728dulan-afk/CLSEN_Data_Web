@@ -1,0 +1,5 @@
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
+backend/app/catalog/data/ucd_15_1/** text eol=lf

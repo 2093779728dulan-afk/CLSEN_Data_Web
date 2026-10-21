@@ -1,0 +1,621 @@
+{
+  "approval_reference": "项目审批单 PROJ-2026-0903-01",
+  "approval_token": "1bf71b4e031c386ffacad2ed6ac26ffaaeeafba06d1d5d6995ab1e9a685f20a2",
+  "approved_at": "2026-09-03T00:46:37.561918Z",
+  "approved_by": "项目负责人管理员",
+  "baseline_id": "project-optimization-stage-0-v1",
+  "environment_digest": "62efc1ad76f950871ff54bfccae131e96d82b5b78b37964a3241ca33ee8ad6ef",
+  "evidence_digest": "931466eaf893bfa97d6daa97693743e6680e97586f307805f64d5724e9780b3b",
+  "measurement_source_sha": "189975bf91a2fde84ce90bcebe470a49548661f9",
+  "run_id": "stage0-bd63009f0bba",
+  "scenario_budgets": {
+    "admin-maintenance-api@mysql-8.0": 45.0,
+    "admin-maintenance-api@mysql-8.4": 30.0,
+    "api-startup-readiness@mysql-8.0": 2241.0,
+    "api-startup-readiness@mysql-8.4": 2261.0,
+    "frontend-bundle-legacy_parser": 804210.0,
+    "frontend-bundle-p0_catalog": 838968.0,
+    "heartbeat-long-task@mysql-8.0": 12122.0,
+    "heartbeat-long-task@mysql-8.4": 12063.0,
+    "heartbeat-maintenance-barrier@mysql-8.0": 27.0,
+    "heartbeat-maintenance-barrier@mysql-8.4": 20.0,
+    "heartbeat-single-row-update@mysql-8.0": 44.0,
+    "heartbeat-single-row-update@mysql-8.4": 69.0,
+    "queue-catalog-export-query@mysql-8.0": 2.0,
+    "queue-catalog-export-query@mysql-8.4": 2.0,
+    "queue-catalog-import-query@mysql-8.0": 2.0,
+    "queue-catalog-import-query@mysql-8.4": 2.0,
+    "queue-publication-outbox-query@mysql-8.0": 2.0,
+    "queue-publication-outbox-query@mysql-8.4": 2.0,
+    "queue-return-dedup-query@mysql-8.0": 1.0,
+    "queue-return-dedup-query@mysql-8.4": 1.0,
+    "ui-admin-maintenance-load": 329.0,
+    "ui-batch-review-confirm": 369.0,
+    "ui-dashboard-load": 274.0,
+    "ui-product-chart-load": 256.0,
+    "worker-idle-pass@mysql-8.0": 13.0,
+    "worker-idle-pass@mysql-8.4": 13.0
+  },
+  "scenario_measurements": {
+    "admin-maintenance-api@mysql-8.0": {
+      "approved_ceiling": 45.0,
+      "median_round_p95": 32.9744,
+      "rounds": [
+        {
+          "max": 28.4036,
+          "p50": 26.05135,
+          "p95": 28.1675
+        },
+        {
+          "max": 42.6082,
+          "p50": 26.2471,
+          "p95": 32.9744
+        },
+        {
+          "max": 46.426,
+          "p50": 26.4862,
+          "p95": 36.7949
+        }
+      ],
+      "unit": "ms"
+    },
+    "admin-maintenance-api@mysql-8.4": {
+      "approved_ceiling": 30.0,
+      "median_round_p95": 23.5153,
+      "rounds": [
+        {
+          "max": 23.7687,
+          "p50": 21.973,
+          "p95": 23.4929
+        },
+        {
+          "max": 33.1825,
+          "p50": 21.0366,
+          "p95": 23.5153
+        },
+        {
+          "max": 25.8999,
+          "p50": 21.839550000000003,
+          "p95": 24.8556
+        }
+      ],
+      "unit": "ms"
+    },
+    "api-startup-readiness@mysql-8.0": {
+      "approved_ceiling": 2241.0,
+      "median_round_p95": 1862.8281,
+      "rounds": [
+        {
+          "max": 1931.4328,
+          "p50": 1844.0983,
+          "p95": 1855.6921
+        },
+        {
+          "max": 1875.915,
+          "p50": 1846.08225,
+          "p95": 1862.8281
+        },
+        {
+          "max": 1887.1799,
+          "p50": 1849.4467,
+          "p95": 1867.2971
+        }
+      ],
+      "unit": "ms"
+    },
+    "api-startup-readiness@mysql-8.4": {
+      "approved_ceiling": 2261.0,
+      "median_round_p95": 1861.1646,
+      "rounds": [
+        {
+          "max": 1906.2444,
+          "p50": 1847.8764500000002,
+          "p95": 1861.1646
+        },
+        {
+          "max": 1922.4768,
+          "p50": 1842.84535,
+          "p95": 1859.5775
+        },
+        {
+          "max": 1884.9342,
+          "p50": 1847.64545,
+          "p95": 1883.4442
+        }
+      ],
+      "unit": "ms"
+    },
+    "frontend-bundle-legacy_parser": {
+      "approved_ceiling": 804210.0,
+      "median_round_p95": 670175.0,
+      "rounds": [
+        {
+          "max": 670175,
+          "p50": 670175,
+          "p95": 670175
+        },
+        {
+          "max": 670175,
+          "p50": 670175,
+          "p95": 670175
+        },
+        {
+          "max": 670175,
+          "p50": 670175,
+          "p95": 670175
+        }
+      ],
+      "unit": "bytes"
+    },
+    "frontend-bundle-p0_catalog": {
+      "approved_ceiling": 838968.0,
+      "median_round_p95": 699140.0,
+      "rounds": [
+        {
+          "max": 699140,
+          "p50": 699140,
+          "p95": 699140
+        },
+        {
+          "max": 699140,
+          "p50": 699140,
+          "p95": 699140
+        },
+        {
+          "max": 699140,
+          "p50": 699140,
+          "p95": 699140
+        }
+      ],
+      "unit": "bytes"
+    },
+    "heartbeat-long-task@mysql-8.0": {
+      "approved_ceiling": 12122.0,
+      "median_round_p95": 10031.0324,
+      "rounds": [
+        {
+          "max": 10067.8973,
+          "p50": 10013.0941,
+          "p95": 10029.229
+        },
+        {
+          "max": 10106.0932,
+          "p50": 10005.9363,
+          "p95": 10031.0324
+        },
+        {
+          "max": 10134.5711,
+          "p50": 10016.2081,
+          "p95": 10101.4552
+        }
+      ],
+      "unit": "ms"
+    },
+    "heartbeat-long-task@mysql-8.4": {
+      "approved_ceiling": 12063.0,
+      "median_round_p95": 10023.4169,
+      "rounds": [
+        {
+          "max": 10024.6609,
+          "p50": 10005.70805,
+          "p95": 10023.4169
+        },
+        {
+          "max": 10017.8924,
+          "p50": 10002.779,
+          "p95": 10009.5486
+        },
+        {
+          "max": 10220.3418,
+          "p50": 10005.5116,
+          "p95": 10051.8729
+        }
+      ],
+      "unit": "ms"
+    },
+    "heartbeat-maintenance-barrier@mysql-8.0": {
+      "approved_ceiling": 27.0,
+      "median_round_p95": 18.2361,
+      "rounds": [
+        {
+          "max": 23.7762,
+          "p50": 15.1421,
+          "p95": 22.1157
+        },
+        {
+          "max": 18.0723,
+          "p50": 14.919550000000001,
+          "p95": 17.2135
+        },
+        {
+          "max": 18.6879,
+          "p50": 14.50165,
+          "p95": 18.2361
+        }
+      ],
+      "unit": "ms"
+    },
+    "heartbeat-maintenance-barrier@mysql-8.4": {
+      "approved_ceiling": 20.0,
+      "median_round_p95": 15.7853,
+      "rounds": [
+        {
+          "max": 17.5449,
+          "p50": 11.44695,
+          "p95": 15.7853
+        },
+        {
+          "max": 18.2451,
+          "p50": 11.75365,
+          "p95": 16.1353
+        },
+        {
+          "max": 16.8077,
+          "p50": 11.34245,
+          "p95": 14.4228
+        }
+      ],
+      "unit": "ms"
+    },
+    "heartbeat-single-row-update@mysql-8.0": {
+      "approved_ceiling": 44.0,
+      "median_round_p95": 32.6117,
+      "rounds": [
+        {
+          "max": 21.256,
+          "p50": 17.9956,
+          "p95": 20.3985
+        },
+        {
+          "max": 36.4115,
+          "p50": 19.83155,
+          "p95": 32.6117
+        },
+        {
+          "max": 41.0642,
+          "p50": 24.001,
+          "p95": 35.911
+        }
+      ],
+      "unit": "ms"
+    },
+    "heartbeat-single-row-update@mysql-8.4": {
+      "approved_ceiling": 69.0,
+      "median_round_p95": 31.9482,
+      "rounds": [
+        {
+          "max": 19.7446,
+          "p50": 14.4836,
+          "p95": 17.2574
+        },
+        {
+          "max": 39.2525,
+          "p50": 15.7988,
+          "p95": 31.9482
+        },
+        {
+          "max": 62.2201,
+          "p50": 21.6261,
+          "p95": 57.4095
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-catalog-export-query@mysql-8.0": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 0.7432,
+      "rounds": [
+        {
+          "max": 0.941,
+          "p50": 0.52235,
+          "p95": 0.9354
+        },
+        {
+          "max": 0.7074,
+          "p50": 0.5164500000000001,
+          "p95": 0.6932
+        },
+        {
+          "max": 0.7462,
+          "p50": 0.49165000000000003,
+          "p95": 0.7432
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-catalog-export-query@mysql-8.4": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 0.781,
+      "rounds": [
+        {
+          "max": 1.0765,
+          "p50": 0.54815,
+          "p95": 0.781
+        },
+        {
+          "max": 0.9788,
+          "p50": 0.52015,
+          "p95": 0.9781
+        },
+        {
+          "max": 0.807,
+          "p50": 0.4572,
+          "p95": 0.7094
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-catalog-import-query@mysql-8.0": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 0.6043,
+      "rounds": [
+        {
+          "max": 0.6066,
+          "p50": 0.48150000000000004,
+          "p95": 0.5898
+        },
+        {
+          "max": 0.6177,
+          "p50": 0.53565,
+          "p95": 0.6043
+        },
+        {
+          "max": 1.1651,
+          "p50": 0.5366500000000001,
+          "p95": 0.9641
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-catalog-import-query@mysql-8.4": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 0.9584,
+      "rounds": [
+        {
+          "max": 1.9603,
+          "p50": 0.5410999999999999,
+          "p95": 0.9584
+        },
+        {
+          "max": 1.1142,
+          "p50": 0.44895,
+          "p95": 1.0124
+        },
+        {
+          "max": 1.3266,
+          "p50": 0.44435,
+          "p95": 0.8267
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-publication-outbox-query@mysql-8.0": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 1.1258,
+      "rounds": [
+        {
+          "max": 1.4703,
+          "p50": 0.7401,
+          "p95": 1.2494
+        },
+        {
+          "max": 1.0929,
+          "p50": 0.6616,
+          "p95": 1.0047
+        },
+        {
+          "max": 1.2693,
+          "p50": 0.6695500000000001,
+          "p95": 1.1258
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-publication-outbox-query@mysql-8.4": {
+      "approved_ceiling": 2.0,
+      "median_round_p95": 0.7288,
+      "rounds": [
+        {
+          "max": 0.7474,
+          "p50": 0.50805,
+          "p95": 0.6321
+        },
+        {
+          "max": 1.2956,
+          "p50": 0.4961,
+          "p95": 0.7288
+        },
+        {
+          "max": 0.8729,
+          "p50": 0.4992,
+          "p95": 0.8394
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-return-dedup-query@mysql-8.0": {
+      "approved_ceiling": 1.0,
+      "median_round_p95": 0.6252,
+      "rounds": [
+        {
+          "max": 0.6779,
+          "p50": 0.52315,
+          "p95": 0.6252
+        },
+        {
+          "max": 0.7484,
+          "p50": 0.52555,
+          "p95": 0.6209
+        },
+        {
+          "max": 0.8142,
+          "p50": 0.50025,
+          "p95": 0.7925
+        }
+      ],
+      "unit": "ms"
+    },
+    "queue-return-dedup-query@mysql-8.4": {
+      "approved_ceiling": 1.0,
+      "median_round_p95": 0.8132,
+      "rounds": [
+        {
+          "max": 0.5544,
+          "p50": 0.47929999999999995,
+          "p95": 0.5528
+        },
+        {
+          "max": 1.005,
+          "p50": 0.45855,
+          "p95": 0.8132
+        },
+        {
+          "max": 0.9053,
+          "p50": 0.52315,
+          "p95": 0.8243
+        }
+      ],
+      "unit": "ms"
+    },
+    "ui-admin-maintenance-load": {
+      "approved_ceiling": 329.0,
+      "median_round_p95": 235.66040000000066,
+      "rounds": [
+        {
+          "max": 202.23790000000008,
+          "p50": 183.82784999999785,
+          "p95": 201.08630000000267
+        },
+        {
+          "max": 251.9134999999951,
+          "p50": 217.57364999999845,
+          "p95": 235.66040000000066
+        },
+        {
+          "max": 279.4649999999965,
+          "p50": 234.5048999999999,
+          "p95": 273.57970000000205
+        }
+      ],
+      "unit": "ms"
+    },
+    "ui-batch-review-confirm": {
+      "approved_ceiling": 369.0,
+      "median_round_p95": 289.23070000000007,
+      "rounds": [
+        {
+          "max": 319.2839000000022,
+          "p50": 259.8083000000024,
+          "p95": 307.10289999999986
+        },
+        {
+          "max": 315.21020000000135,
+          "p50": 267.23489999999947,
+          "p95": 285.2963000000018
+        },
+        {
+          "max": 347.1355000000003,
+          "p50": 281.53980000000047,
+          "p95": 289.23070000000007
+        }
+      ],
+      "unit": "ms"
+    },
+    "ui-dashboard-load": {
+      "approved_ceiling": 274.0,
+      "median_round_p95": 196.77549999999974,
+      "rounds": [
+        {
+          "max": 219.29750000000013,
+          "p50": 167.47720000000027,
+          "p95": 190.13410000000022
+        },
+        {
+          "max": 230.78340000000026,
+          "p50": 176.61725000000024,
+          "p95": 227.96200000000044
+        },
+        {
+          "max": 203.66259999999966,
+          "p50": 177.90449999999964,
+          "p95": 196.77549999999974
+        }
+      ],
+      "unit": "ms"
+    },
+    "ui-product-chart-load": {
+      "approved_ceiling": 256.0,
+      "median_round_p95": 208.1128000000026,
+      "rounds": [
+        {
+          "max": 173.77449999999953,
+          "p50": 161.77554999999847,
+          "p95": 173.1863000000012
+        },
+        {
+          "max": 258.3171000000002,
+          "p50": 173.353149999999,
+          "p95": 212.64949999999953
+        },
+        {
+          "max": 251.16619999999966,
+          "p50": 189.33530000000246,
+          "p95": 208.1128000000026
+        }
+      ],
+      "unit": "ms"
+    },
+    "worker-idle-pass@mysql-8.0": {
+      "approved_ceiling": 13.0,
+      "median_round_p95": 9.0316,
+      "rounds": [
+        {
+          "max": 9.2695,
+          "p50": 8.0922,
+          "p95": 9.0316
+        },
+        {
+          "max": 8.6955,
+          "p50": 7.6229,
+          "p95": 8.6136
+        },
+        {
+          "max": 10.5997,
+          "p50": 8.4326,
+          "p95": 10.0347
+        }
+      ],
+      "unit": "ms"
+    },
+    "worker-idle-pass@mysql-8.4": {
+      "approved_ceiling": 13.0,
+      "median_round_p95": 9.8337,
+      "rounds": [
+        {
+          "max": 9.5068,
+          "p50": 6.83405,
+          "p95": 8.0217
+        },
+        {
+          "max": 10.8432,
+          "p50": 7.45725,
+          "p95": 10.5838
+        },
+        {
+          "max": 10.0032,
+          "p50": 7.9052500000000006,
+          "p95": 9.8337
+        }
+      ],
+      "unit": "ms"
+    }
+  },
+  "schema_version": 1,
+  "timing": {
+    "heartbeat_seconds": 10,
+    "offline_seconds": 60,
+    "offline_visible_seconds": 75,
+    "refresh_seconds": 15,
+    "stale_seconds": 30
+  }
+}

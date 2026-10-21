@@ -1,0 +1,30 @@
+name: Self-hosted runner smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/self-hosted-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke:
+    name: Verify CLSEN_Rag_OV
+    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    timeout-minutes: 10
+    steps:
+      - name: Verify runner toolchain and capacity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "${RUNNER_NAME}" = "CLSEN_Rag_OV"
+          test "${RUNNER_OS}" = "Linux"
+          test "${RUNNER_ARCH}" = "X64"
+          command -v pwsh
+          pwsh --version
+          command -v docker
+          docker version --format '{{.Server.Version}}'
+          df -h /
+          docker system df

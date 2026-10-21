@@ -1,0 +1,30 @@
+.frame {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.header { display: grid; gap: var(--space-1); padding: var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+.header h3,
+.header p { margin: 0; overflow-wrap: anywhere; }
+.header h3 { font-size: var(--font-size-lg); line-height: 1.35; }
+.header p { color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.5; }
+
+.scroller { max-width: 100%; overflow-x: auto; }
+.scroller:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  border-collapse: collapse;
+}
+
+.table th,
+.table td { padding: var(--space-3) var(--space-4); text-align: left; border-bottom: 1px solid var(--color-border-subtle); }
+.table th { color: var(--color-text); font-size: var(--font-size-xs); font-weight: 700; background: var(--color-surface-muted); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--color-info-bg); }

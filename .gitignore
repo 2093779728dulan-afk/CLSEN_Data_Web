@@ -1,0 +1,37 @@
+# Local source data may contain order identifiers and customer comments.
+/表格/
+/data/incoming/
+/data/archive/
+/data/rejected/
+/data/raw/
+/data/golden/
+/data/backups/
+/data/restore-tests/
+/data/test-gate-snapshots/
+/backend/tests/fixtures/private/
+/mysql-data/
+/ops/secrets/
+
+# Local configuration and secrets.
+.env
+.env.*
+!.env.example
+
+# Runtime and build artifacts.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+node_modules/
+dist/
+coverage/
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/blob-report/
+.worktrees/
+.coverage
+.coverage.*
+*.log

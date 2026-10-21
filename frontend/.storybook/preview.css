@@ -1,0 +1,96 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --font-body: "Noto Sans SC Variable", sans-serif;
+  --font-display: "Noto Sans SC Variable", sans-serif;
+  --font-mono: "Noto Sans SC Variable", monospace;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-page);
+  font-family: var(--font-body);
+}
+
+.storybook-stack {
+  display: grid;
+  max-width: 920px;
+  gap: var(--space-4);
+}
+
+.storybook-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.storybook-form {
+  display: grid;
+  width: min(100%, 620px);
+  gap: var(--space-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.storybook-dialog-content {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.storybook-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.storybook-fieldset {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.storybook-fieldset legend { padding: 0 var(--space-2); font-weight: 700; }
+
+.storybook-native-button {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  color: var(--color-primary-strong);
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.storybook-native-button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.storybook-narrow { width: min(100%, 340px); }
+.storybook-narrow-table { width: min(100%, 520px); }
+
+.storybook-state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-4);
+}
+
+.storybook-state-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.storybook-state-card h3,
+.storybook-state-card p { margin: 0; }
+
+@media (max-width: 640px) {
+  .storybook-form {
+    grid-template-columns: 1fr;
+  }
+}
