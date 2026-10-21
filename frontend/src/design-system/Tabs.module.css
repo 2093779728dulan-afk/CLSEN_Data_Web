@@ -18,6 +18,7 @@
   border-bottom: 2px solid transparent;
   font-weight: 700;
   white-space: nowrap;
+  transition: color var(--motion-interaction) var(--motion-ease-standard), background-color var(--motion-interaction) var(--motion-ease-standard), border-color var(--motion-interaction) var(--motion-ease-standard);
 }
 
 .trigger[data-state="active"] {
@@ -28,3 +29,7 @@
 .content {
   padding-top: var(--space-4);
 }
+.content[data-state="inactive"] { display: none; }
+.animated[data-state="active"] { animation: content-enter var(--motion-content-enter) var(--motion-ease-enter); }
+@keyframes content-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .trigger { transition: none; } .animated[data-state] { animation: none; } }

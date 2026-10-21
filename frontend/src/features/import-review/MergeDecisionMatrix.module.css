@@ -1,0 +1,44 @@
+.merge-matrix { display: grid; gap: var(--space-4); min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); padding: var(--space-5); }
+.merge-matrix > header { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.merge-matrix h3 { margin: 0 0 var(--space-2); font-size: var(--font-size-lg); color: var(--color-text); }
+.merge-matrix > header > div > span { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.progress { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.merge-matrix__rule { background: var(--color-surface-muted); border-radius: var(--radius-control); padding: var(--space-4); }
+.merge-matrix__rule p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.7; }
+.operator { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.loading { display: grid; gap: var(--space-3); }
+.loading p { margin: 0; color: var(--color-text-muted); }
+.merge-matrix__page-actions { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.merge-matrix__list { display: grid; gap: var(--space-4); }
+.merge-matrix__list > article { display: grid; gap: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: var(--space-4); min-width: 0; }
+.merge-matrix__pair-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.merge-matrix__pair-heading > div { display: grid; gap: var(--space-1); }
+.merge-matrix__pair-heading > div > span { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.merge-matrix__comparison { margin: 0; display: grid; gap: var(--space-3); }
+.merge-matrix__comparison > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 4fr); gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.merge-matrix__comparison dt { color: var(--color-text-muted); font-size: var(--font-size-sm); padding-top: var(--space-1); overflow-wrap: anywhere; }
+.merge-matrix__comparison dd { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.merge-matrix__comparison dd > div { display: grid; align-content: start; gap: var(--space-1); }
+.merge-matrix__comparison dd span { overflow-wrap: anywhere; }
+.merge-matrix__comparison small { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.merge-matrix__comparison dd.merge-matrix__same-value { display: flex; flex-wrap: wrap; align-items: start; gap: var(--space-3); }
+.merge-matrix__same-value em { color: var(--color-text-muted); font-size: var(--font-size-xs); font-style: normal; }
+.merge-matrix details { min-width: 0; }
+.merge-matrix summary { color: var(--color-primary-strong); cursor: pointer; width: fit-content; padding: var(--space-2) 0; }
+.merge-matrix summary:focus-visible, .tableScroll:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.tableScroll { overflow-x: auto; min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+.tableScroll table { min-width: 450px; }
+.tableScroll td { overflow-wrap: anywhere; min-width: 160px; max-width: 320px; white-space: normal; }
+.merge-matrix__decision { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 2fr); gap: var(--space-3); }
+.stage { padding: var(--space-6); max-width: 1100px; margin: 0 auto; display: grid; gap: var(--space-4); }
+.stage > h1, .stage > p { margin: 0; }
+@media (max-width: 600px) {
+  .readFailure > section { flex-direction: column; align-items: stretch; }
+  .readFailure button { white-space: nowrap; }
+  .merge-matrix { padding: var(--space-3); }
+  .stage { padding: var(--space-3); }
+  .merge-matrix__page-actions, .merge-matrix__decision { grid-template-columns: 1fr; }
+  .merge-matrix__comparison > div { grid-template-columns: 1fr; gap: var(--space-2); }
+  .merge-matrix__comparison dd { gap: var(--space-3); }
+  .merge-matrix__pair-heading > div > span { line-height: 1.6; }
+}

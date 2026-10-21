@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../api/client";
 import type { StyleLedgerResponse } from "./productAnalyticsTypes";
@@ -10,10 +10,18 @@ vi.mock("./productAnalyticsApi", () => ({ loadStyleLedger: (...args: unknown[]):
 vi.mock("../../app/AuthzGenerationContext", () => ({ useAuthzGeneration: () => ({ generation: 0 }) }));
 import { ProductLedgerPage } from "./ProductLedgerPage";
 
+function SearchHistory() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return <><output aria-label="筛选地址">{location.search}</output>
+    <button onClick={() => void navigate(-1)}>测试后退</button>
+    <button onClick={() => void navigate(1)}>测试前进</button></>;
+}
+
 const metric = { denominator: null, expected_days: 31, is_partial: false, null_reason: null, numerator: null, observed_days: 31, source_completeness: "complete" as const, value: 2, value_state: "observed" as const };
 const response = {
   coverage: { scope: "site", business: { confirmed_distinct_rows: 1, coverage_from: "2026-07-25", coverage_to: "2026-08-24", dedup_decision_rate: "1.000000", dedup_status: "complete", duplicate_of_rows: 0, eligible_rows: 1, excluded_rows: 0, expected_days: 31, identity_decision_rate: "1.000000", identity_status: "complete", mapped_rows: 1, mapping_rate: "1.000000", missing_days: 0, published_days: 31, report_coverage_rate: "1.000000", report_type: "business_report", unique_rows: 1, unmatched_rows: 0, unresolved_rows: 0 }, returns: {} },
-  direction: "desc", page: 1, page_size: 50, permissions: {}, provenance: { catalog_version: 7, catalog_version_id: "7", consistent_as_of: "2026-08-24T10:00:00Z", fact_basis: "current", identity_source: "p0_catalog", identity_version_id: "7", reporting_timezone: "Asia/Shanghai" },
+  direction: "desc", page: 1, page_size: 50, permissions: {}, provenance: { catalog_version: 7, catalog_version_id: "107", consistent_as_of: "2026-08-24T10:00:00Z", fact_basis: "current", identity_source: "p0_catalog", identity_version_id: "107", reporting_timezone: "Asia/Shanghai" },
   reconciliation: { scope: "site", metric_status: {}, source_totals: {}, mapped_totals: {}, unmatched_totals: {}, excluded_totals: {}, duplicate_totals: {}, unresolved_duplicate_totals: {} },
   rows: [{ color_count: 2, latest_report_date: "2026-08-24", metrics: { units: metric, sales: { ...metric, value: "20.00" }, returns: metric, sessions: metric, conversion: { ...metric, value: "1.000000" } }, size_count: 3, sku_count: 4, source_title_count: 2, standard_name: "标准外套", status: "enabled", style_code: "ST-1", style_id: "101" }], sort: "units", total_rows: 1,
 } as unknown as StyleLedgerResponse;
@@ -36,6 +44,39 @@ describe("ProductLedgerPage", () => {
     expect(screen.getByText(/缺失数据不代表销量为零/)).toBeVisible();
   });
   beforeEach(() => { loadStyleLedger.mockReset().mockResolvedValue(response); });
+  it("passes the catalog record into snapshot detail links and releases it for current facts", async () => {
+    loadStyleLedger.mockResolvedValue({ ...response, provenance: { ...response.provenance, fact_basis: "catalog_snapshot" } });
+    render(<MemoryRouter initialEntries={["/products?from=2026-08-01&to=2026-08-24&fact_basis=catalog_snapshot&catalog_version=107"]}><ProductLedgerPage today="2026-08-24" /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: "查看款号 ST-1 商品信息" }));
+    expect(screen.getByRole("link", { name: "进入款式详情" })).toHaveAttribute("href", expect.stringContaining("fact_basis=catalog_snapshot&catalog_version=107"));
+    fireEvent.click(screen.getByRole("button", { name: "关闭商品信息" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "事实版本" }), { target: { value: "current" } });
+    await waitFor(() => expect(loadStyleLedger.mock.calls.at(-1)?.[0]).toMatchObject({ fact_basis: "current", catalog_version: null }));
+  });
+  it("retains consecutive filter changes before the router commits and restores history", async () => {
+    render(<MemoryRouter initialEntries={["/products?from=2026-07-25&to=2026-08-24&sort=units&direction=desc&page=1&page_size=50&return_basis=event_date&fact_basis=current"]}>
+      <SearchHistory /><ProductLedgerPage today="2026-08-24" />
+    </MemoryRouter>);
+    await screen.findByRole("button", { name: "查看款号 ST-1 商品信息" });
+    act(() => {
+      fireEvent.change(screen.getByRole("combobox", { name: "退货日期" }), { target: { value: "report_date" } });
+      fireEvent.change(screen.getByRole("combobox", { name: "事实版本" }), { target: { value: "catalog_snapshot" } });
+    });
+    await waitFor(() => expect(loadStyleLedger.mock.calls.at(-1)?.[0]).toMatchObject({ return_basis: "report_date", fact_basis: "catalog_snapshot", catalog_version: "107" }));
+    expect(screen.getByRole("combobox", { name: "退货日期" })).toHaveValue("report_date");
+    expect(screen.getByLabelText("筛选地址")).toHaveTextContent("return_basis=report_date&catalog_version=107&fact_basis=catalog_snapshot");
+    fireEvent.click(screen.getByRole("button", { name: "测试后退" }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "事实版本" })).toHaveValue("current"));
+    expect(screen.getByRole("combobox", { name: "退货日期" })).toHaveValue("report_date");
+    fireEvent.click(screen.getByRole("button", { name: "测试后退" }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "退货日期" })).toHaveValue("event_date"));
+    fireEvent.change(screen.getByRole("combobox", { name: "每页" }), { target: { value: "25" } });
+    await waitFor(() => expect(loadStyleLedger.mock.calls.at(-1)?.[0]).toMatchObject({ return_basis: "event_date", fact_basis: "current", page_size: 25 }));
+    fireEvent.click(screen.getByRole("button", { name: "测试后退" }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "每页" })).toHaveValue("50"));
+    fireEvent.click(screen.getByRole("button", { name: "测试前进" }));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "每页" })).toHaveValue("25"));
+  });
   it("loads only the stable-style endpoint adapter and renders standard identity", async () => {
     render(<MemoryRouter initialEntries={["/products?unknown=1"]}><ProductLedgerPage today="2026-08-24" /></MemoryRouter>);
     const trigger = await screen.findByRole("button", { name: "查看款号 ST-1 商品信息" });

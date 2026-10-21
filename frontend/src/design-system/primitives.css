@@ -2,11 +2,41 @@
   font: inherit;
 }
 
-:where(button, input, select, textarea):focus-visible,
-:where(a):focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+/* Low-specificity defaults: component modules own their focused/error states. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
+
+:where(input:not([class]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]), select:not([class]), textarea:not([class])) {
+  min-width: 0;
+  min-height: var(--control-height-large);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font: inherit;
+  line-height: 1.5;
+}
+
+:where(input, textarea)::placeholder { color: var(--color-text-muted); opacity: 1; }
+:where(button:not([class])) {
+  min-height: var(--control-height-large);
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary):focus-visible { outline-color: Highlight; }
+}
+
 
 :where(button:disabled, input:disabled, select:disabled, textarea:disabled) {
   cursor: not-allowed;
@@ -62,8 +92,8 @@
 
 .ui-button--danger:hover:not(:disabled) {
   color: var(--color-surface);
-  background: #942D2D;
-  border-color: #942D2D;
+  background: var(--color-danger-strong);
+  border-color: var(--color-danger-strong);
 }
 
 .ui-button--text {
@@ -90,12 +120,12 @@
   gap: var(--space-1);
   color: var(--color-text);
   font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.ui-field :is(input, select, textarea) {
+:where(.ui-field :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea)) {
   width: 100%;
-  min-height: var(--control-height);
+  min-height: var(--control-height-large);
   padding: var(--space-2) var(--space-3);
   color: var(--color-text);
   background: var(--color-surface);
@@ -104,15 +134,31 @@
   font-weight: 400;
 }
 
-.ui-field textarea {
+:where(.ui-field textarea) {
   min-height: calc(var(--control-height-large) * 2);
   resize: vertical;
 }
 
-.ui-field :is(input, select, textarea)::placeholder {
+:where(.ui-field :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea))::placeholder {
   color: var(--color-text-muted);
   opacity: 1;
 }
+
+/* Native controls follow the same subtle feedback as the shared adapters. */
+:where(input:not([class]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]), select:not([class]), textarea:not([class]), button:not([class])) {
+  transition: border-color var(--motion-interaction) var(--motion-ease-standard), background-color var(--motion-interaction) var(--motion-ease-standard);
+}
+@media (hover: hover) {
+  :where(input:not([class]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not(:disabled):not([readonly]):not([aria-invalid="true"]), select:not([class]):not(:disabled):not([aria-invalid="true"]), textarea:not([class]):not(:disabled):not([readonly]):not([aria-invalid="true"])):hover { border-color: var(--color-primary); }
+  :where(button:not([class]):not(:disabled)):hover { background: var(--color-surface-muted); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(input:not([class]), select:not([class]), textarea:not([class]), button:not([class])) { transition: none; }
+}
+
+/* States follow legacy defaults; component selectors still take precedence. */
+:where(input[readonly], textarea[readonly]) { background: var(--color-surface-muted); }
+:where(input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]) { border-color: var(--color-danger); }
 
 .ui-surface {
   background: var(--color-surface);

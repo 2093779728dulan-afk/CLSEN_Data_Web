@@ -6,7 +6,8 @@ import { expect, it } from "vitest";
 it("exposes the approved semantic color tokens", () => {
   const css = readFileSync(resolve("src/design-system/tokens.css"), "utf8");
 
-  expect(css).toContain("--color-page: #F5F8FB");
+  expect(css).toContain("--color-page: var(--color-workspace-background)");
+  expect(css).toContain("--color-workspace-background: #FAFBFC");
   expect(css).toContain("--color-primary: #1769AA");
   expect(css).toContain("--color-danger: #B33A3A");
   expect(css).toContain("--motion-duration-fast: 120ms");

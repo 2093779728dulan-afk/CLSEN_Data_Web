@@ -51,3 +51,44 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* shadcn checkbox treatment on a native input; selection/form behavior stays native. */
+.control:has(input[type="checkbox"]) { min-height: var(--control-height); align-items: center; }
+.checkmark { position: relative; display: grid; width: 18px; height: 18px; }
+.checkmark input {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--space-1);
+  box-shadow: var(--shadow-control);
+  cursor: inherit;
+  transition: background-color var(--motion-interaction) var(--motion-ease-standard), border-color var(--motion-interaction) var(--motion-ease-standard);
+}
+.checkmark input:hover:not(:disabled):not([aria-invalid="true"]) { border-color: var(--color-primary); }
+.checkmark input:checked, .checkmark input:indeterminate { background: var(--color-primary); border-color: var(--color-primary); }
+.checkmark input[aria-invalid="true"] { border-color: var(--color-danger); }
+.checkmark input[aria-invalid="true"]:focus-visible { box-shadow: var(--danger-ring); }
+.checkmark svg {
+  position: absolute;
+  inset: 2px;
+  width: 14px;
+  height: 14px;
+  color: var(--color-on-primary);
+  pointer-events: none;
+  stroke-width: 2.5;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--motion-interaction) var(--motion-ease-standard), transform var(--motion-interaction) var(--motion-ease-standard);
+}
+.checkmark input:checked:not(:indeterminate) ~ .check, .checkmark input:indeterminate ~ .partial { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .checkmark input, .checkmark svg { transition: none; }
+}
+@media (forced-colors: active) {
+  .checkmark input { appearance: auto; }
+  .checkmark svg { display: none; }
+  .control input:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+}

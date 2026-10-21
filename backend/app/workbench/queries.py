@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.auth.sessions import Principal
 from app.imports.types import ReportType
 from app.validation.fields import FieldContractError, get_report_field_contract
+from app.workbench.repository import LATEST_UNDOABLE_CELL_SQL
 
 type WorkbenchSource = Literal["draft", "published", "empty"]
 type SortDirection = Literal["asc", "desc"]
@@ -338,7 +339,19 @@ class DateWorkbenchQueryService:
             changed_only=changed_only,
             editable=writable and source == "draft",
         )
-        permissions = self._permissions(source=source, writable=writable)
+        permissions = self._permissions(
+            source=source,
+            writable=writable,
+            can_undo=(
+                writable
+                and source == "draft"
+                and self._session.execute(
+                    LATEST_UNDOABLE_CELL_SQL,
+                    {"version_id": head.version_id, "actor_user_id": principal.user_id},
+                ).first()
+                is not None
+            ),
+        )
         return DateWorkbenchResponse(
             report_date=report_date,
             report_type=report_type,
@@ -797,12 +810,13 @@ class DateWorkbenchQueryService:
         *,
         source: WorkbenchSource,
         writable: bool,
+        can_undo: bool = False,
     ) -> WorkbenchPermissionsResponse:
         draft = writable and source == "draft"
         return WorkbenchPermissionsResponse(
             can_upload=writable and source == "empty",
             can_edit=draft,
-            can_undo=draft,
+            can_undo=draft and can_undo,
             can_validate=draft,
             can_publish=draft,
             can_create_revision=writable and source == "published",

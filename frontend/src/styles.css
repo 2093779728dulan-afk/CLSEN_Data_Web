@@ -36,11 +36,6 @@ a {
   color: inherit;
 }
 
-button:focus-visible,
-a:focus-visible {
-  outline: 3px solid var(--amber);
-  outline-offset: 3px;
-}
 
 .evidence-rail {
   position: sticky;
@@ -1509,13 +1504,6 @@ p {
 
 /* Review evidence chain */
 
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-summary:focus-visible {
-  outline: 3px solid var(--amber);
-  outline-offset: 2px;
-}
 
 .primary-action--fit {
   width: auto;

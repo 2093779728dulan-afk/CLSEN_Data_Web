@@ -13,7 +13,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass, field, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any, Self
@@ -616,6 +616,11 @@ def seed(
         )
         publication = PublicationIntegrationCase(dataset)
         report_date = date(2025, 7, 17)
+        if include_catalog_experience:
+            # Keep interactive sample facts inside the existing 366-day query limit.
+            report_date = (date.today().replace(day=1) - timedelta(days=1)).replace(
+                day=17
+            )
         _business_baseline, business = publication.materialize_baseline(
             report_date=report_date,
             variant="live-business",

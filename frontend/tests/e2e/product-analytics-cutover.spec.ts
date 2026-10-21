@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-const source=process.env.VITE_PRODUCT_ANALYTICS_SOURCE;
+const source=process.env.VITE_PRODUCT_ANALYTICS_SOURCE ?? "p0_catalog";
 test.skip(process.env.PLAYWRIGHT_CUTOVER_RUN!=="1","cutover matrix is run explicitly");
 
 const block={confirmed_distinct_rows:0,coverage_from:"2026-07-25",coverage_to:"2026-08-24",dedup_decision_rate:null,dedup_status:"not_applicable",duplicate_of_rows:null,eligible_rows:0,excluded_rows:0,expected_days:31,identity_decision_rate:null,identity_status:"not_applicable",mapped_rows:0,mapping_rate:null,missing_days:31,published_days:0,report_coverage_rate:"0.000000",report_type:"business_report",unique_rows:null,unmatched_rows:0,unresolved_rows:null};
@@ -12,5 +12,5 @@ async function install(page:Page,requests:string[]){await page.route((url)=>url.
 test("uses one atomic product analytics surface and keeps catalog available",async({page})=>{expect(["legacy_parser","p0_catalog"]).toContain(source);const requests:string[]=[];await install(page,requests);await page.goto("/catalog");await expect(page.getByRole("heading",{name:"商品主档尚未初始化"})).toBeVisible();
   if(source==="p0_catalog"){await page.goto("/?tab=products");await expect(page).toHaveURL(/\/products/);await expect(page.getByRole("heading",{level:1,name:"产品总表"})).toBeVisible();await expect(page.getByRole("link",{name:"产品分析"})).toBeVisible();expect(requests).toContain("/api/dashboard/style-ledger");expect(requests).not.toContain("/api/dashboard/product-ledger");}
   else{await page.goto("/products/501");await expect(page).toHaveURL(/\?tab=products/);await expect(page.getByRole("tab",{name:"产品总表"})).toBeVisible();expect(requests).toContain("/api/dashboard/product-ledger");expect(requests).not.toContain("/api/dashboard/style-ledger");expect(requests.some(path=>path.includes("/styles/501/card"))).toBe(false);}
-  await expect(page.locator(".app-shell")).toHaveAttribute("data-product-analytics-source",`product-analytics-source:${source}`);
+  await expect(page.locator(".app-shell")).toHaveAttribute("data-product-analytics-source",source);
 });

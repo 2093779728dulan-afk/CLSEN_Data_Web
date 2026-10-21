@@ -14,5 +14,7 @@ it("locates a server issue including its row and section", () => {
 it("distinguishes file correction from retrying a recoverable parse failure", () => {
   render(<CatalogIssueSummary status="parse_failed" failureReason="invalid_headers" />);
   expect(screen.getByText(/修正原文件并到批量维护重新上传/)).toBeVisible();
-  expect(screen.getByText("原因代码：invalid_headers")).toBeVisible();
+  const reason = screen.getByText("invalid_headers").closest("p");
+  expect(reason).toBeVisible();
+  expect(reason).toHaveTextContent("原因代码：invalid_headers");
 });

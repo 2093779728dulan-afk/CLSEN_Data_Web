@@ -84,8 +84,10 @@ describe("ReadonlyPublishedDataGrid", () => {
     const table = screen.getByRole("table", { name: "经营报告已发布原始明细" });
     const headers = within(table).getAllByRole("columnheader");
     expect(headers.map((header) => header.textContent)).toEqual(expect.arrayContaining([
-      "报告日期", "发布版本", "行号", "商品信息", "其他", "Seller SKU↕", "Units Ordered统计↓",
+      "报告日期", "发布版本", "行号", "商品信息", "其他", "Seller SKU", "Units Ordered统计",
     ]));
+    expect(within(table).getByRole("button", { name: "按 Seller SKU 排序" }).closest("th")).toHaveAttribute("aria-sort", "none");
+    expect(within(table).getByRole("button", { name: "按 Units Ordered 排序" }).closest("th")).toHaveAttribute("aria-sort", "descending");
     expect(headers.findIndex((header) => header.textContent === "报告日期")).toBeLessThan(headers.findIndex((header) => header.textContent === "发布版本"));
     expect(headers.findIndex((header) => header.textContent === "发布版本")).toBeLessThan(headers.findIndex((header) => header.textContent === "行号"));
     expect(screen.getByText("2026-08-14")).toBeVisible();

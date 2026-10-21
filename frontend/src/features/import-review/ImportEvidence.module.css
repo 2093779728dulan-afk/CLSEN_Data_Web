@@ -1,0 +1,43 @@
+.source, .notes { min-width: 0; color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-5); border-bottom: 1px solid var(--color-border); }
+.identity { flex: 1; min-width: 200px; }
+.kicker { margin: 0 0 var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: 600; }
+.heading h3 { margin: 0; font-size: var(--font-size-lg); letter-spacing: -.02em; }
+.heading p:last-child { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.65; }
+.fileName { margin: var(--space-3) 0 0; font: 600 var(--font-size-sm) var(--font-mono); overflow-wrap: anywhere; }
+.sourceBody, .notesBody, .content { padding: var(--space-5); }
+.sourceBody, .notesBody { display: grid; gap: var(--space-5); }
+.toolbar { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--space-4); }
+.toolbar > div { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--space-3); font-size: var(--font-size-sm); }
+.toolbar .field { flex: 1; min-width: 200px; }
+.field { display: grid; gap: var(--space-2); min-width: 0; font-size: var(--font-size-sm); font-weight: 600; }
+.field textarea { box-sizing: border-box; width: 100%; min-height: 100px; padding: var(--space-3); color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-control); font: inherit; font-weight: 400; resize: vertical; }
+.field textarea:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.previewTable { font-family: var(--font-mono); }
+.previewTable th, .previewTable td { white-space: nowrap; }
+.previewTable th:first-child { min-width: 48px; color: var(--color-text-muted); }
+.ledger { display: grid; gap: var(--space-4); min-width: 0; }
+.ledgerHeading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.ledgerHeading h4, .appendForm h4 { margin: 0; font-size: var(--font-size-base); }
+.noteList { display: grid; gap: var(--space-3); padding: 0; margin: 0; list-style: none; }
+.noteList > li { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface-muted); min-width: 0; }
+.noteMeta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.noteBody { margin: var(--space-3) 0; font-size: var(--font-size-sm); line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.appendForm { display: grid; gap: var(--space-4); padding-top: var(--space-5); border-top: 1px solid var(--color-border); }
+.appendForm > button { justify-self: start; }
+.hint { margin: 0; font-size: var(--font-size-xs); color: var(--color-text-muted); line-height: 1.65; overflow-wrap: anywhere; }
+.revisionForm { display: grid; gap: var(--space-3); padding-top: var(--space-4); margin-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.revisionActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.reference { max-width: 1240px; padding: var(--space-6); margin: 0 auto; }
+.referenceGrid { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+.referenceDisclaimer { margin: var(--space-5) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.65; }
+@media (max-width: 1100px) { .referenceGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .heading, .sourceBody, .notesBody, .content { padding: var(--space-4); }
+  .reference { padding: var(--space-4); }
+  .heading > button, .appendForm > button { width: 100%; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar > div, .toolbar .field { flex: none; min-width: 0; }
+  .revisionActions { flex-direction: column-reverse; }
+  .revisionActions > button { width: 100%; }
+}

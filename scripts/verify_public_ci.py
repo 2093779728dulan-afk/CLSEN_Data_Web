@@ -38,7 +38,7 @@ SOURCE_ROOTS = (
 )
 # Reviewed public-only adapters, not trusted merely because a manifest lists them.
 ADAPTER_BLOBS = {
-    ".github/workflows/public-ci.yml": "af6790d0a87ec988a0304c6a4a6a134cec347a6e",
+    ".github/workflows/public-ci.yml": "448ab35aedf71e5318eeeae7b1349a9796775899",
     "scripts/prepare-public-ci.ps1": "af5eafbe62cd333eaa3cec498eb2733599a319d3",
     "backend/tests/contracts/test_public_ci_workflow.py": (
         "9b699444756794bcd5aaea24275eb7521a4898f9"

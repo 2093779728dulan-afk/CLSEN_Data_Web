@@ -1,0 +1,9 @@
+.field { width: 100%; min-width: 0; }
+.field :global(.glide-select__trigger) { width: 100%; justify-content: space-between; border: 1px solid var(--color-border); box-shadow: var(--shadow-control); }
+.field :global(.glide-select__label) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.field :global(.glide-select__menu) { border: 1px solid var(--color-border); box-shadow: var(--shadow-raised); }
+@media (forced-colors: active) {
+  .field :global(.glide-select__trigger) { border-color: ButtonText; }
+  .field :global(.glide-select__menu) { border-color: CanvasText; }
+}

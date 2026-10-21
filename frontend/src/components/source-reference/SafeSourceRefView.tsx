@@ -1,4 +1,6 @@
-import "./SafeSourceRefView.css";
+import { Fingerprint } from "lucide-react";
+import { StatusBadge } from "../../design-system";
+import styles from "./SafeSourceRefView.module.css";
 
 export type SafeSourceRef = {
   digest: string;
@@ -13,11 +15,11 @@ export function SafeSourceRefView({ source }: { source: SafeSourceRef }) {
   const containsStructuralCharacter = /[<>&"']/u.test(source.preview);
   const preview = containsStructuralCharacter ? "[含危险字符的来源]" : source.preview;
   return (
-    <span className="safe-source-ref">
-      <span>{preview}</span>
-      <code aria-label="来源摘要后八位">{suffix}</code>
-      {(source.is_unsafe || containsStructuralCharacter) && <span className="safe-source-ref__badge">含危险字符</span>}
-      {source.is_truncated && <span className="safe-source-ref__badge">已截断</span>}
+    <span className={`safe-source-ref ${styles.reference}`}>
+      <span className={styles.preview}>{preview}</span>
+      <span className={styles.digest}><Fingerprint aria-hidden="true" /><code aria-label="来源摘要后八位">{suffix}</code></span>
+      {(source.is_unsafe || containsStructuralCharacter) && <StatusBadge tone="warn" label="含危险字符" />}
+      {source.is_truncated && <StatusBadge tone="quiet" label="已截断" />}
     </span>
   );
 }

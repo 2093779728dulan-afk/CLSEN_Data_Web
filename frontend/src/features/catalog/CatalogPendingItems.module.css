@@ -1,0 +1,21 @@
+.panel { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-top: 3px solid var(--color-warning); border-radius: var(--radius-card); background: var(--color-surface); }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
+.heading > div { min-width: 0; flex: 1; }
+.heading h3 { font-size: var(--font-size-base); margin: var(--space-2) 0; }
+.heading p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-muted); line-height: 1.7; }
+.heading .kicker { display: flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.kicker svg { width: var(--space-4); height: var(--space-4); }
+.panel > ul { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.item { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-page); }
+.itemHeading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.itemHeading > strong { font-size: var(--font-size-sm); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.counts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.counts strong { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.previews { display: grid; gap: var(--space-2); min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.previews > ul { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; margin: 0; }
+.previews li { min-width: 0; max-width: 100%; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-surface); padding: var(--space-1) var(--space-2); }
+.previews code { color: var(--color-text); font-family: var(--font-mono); overflow-wrap: anywhere; line-height: 1.7; }
+.previews p { margin: 0; line-height: 1.7; }
+.item footer { display: flex; justify-content: flex-end; align-items: center; }
+.readonly { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+@media (max-width: 600px) { .heading > div { flex-basis: 100%; } .item { padding: var(--space-3); } .item footer { justify-content: flex-start; } }

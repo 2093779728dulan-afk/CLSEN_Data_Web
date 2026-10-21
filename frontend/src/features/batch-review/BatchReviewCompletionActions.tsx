@@ -14,8 +14,8 @@ export function BatchReviewCompletionActions({ run }: { run: BatchReviewRun }) {
   return <section aria-labelledby="batch-review-completion-title" className={css["batch-review-completion"]}>
     <h2 id="batch-review-completion-title">后续操作</h2>
     <div className={css["batch-review-actions"]}>
-      {hasReady ? <a className={"primary-action"} href={`/versions?batch_review_run_id=${run.id}`}>查看全部待发布草稿</a> : null}
-      {exceptions.map((item) => item.manual_review_url ? <a className={"quiet-action"} href={manualReviewUrl(item)} key={item.id}>处理 {item.filename}</a> : null)}
+      {hasReady ? <a className={css.link} href={`/versions?batch_review_run_id=${run.id}`}>查看全部待发布草稿</a> : null}
+      {exceptions.map((item) => item.manual_review_url ? <a className={css.link} href={manualReviewUrl(item)} key={item.id}>处理 {item.filename}</a> : null)}
     </div>
     {hasReady ? <p>待发布草稿仍需按现有发布门禁逐项发布。</p> : null}
   </section>;

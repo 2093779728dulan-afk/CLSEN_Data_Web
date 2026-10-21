@@ -1,5 +1,6 @@
 import { conversionPercent } from "./ledgerInsights";
-import css from "./ProductAnalytics.module.css";
+import { CircleDashed, CircleSlash2, FileMinus2 } from "lucide-react";
+import css from "./MetricValueView.module.css";
 import type { MetricValue } from "./productAnalyticsTypes";
 import { formatMoney, formatSixPlaceDecimal } from "./metricFormatting";
 
@@ -31,9 +32,10 @@ export function MetricValueView({ metric, kind, compact = false, percentage = fa
     detail = "已观测为零";
   }
   if (percentage && kind === "conversion" && (metric.value_state === "observed" || metric.value_state === "zero") && metric.value !== null) value = conversionPercent(String(metric.value));
-  return <span className={css["metric-value"] + " " + (css[`metric-value--${metric.value_state}`] ?? "")}>
-    <span className={css["metric-value__number"]}>{value}</span>
-    {!compact && detail && <small>{detail}</small>}
-    {metric.is_partial && <small className={css["metric-value__partial"]}>部分数据</small>}
+  const stateClass = value === "无报表" ? css.missing_report : value === "分母为 0" ? css.undefined_denominator : css[metric.value_state] ?? "";
+  return <span className={`${css.value} ${stateClass} ${compact ? css.compact : ""}`}>
+    <span className={css.number}>{value === "无报表" && <FileMinus2 aria-hidden="true" />}{value === "分母为 0" && <CircleSlash2 aria-hidden="true" />}{value}</span>
+    {!compact && detail && <small className={css.detail}>{detail}</small>}
+    {metric.is_partial && <small className={css.partial}><CircleDashed aria-hidden="true" /><span>部分数据</span>{!compact && value !== "无报表" && <span className={css.coverage} aria-label={`已发布 ${metric.observed_days}/${metric.expected_days} 天`}>{metric.observed_days}/{metric.expected_days} 天</span>}</small>}
   </span>;
 }

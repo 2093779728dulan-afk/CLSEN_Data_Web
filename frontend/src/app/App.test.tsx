@@ -1,4 +1,4 @@
-import surfaceCss from "../features/import-review/ReviewSurfaces.module.css";
+import workspaceCss from "./AdvancedReviewWorkspaceView.module.css";
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -269,7 +269,7 @@ describe("App", () => {
     observer.observe(document.body, { childList: true, subtree: true });
     try {
       renderApp();
-      expect(await screen.findByLabelText("关闭主导航", { selector: "button" })).toHaveAttribute("aria-expanded", "true");
+      expect(await screen.findByRole("dialog", { name: "工作区导航" })).toBeVisible();
     } finally {
       observer.disconnect();
     }
@@ -279,13 +279,13 @@ describe("App", () => {
     renderApp();
     const openNavigation = await screen.findByLabelText("打开主导航", { selector: "button" });
 
+    openNavigation.focus();
     fireEvent.click(openNavigation);
 
     const closeNavigation = await screen.findByLabelText("关闭主导航", { selector: "button" });
-    expect(closeNavigation).toHaveAttribute("aria-controls", "primary-navigation");
-    expect(closeNavigation).toHaveAttribute("aria-expanded", "true");
+    expect(closeNavigation.closest('[role="dialog"]')).toBeVisible();
 
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(closeNavigation, { key: "Escape" });
 
     expect(await screen.findByLabelText("打开主导航", { selector: "button" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByLabelText("打开主导航", { selector: "button" })).toHaveFocus();
@@ -294,7 +294,7 @@ describe("App", () => {
   it("closes the narrow navigation after following a workspace link", async () => {
     renderApp();
     fireEvent.click(await screen.findByLabelText("打开主导航", { selector: "button" }));
-    expect(await screen.findByLabelText("关闭主导航", { selector: "button" })).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByRole("dialog", { name: "工作区导航" })).toBeVisible();
 
     fireEvent.click(screen.getByRole("link", { name: /版本记录/ }));
 
@@ -363,7 +363,7 @@ describe("App", () => {
     const redDay = await screen.findByRole("button", {
       name: /需处理：阻断、导入失败或原文件异常/,
     });
-    expect(redDay).toHaveClass(surfaceCss["evidence-day--red"]!);
+    expect(redDay).toHaveClass(workspaceCss.red!);
     expect(within(redDay).getByText("!")).toBeVisible();
   });
 
@@ -663,7 +663,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "退出" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("退出失败，当前会话仍然有效，请重试。");
-    expect(screen.getByText("查看人员")).toBeVisible();
+    expect(within(screen.getByRole("complementary", { name: "主导航" })).getByText("查看人员", { selector: "strong" })).toBeVisible();
     expect(screen.getByRole("button", { name: "退出" })).toBeEnabled();
     expect(window.sessionStorage.getItem(recoveryKey)).toBe("keep-on-failure");
   });

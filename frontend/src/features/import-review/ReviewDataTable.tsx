@@ -1,5 +1,8 @@
-import css from "./ReviewWorkspace.module.css";
-import { Button, Input, Select } from "../../design-system";
+import css from "./ReviewDataTable.module.css";
+import cellCss from "./CellReviewDrawer.module.css";
+import rowCss from "./RowReviewDrawer.module.css";
+import controlCss from "../../design-system/Control.module.css";
+import { Button, Checkbox, Dialog, EmptyState, FormField, Input, Pagination, SearchInput, Select, StatusBadge, StatusMessage } from "../../design-system";
 import {
   useEffect,
   useMemo,
@@ -19,6 +22,7 @@ import type {
   ReviewWorkspace,
   TypedFieldValue,
 } from "../../api/types";
+import { IssueReviewPanel } from "./IssueReviewPanel";
 import { NoteRevisionEditor } from "./NoteRevisionEditor";
 import { auditOperatorLabel, defaultAuditReason, type AuditOperator } from "./auditReason";
 
@@ -82,12 +86,6 @@ function displayValue(value: TypedFieldValue | null) {
   return String(value.value);
 }
 
-function unknownValue(value: unknown) {
-  if (value === null || value === undefined) return "—";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value);
-}
-
 function editValue(contract: ReviewFieldContract, raw: string, useNull: boolean): TypedFieldValue {
   if (useNull) return { type: "null", value: null };
   if (contract.kind === "integer") {
@@ -105,23 +103,6 @@ function editValue(contract: ReviewFieldContract, raw: string, useNull: boolean)
     return { type: "utc_datetime", value: raw };
   }
   return { type: "text", value: raw };
-}
-
-function useDrawerCloseButton(onClose: () => void) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
-
-  return closeButtonRef;
 }
 
 function CellDrawer({
@@ -159,7 +140,6 @@ function CellDrawer({
   const [note, setNote] = useState("");
   const [noteVisibility, setNoteVisibility] = useState<"internal" | "viewer_visible">("internal");
   const [error, setError] = useState<string>();
-  const closeButtonRef = useDrawerCloseButton(onClose);
   const currentValueType = cell.current.type;
   const currentValue = cell.current.value;
 
@@ -205,25 +185,47 @@ function CellDrawer({
 
   const latestChange = cell.history[0];
   return (
-    <aside aria-label="字段对照" className={css["cell-drawer"]} role="dialog">
-      <header><div><p className="section-kicker">第 {row.row_ordinal} 行</p><h3>{cell.field_name}</h3></div><button aria-label="关闭字段对照" className="drawer-close" onClick={onClose} ref={closeButtonRef} type="button">×</button></header>
-      <dl className={css["value-comparison"]}>
-        <div><dt>源文件值</dt><dd>{displayValue(cell.source)}</dd></div>
-        <div><dt>版本基础值</dt><dd>{displayValue(cell.base)}</dd></div>
-        <div><dt>当前草稿值</dt><dd>{displayValue(cell.current)}</dd></div>
-      </dl>
-      <p className="field-contract-line">{contract.kind} · {contract.nullable ? "允许空值" : "必填"}{contract.scale !== null ? ` · ${contract.scale} 位小数` : ""}</p>
-
-      {contract.editable && <section className="drawer-section"><h4>修正当前值</h4><label className="field-stack">当前值<Input disabled={useNull} onChange={(event) => setRawValue(event.target.value)} value={rawValue} /></label>{contract.nullable && <label className="check-field"><input checked={useNull} onChange={(event) => setUseNull(event.target.checked)} type="checkbox" />设为空值</label>}<label className="field-stack">修改原因<textarea onChange={(event) => setEditReason(event.target.value)} rows={2} value={editReason} /></label><Button variant="primary" disabled={busy || !editReason.trim()} onClick={() => { void submitEdit(); }} type="button">保存字段修改</Button></section>}
-
-      <section className="drawer-section"><h4>恢复一个已记录的值</h4><label className="field-stack">恢复原因<Input onChange={(event) => setRestoreReason(event.target.value)} value={restoreReason} /></label><div className="restore-actions">{latestChange && <Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { void restore({ source_kind: "previous", field_change_id: latestChange.id }); }} type="button">撤销本次修改</Button>}{cell.parent_restore_options.length > 0 && <><label className="field-stack">父版本<Select onChange={(event) => setParentVersionId(Number(event.target.value))} value={parentVersionId}>{cell.parent_restore_options.map((option) => <option key={option.parent_version_id} value={option.parent_version_id}>v{option.parent_version_id} · {displayValue(option.value)}</option>)}</Select></label><Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { void restore({ source_kind: "parent", parent_version_id: parentVersionId }); }} type="button">恢复父版本值</Button></>}{cell.source_restore_option && <Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { const source = cell.source_restore_option; if (source) void restore({ source_kind: "source", source_batch_id: source.source_batch_id, parsed_source_row_id: source.parsed_source_row_id }); }} type="button">恢复源文件值</Button>}</div></section>
-      {operator && <p className="stage-placeholder">操作人来源：当前登录会话 · {auditOperatorLabel(operator)}。默认原因可补充修改。</p>}
-
-      <section className="drawer-section"><h4>字段备注</h4>{cell.notes.length > 0 && <ul className="cell-note-list">{cell.notes.map((item) => <li key={item.note_key}><p>{item.body}</p><span>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</span><NoteRevisionEditor busy={busy} note={item} onRevise={onReviseNote} /></li>)}</ul>}<label className="field-stack">备注内容<textarea onChange={(event) => setNote(event.target.value)} rows={2} value={note} /></label><label className="field-stack">可见范围<Select onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></label><Button variant="secondary" disabled={busy || !note.trim()} onClick={() => { void addNote(); }} type="button">追加字段备注</Button></section>
-
-      <section className="drawer-section"><h4>字段历史</h4>{cell.history.length ? <ol className="change-history">{cell.history.map((item) => <li key={item.id}><div><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></div><p>{displayValue(item.before)} → {displayValue(item.after)}</p><small>{item.reason}</small></li>)}</ol> : <p className="stage-placeholder">这个字段还没有人工修改。</p>}</section>
-      {error && <p className="form-error" role="alert">{error}</p>}
-    </aside>
+    <Dialog open accessibleLabel="字段对照" presentation="drawer" closeLabel="关闭字段对照" dismissDisabled={busy}
+      title={<>{cell.field_name}<span className={cellCss.rowLabel}>第 {row.row_ordinal} 行</span></>}
+      description="核对源文件、版本基础与当前草稿。修改、恢复及备注分别保留记录。" eyebrow="字段核对"
+      onOpenChange={open => { if (!open && !busy) onClose(); }}>
+      <div aria-label="字段对照内容" role="region" tabIndex={busy ? 0 : undefined} className={cellCss.content}>
+        <div className={cellCss.identity}><span>行 ID #{row.row_id} · 字段 {cell.field_name}</span><StatusBadge label={cell.changed_from_source ? "与源文件不同" : "与源文件一致"} tone={cell.changed_from_source ? "warn" : "quiet"} /></div>
+        <dl className={cellCss.comparison}>
+          <div><dt>源文件值</dt><dd>{displayValue(cell.source)}</dd></div>
+          <div><dt>版本基础值</dt><dd>{displayValue(cell.base)}</dd></div>
+          <div className={cellCss.current}><dt>当前草稿值</dt><dd>{displayValue(cell.current)}</dd></div>
+        </dl>
+        <p className={cellCss.contract}>{contract.kind} · {contract.nullable ? "允许空值" : "必填"}{contract.scale !== null ? ` · ${contract.scale} 位小数` : ""}</p>
+        {error && <StatusMessage kind="danger" title="字段操作未完成">{error}</StatusMessage>}
+        {contract.editable ? <section className={cellCss.section} aria-label="修正当前值"><h3>修正当前值</h3>
+          <FormField label="当前值" hint="保存只修改当前草稿字段；原始值仍保留。"><Input disabled={busy || useNull} onChange={(event) => setRawValue(event.target.value)} value={rawValue} /></FormField>
+          {contract.nullable && <Checkbox label="设为空值" checked={useNull} disabled={busy} onChange={(event) => setUseNull(event.target.checked)} />}
+          <FormField label="修改原因"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setEditReason(event.target.value)} rows={3} value={editReason} /></FormField>
+          <Button variant="primary" loading={busy} loadingLabel="正在处理…" disabled={busy || !editReason.trim()} onClick={() => { void submitEdit(); }} type="button">保存字段修改</Button>
+        </section> : <StatusMessage kind="info" title="字段不可直接编辑">当前字段的编辑规则由报表合同决定。</StatusMessage>}
+        <section className={cellCss.section} aria-label="恢复一个已记录的值"><h3>恢复一个已记录的值</h3>
+          {latestChange || cell.parent_restore_options.length > 0 || cell.source_restore_option ? <>
+            <FormField label="恢复原因"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setRestoreReason(event.target.value)} rows={3} value={restoreReason} /></FormField>
+            <div className={cellCss.restoreActions}>
+              {latestChange && <Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { void restore({ source_kind: "previous", field_change_id: latestChange.id }); }} type="button">撤销本次修改</Button>}
+              {cell.parent_restore_options.length > 0 && <><FormField label="父版本"><Select disabled={busy} onChange={(event) => setParentVersionId(Number(event.target.value))} value={parentVersionId}>{cell.parent_restore_options.map((option) => <option key={option.parent_version_id} value={option.parent_version_id}>版本 ID #{option.parent_version_id} · {displayValue(option.value)}</option>)}</Select></FormField><Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { void restore({ source_kind: "parent", parent_version_id: parentVersionId }); }} type="button">恢复父版本值</Button></>}
+              {cell.source_restore_option && <Button variant="secondary" disabled={busy || !restoreReason.trim()} onClick={() => { const source = cell.source_restore_option; if (source) void restore({ source_kind: "source", source_batch_id: source.source_batch_id, parsed_source_row_id: source.parsed_source_row_id }); }} type="button">恢复源文件值</Button>}
+            </div>
+          </> : <p className={cellCss.hint}>当前字段暂无可恢复的历史或来源值。</p>}
+        </section>
+        {operator && <p className={cellCss.hint}>操作人来源：当前登录会话 · {auditOperatorLabel(operator)}。默认原因可补充修改。</p>}
+        <section className={cellCss.section} aria-label="字段备注"><h3>字段备注</h3>
+          {cell.notes.length > 0 ? <ul className={cellCss.notes}>{cell.notes.map((item) => <li key={item.note_key}><p>{item.body}</p><small>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</small><NoteRevisionEditor busy={busy} note={item} onRevise={onReviseNote} /></li>)}</ul> : <p className={cellCss.hint}>尚无字段备注。</p>}
+          <FormField label="备注内容"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setNote(event.target.value)} rows={2} value={note} /></FormField>
+          <FormField label="可见范围"><Select disabled={busy} onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></FormField>
+          <Button variant="secondary" disabled={busy || !note.trim()} onClick={() => { void addNote(); }} type="button">追加字段备注</Button>
+        </section>
+        <section className={cellCss.section} aria-label="字段历史"><h3>字段历史</h3>
+          {cell.history.length ? <ol className={cellCss.history}>{cell.history.map((item) => <li key={item.id}><header><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></header><dl><div><dt>修改前</dt><dd>{displayValue(item.before)}</dd></div><div><dt>修改后</dt><dd>{displayValue(item.after)}</dd></div></dl><p>{item.reason}</p></li>)}</ol> : <p className={cellCss.hint}>这个字段还没有人工修改。</p>}
+        </section>
+      </div>
+    </Dialog>
   );
 }
 
@@ -253,7 +255,6 @@ function AddRowDrawer({
   );
   const [reason, setReason] = useState(() => defaultAuditReason(operator, "新增纠错行", source));
   const [error, setError] = useState<string>();
-  const closeButtonRef = useDrawerCloseButton(onClose);
 
   useEffect(() => {
     setReason(defaultAuditReason(operator, "新增纠错行", source));
@@ -281,26 +282,28 @@ function AddRowDrawer({
   };
 
   return (
-    <aside aria-label="新增纠错行" className={css["cell-drawer"]} role="dialog">
-      <header><div><p className="section-kicker">人工纠错</p><h3>新增纠错行</h3></div><button aria-label="关闭新增纠错行" className="drawer-close" onClick={onClose} ref={closeButtonRef} type="button">×</button></header>
-      <p className="field-contract-line">新增行只存在于处理层，必须关联当前版本的来源批次；原始文件保持不变。</p>
-      <form onSubmit={(event) => { void submit(event); }}>
-        <section className="drawer-section">
-          <h4>来源与原因</h4>
-          <label className="field-stack">来源批次<Select disabled={!sourceBatchIds.length} onChange={(event) => setSourceBatchId(Number(event.target.value))} value={sourceBatchId}>{sourceBatchIds.length ? sourceBatchIds.map((batchId) => <option key={batchId} value={batchId}>导入批次 #{batchId}</option>) : <option value={0}>当前页没有可用来源批次</option>}</Select></label>
-          <label className="field-stack">新增原因<textarea onChange={(event) => setReason(event.target.value)} required rows={3} value={reason} /></label>
-        </section>
-        <section className="drawer-section">
-          <h4>完整行数据</h4>
-          {fields.map((field) => {
-            const useNull = nullFields.has(field.name);
-            return <div key={field.name}><label className="field-stack">{field.name}{field.required_on_add ? "（新增必填）" : ""}<Input aria-label={`新增行字段 ${field.name}`} disabled={useNull} inputMode={field.kind === "integer" || field.kind === "decimal" ? "decimal" : "text"} maxLength={field.max_length ?? undefined} onChange={(event) => setRawValues((current) => ({ ...current, [field.name]: event.target.value }))} value={rawValues[field.name] ?? ""} /></label>{field.nullable && !field.required_on_add && <label className="check-field"><input aria-label={`字段 ${field.name} 使用空值`} checked={useNull} onChange={(event) => setNullFields((current) => { const next = new Set(current); if (event.target.checked) next.add(field.name); else next.delete(field.name); return next; })} type="checkbox" />使用空值</label>}</div>;
-          })}
-        </section>
-        {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="dialog-actions"><Button variant="quiet" disabled={busy} onClick={onClose} type="button">取消新增</Button><Button variant="primary" disabled={busy || !sourceBatchId || !reason.trim()} type="submit">保存新增行</Button></div>
-      </form>
-    </aside>
+    <Dialog open accessibleLabel="新增纠错行" presentation="drawer" closeLabel="关闭新增纠错行" dismissDisabled={busy}
+      title="新增纠错行" eyebrow="人工纠错" description="补录遗漏的有效行，并关联当前草稿的来源批次。原始文件保持不变。"
+      onOpenChange={open => { if (!open && !busy) onClose(); }}>
+      <div className={cellCss.content} role="region" aria-label="新增纠错行内容" tabIndex={busy ? 0 : undefined}>
+        <StatusMessage kind="info" title="补录到当前草稿">新增行需要完整填写必填字段；保存后需重新校验。</StatusMessage>
+        {!sourceBatchIds.length && <StatusMessage kind="warning" title="没有可关联的来源批次">当前草稿暂无可用来源，暂时不能新增纠错行。请先核对导入来源。</StatusMessage>}
+        {error && <StatusMessage kind="danger" title="新增行未保存">{error}</StatusMessage>}
+        <form className={rowCss.form} onSubmit={(event) => { void submit(event); }}>
+          <section className={cellCss.section} aria-label="来源与原因"><h3>来源与原因</h3>
+            <FormField label="来源批次"><Select disabled={busy || !sourceBatchIds.length} onChange={(event) => setSourceBatchId(Number(event.target.value))} value={sourceBatchId}>{sourceBatchIds.length ? sourceBatchIds.map((batchId) => <option key={batchId} value={batchId}>导入批次 #{batchId}</option>) : <option value={0}>当前页没有可用来源批次</option>}</Select></FormField>
+            <FormField label="新增原因"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setReason(event.target.value)} required rows={3} value={reason} /></FormField>
+          </section>
+          <section className={cellCss.section} aria-label="完整行数据"><h3>完整行数据</h3>
+            <div className={rowCss.dataGrid}>{fields.map((field) => {
+              const useNull = nullFields.has(field.name);
+              return <div className={rowCss.field} key={field.name}><FormField label={field.name + (field.required_on_add ? "（新增必填）" : "")} hint={field.scale !== null ? `${field.scale} 位小数` : undefined}><Input aria-label={`新增行字段 ${field.name}`} disabled={busy || useNull} inputMode={field.kind === "integer" || field.kind === "decimal" ? "decimal" : "text"} maxLength={field.max_length ?? undefined} onChange={(event) => setRawValues((current) => ({ ...current, [field.name]: event.target.value }))} value={rawValues[field.name] ?? ""} /></FormField>{field.nullable && !field.required_on_add && <Checkbox label={`字段 ${field.name} 使用空值`} checked={useNull} disabled={busy} onChange={(event) => setNullFields((current) => { const next = new Set(current); if (event.target.checked) next.add(field.name); else next.delete(field.name); return next; })} />}</div>;
+            })}</div>
+          </section>
+          <div className={rowCss.actions}><Button variant="quiet" disabled={busy} onClick={onClose} type="button">取消新增</Button><Button variant="primary" loading={busy} loadingLabel="正在保存…" disabled={busy || !sourceBatchId || !reason.trim()} type="submit">保存新增行</Button></div>
+        </form>
+      </div>
+    </Dialog>
   );
 }
 
@@ -332,7 +335,6 @@ function RowStateDrawer({
   const [note, setNote] = useState("");
   const [noteVisibility, setNoteVisibility] = useState<"internal" | "viewer_visible">("internal");
   const [error, setError] = useState<string>();
-  const closeButtonRef = useDrawerCloseButton(onClose);
   const cannotRestoreSourceDeletion = row.row_state === "deleted" && row.base_row_id !== null;
 
   useEffect(() => {
@@ -365,31 +367,21 @@ function RowStateDrawer({
   };
 
   return (
-    <aside aria-label="行状态操作" className={css["cell-drawer"]} role="dialog">
-      <header><div><p className="section-kicker">第 {row.row_ordinal} 行</p><h3>{operation === "exclude" ? "排除处理行" : "恢复处理行"}</h3></div><button aria-label="关闭行状态操作" className="drawer-close" onClick={onClose} ref={closeButtonRef} type="button">×</button></header>
-      <dl className={css["value-comparison"]}><div><dt>当前状态</dt><dd>{row.row_state}</dd></div><div><dt>来源</dt><dd>{row.base_row_id === null ? "人工新增" : "版本基础行"}</dd></div><div><dt>逻辑行</dt><dd>{row.logical_row_id}</dd></div></dl>
-      <section className="drawer-section"><h4>行备注</h4>{row.notes.length > 0 && <ul className="cell-note-list">{row.notes.map((item) => <li key={item.note_key}><p>{item.body}</p><span>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</span><NoteRevisionEditor busy={busy} note={item} onRevise={onReviseNote} /></li>)}</ul>}<label className="field-stack">行备注内容<textarea onChange={(event) => setNote(event.target.value)} rows={2} value={note} /></label><label className="field-stack">行备注可见范围<Select onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></label><Button variant="secondary" disabled={busy || !note.trim()} onClick={() => { void addNote(); }} type="button">追加行备注</Button></section>
-      <section className="drawer-section"><h4>状态历史</h4>{row.history.length ? <ol className="change-history">{row.history.map((item) => <li key={item.id}><div><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></div><small>{item.reason}</small></li>)}</ol> : <p className="stage-placeholder">这行还没有状态修改记录。</p>}</section>
-      <form onSubmit={(event) => { void submit(event); }}><section className="drawer-section"><h4>{operation === "exclude" ? "排除说明" : "恢复说明"}</h4><label className="field-stack">处理原因<textarea autoFocus onChange={(event) => setReason(event.target.value)} required rows={3} value={reason} /></label><p className="stage-placeholder">{operation === "exclude" ? "排除后该行不进入合计或发布结果，原始来源与历史仍保留。" : "恢复后该行重新进入当前草稿与下一次校验。"}</p></section>{cannotRestoreSourceDeletion && <p className="form-error" role="alert">来源行不能从“已删除”恢复；请由管理员检查异常状态。</p>}{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><Button variant="quiet" disabled={busy} onClick={onClose} type="button">取消</Button><Button variant="primary" disabled={busy || cannotRestoreSourceDeletion || !reason.trim()} type="submit">{operation === "exclude" ? "排除这一行" : "恢复这一行"}</Button></div></form>
-    </aside>
-  );
-}
-
-function IssueList({ busy, issues, onReviewIssue }: { busy: boolean; issues: ReviewIssue[]; onReviewIssue: Props["onReviewIssue"] }) {
-  const [comments, setComments] = useState<Record<number, string>>({});
-  if (!issues.length) return null;
-  return (
-    <section className={css["issue-list"]} aria-label="校验问题">
-      <header><div><p className="section-kicker">校验问题</p><h3>需要人工处理的项目</h3></div><span>{issues.filter((issue) => issue.review.state === "open").length} 项待处理</span></header>
-      <div className={css["issue-list__grid"]}>{issues.map((issue) => {
-        const comment = comments[issue.id] ?? "";
-        const action = issue.review.state === "open"
-          ? issue.severity === "warning" ? "acknowledge" : "resolve"
-          : "reopen";
-        const label = action === "acknowledge" ? "确认警告" : action === "resolve" ? "标记已解决" : "重新打开";
-        return <article aria-label={`${issue.severity === "warning" ? "警告" : "阻断项"} · ${issue.message}`} className={css["issue-card"] + " " + (css[`issue-card--${issue.severity}`] ?? "")} key={issue.id}><div className={css["issue-card__meta"]}><strong>{issue.severity === "warning" ? "警告" : "阻断项"}</strong><code>{issue.rule_code}</code><span>{issue.review.state}</span></div><h4>{issue.message}</h4>{issue.field_name && <p>字段 {issue.field_name}{issue.row_id ? ` · 行 #${issue.row_id}` : ""}</p>}<dl><div><dt>源值</dt><dd>{unknownValue(issue.source_value)}</dd></div><div><dt>处理值</dt><dd>{unknownValue(issue.processed_value)}</dd></div></dl><label className="field-stack">审核说明<textarea onChange={(event) => setComments((current) => ({ ...current, [issue.id]: event.target.value }))} rows={2} value={comment} /></label><Button variant="secondary" disabled={busy || (issue.requires_note && !comment.trim())} onClick={() => { void onReviewIssue(issue, action, comment); }} type="button">{label}</Button></article>;
-      })}</div>
-    </section>
+    <Dialog open accessibleLabel="行状态操作" presentation="drawer" closeLabel="关闭行状态操作" dismissDisabled={busy}
+      title={operation === "exclude" ? "排除处理行" : "恢复处理行"} eyebrow={`第 ${row.row_ordinal} 行`}
+      description="调整当前草稿的行状态，来源与操作历史继续保留。"
+      onOpenChange={open => { if (!open && !busy) onClose(); }}>
+      <div className={cellCss.content} role="region" aria-label="行状态操作内容" tabIndex={busy ? 0 : undefined}>
+        <div className={cellCss.identity}><span>行 ID #{row.row_id}</span><StatusBadge label={row.row_state === "active" ? "参与合计" : row.row_state === "excluded" ? "已排除" : "已删除"} tone={row.row_state === "active" ? "good" : "warn"} /></div>
+        <dl className={rowCss.facts}><div><dt>当前状态</dt><dd>{row.row_state}</dd></div><div><dt>来源</dt><dd>{row.base_row_id === null ? "人工新增" : "版本基础行"}</dd></div><div><dt>逻辑行</dt><dd>{row.logical_row_id}</dd></div></dl>
+        <StatusMessage kind={operation === "exclude" ? "warning" : "info"} title={operation === "exclude" ? "排除后的影响" : "恢复后的影响"}>{operation === "exclude" ? "排除后该行不进入合计或发布结果，原始来源与历史仍保留。" : "恢复后该行重新进入当前草稿与下一次校验。"}</StatusMessage>
+        {cannotRestoreSourceDeletion && <StatusMessage kind="danger" title="当前来源行不能恢复">来源行不能从“已删除”恢复；请由管理员检查异常状态。</StatusMessage>}
+        {error && <StatusMessage kind="danger" title="行操作未完成">{error}</StatusMessage>}
+        <form className={rowCss.form} onSubmit={(event) => { void submit(event); }}><section className={cellCss.section} aria-label="处理说明"><h3>{operation === "exclude" ? "排除说明" : "恢复说明"}</h3><FormField label="处理原因"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setReason(event.target.value)} required rows={3} value={reason} /></FormField></section><div className={rowCss.actions}><Button variant="quiet" disabled={busy} onClick={onClose} type="button">取消</Button><Button variant={operation === "exclude" ? "danger" : "primary"} loading={busy} loadingLabel="正在处理…" disabled={busy || cannotRestoreSourceDeletion || !reason.trim()} type="submit">{operation === "exclude" ? "排除这一行" : "恢复这一行"}</Button></div></form>
+        <section className={cellCss.section} aria-label="行备注"><h3>行备注</h3>{row.notes.length > 0 ? <ul className={cellCss.notes}>{row.notes.map((item) => <li key={item.note_key}><p>{item.body}</p><small>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</small><NoteRevisionEditor busy={busy} note={item} onRevise={onReviseNote} /></li>)}</ul> : <p className={cellCss.hint}>尚无行备注。</p>}<FormField label="行备注内容"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setNote(event.target.value)} rows={3} value={note} /></FormField><FormField label="行备注可见范围"><Select disabled={busy} onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></FormField><Button variant="secondary" disabled={busy || !note.trim()} onClick={() => { void addNote(); }} type="button">追加行备注</Button></section>
+        <section className={cellCss.section} aria-label="状态历史"><h3>状态历史</h3>{row.history.length ? <ol className={cellCss.history}>{row.history.map((item) => <li key={item.id}><header><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></header><p>{item.reason}</p></li>)}</ol> : <p className={cellCss.hint}>这行还没有状态修改记录。</p>}</section>
+      </div>
+    </Dialog>
   );
 }
 
@@ -550,14 +542,56 @@ export function ReviewDataTable({ busy, onAddCellNote, onAddRow, onAddRowNote, o
 
   return <>
     <section className={css["review-data"]} aria-label="草稿数据对照">
-      <header className={css["review-data__toolbar"]}><div className={css["review-data__summary"]}><div><p className="section-kicker">逐行对照</p><h3>源值、基础值与当前值</h3><p className={css["review-data__legend"]}><i aria-hidden="true" />红色单元格表示当前值与上传源表不同</p></div><Button variant="quiet" disabled={busy || !sourceBatchIds.length} onClick={() => { setSelected(undefined); setRowActionId(undefined); setAddingRow(true); }} title={sourceBatchIds.length ? undefined : "当前页没有可关联的来源批次"} type="button">新增纠错行</Button></div><div className={css["review-data__controls"]}><label className="search-field">搜索当前页<Input onChange={(event) => setQuery(event.target.value)} placeholder="SKU、ASIN 或数值" type="search" value={query} /></label><label className="compact-select">显示字段<Select aria-label="显示字段" onChange={(event) => { setFocusedField(event.target.value); setSort(undefined); }} value={focusedField}><option value="all">全部字段</option>{workspace.fields.map((field) => <option key={field.name} value={field.name}>{field.name}</option>)}</Select></label><label className="compact-select">行状态<Select onChange={(event) => setRowState(event.target.value as typeof rowState)} value={rowState}><option value="all">全部</option><option value="active">有效</option><option value="excluded">已排除</option><option value="deleted">已删除</option></Select></label><label className="check-field"><input checked={changedOnly} onChange={(event) => setChangedOnly(event.target.checked)} type="checkbox" />仅看差异</label><div aria-label="差异导航" className={css["review-data__difference-nav"]} role="group"><Button disabled={busy || !differences.length} onClick={() => moveDifference(-1)} type="button">上一处差异</Button><span>{differences.length} 处</span><Button disabled={busy || !differences.length} onClick={() => moveDifference(1)} type="button">下一处差异</Button></div></div></header>
+      <header className={css.toolbar}>
+        <div className={css.summary}>
+          <div><h3>源值、基础值与当前值</h3><p>先定位差异，再打开单元格核对来源与修改记录。搜索、筛选及排序仅作用于当前页。</p></div>
+          <Button variant="secondary" disabled={busy || !sourceBatchIds.length} onClick={() => { setSelected(undefined); setRowActionId(undefined); setAddingRow(true); }} title={sourceBatchIds.length ? undefined : "当前页没有可关联的来源批次"} type="button">新增纠错行</Button>
+        </div>
+        <div className={css.controls}>
+          <FormField label="搜索当前页"><SearchInput onValueChange={setQuery} placeholder="SKU、ASIN 或数值" value={query} clearLabel="清除当前页搜索" /></FormField>
+          <FormField label="显示字段"><Select onChange={(event) => { setFocusedField(event.target.value); setSort(undefined); }} value={focusedField}><option value="all">全部字段</option>{workspace.fields.map((field) => <option key={field.name} value={field.name}>{field.name}</option>)}</Select></FormField>
+          <FormField label="行状态"><Select onChange={(event) => setRowState(event.target.value as typeof rowState)} value={rowState}><option value="all">全部</option><option value="active">有效</option><option value="excluded">已排除</option><option value="deleted">已删除</option></Select></FormField>
+        </div>
+        <div className={css.reviewLine}>
+          <Checkbox checked={changedOnly} onChange={(event) => setChangedOnly(event.target.checked)} label="仅看差异" />
+          <div aria-label="差异导航" className={css.differenceNav} role="group">
+            <Button variant="quiet" disabled={busy || !differences.length} onClick={() => moveDifference(-1)} type="button">上一处差异</Button>
+            <output aria-live="polite" aria-label="当前页差异数量">{differenceCursor < 0 ? `${differences.length} 处` : `${differenceCursor + 1} / ${differences.length}`}</output>
+            <Button variant="quiet" disabled={busy || !differences.length} onClick={() => moveDifference(1)} type="button">下一处差异</Button>
+          </div>
+        </div>
+        <div className={css.legend}><span><i aria-hidden="true" className={css.sourceMarker} />源表差异</span><span><i aria-hidden="true" />版本差异</span><strong>显示当前页 {rows.length} / {workspace.rows.length} 行</strong></div>
+      </header>
+      {!sourceBatchIds.length && <StatusMessage kind="info" title="暂不能新增纠错行">当前草稿没有可关联的来源批次，请先核对导入来源。</StatusMessage>}
       <div className={css["review-table-scroll"]} role="region" aria-label="可横向滚动的草稿数据表" tabIndex={0}>
-        <table className={css["review-table"]}><thead><tr><th className={css["review-table__row-key"]}>行</th><th className={css["review-table__state"]}>状态</th>{visibleFields.map((field) => { const keyIndex = keyFieldIndexes.get(field.name); const isKey = keyIndex !== undefined; const nextDirection = sort?.fieldName === field.name && sort.direction === "ascending" ? "降序" : "升序"; const style = isKey ? ({ "--review-key-offset": `${keyIndex * 160}px` } as CSSProperties) : undefined; return <th aria-sort={sort?.fieldName === field.name ? sort.direction : "none"} className={isKey ? css["review-table__key-field"] : undefined} key={field.name} style={style}><button aria-label={`按 ${field.name} ${nextDirection}排序`} className={css["review-table__sort"]} onClick={() => toggleSort(field.name)} type="button">{field.name}{field.included_in_totals && <span>合计</span>}<i aria-hidden="true">{sort?.fieldName === field.name ? sort.direction === "ascending" ? "↑" : "↓" : "↕"}</i></button></th>; })}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={row.row_id}><th className={css["review-table__row-key"]} scope="row">{row.row_ordinal}</th><td className={css["review-table__state"] + " " + css["review-table__cell"]}><button aria-label={`管理第 ${row.row_ordinal} 行状态，当前 ${row.row_state}`} onClick={() => { setSelected(undefined); setAddingRow(false); setRowActionId(row.row_id); }} type="button"><span>{row.row_state}</span><small>{row.row_state === "active" ? "排除" : "恢复"}</small></button></td>{visibleFields.map((field, fieldIndex) => { const cell = row.cells.find((item) => item.field_name === field.name); const keyIndex = keyFieldIndexes.get(field.name); const isKey = keyIndex !== undefined; const style = isKey ? ({ "--review-key-offset": `${keyIndex * 160}px` } as CSSProperties) : undefined; if (!cell) return <td className={isKey ? css["review-table__key-field"] : undefined} key={field.name} style={style}>—</td>; const sourceChanged = cell.changed_from_source; const changed = cell.changed_from_base || sourceChanged; const classes = [css["review-table__cell"], changed && css["review-table__cell--changed"], sourceChanged && css["review-table__cell--source-different"], isKey && css["review-table__key-field"]].filter(Boolean).join(" "); return <td className={classes} key={field.name} style={style}><button aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End" aria-label={`${field.name}，当前值 ${displayValue(cell.current)}${changed ? "，与来源不同" : ""}`} onClick={() => selectCell(row.row_id, field.name)} onKeyDown={(event) => handleCellKeyDown(event, rowIndex, fieldIndex)} ref={(node) => { const key = cellKey(row.row_id, field.name); if (node) cellButtons.current.set(key, node); else cellButtons.current.delete(key); }} type="button"><span>{displayValue(cell.current)}</span>{changed && <small>{sourceChanged ? "源表差异" : "版本差异"}</small>}</button></td>; })}</tr>)}</tbody></table>
-        {!rows.length && <p className="table-empty">当前筛选没有行。关闭“仅看差异”或更改搜索条件。</p>}
+        <table className={css["review-table"]}>
+          <thead><tr><th className={css.rowKey} scope="col">行</th><th className={css.state} scope="col">状态</th>{visibleFields.map((field) => {
+            const keyIndex = keyFieldIndexes.get(field.name);
+            const nextDirection = sort?.fieldName === field.name && sort.direction === "ascending" ? "降序" : "升序";
+            const style = keyIndex !== undefined ? ({ "--review-key-offset": `${keyIndex * 160}px` } as CSSProperties) : undefined;
+            return <th scope="col" aria-sort={sort?.fieldName === field.name ? sort.direction : "none"} className={keyIndex !== undefined ? css["review-table__key-field"] : undefined} key={field.name} style={style}><button aria-label={`按 ${field.name} ${nextDirection}排序`} className={css.sort} onClick={() => toggleSort(field.name)} type="button">{field.name}{field.included_in_totals && <span>合计</span>}<i aria-hidden="true">{sort?.fieldName === field.name ? sort.direction === "ascending" ? "↑" : "↓" : "↕"}</i></button></th>;
+          })}</tr></thead>
+          <tbody>{rows.map((row, rowIndex) => <tr key={row.row_id}>
+            <th className={css.rowKey} scope="row">{row.row_ordinal}</th>
+            <td className={`${css.state} ${css.cell}`}><button aria-label={`管理第 ${row.row_ordinal} 行状态，当前 ${row.row_state}`} onClick={() => { setSelected(undefined); setAddingRow(false); setRowActionId(row.row_id); }} type="button"><span>{row.row_state === "active" ? "有效" : row.row_state === "excluded" ? "已排除" : "已删除"}</span><small>{row.row_state === "active" ? "排除" : "恢复"}</small></button></td>
+            {visibleFields.map((field, fieldIndex) => {
+              const cell = row.cells.find((item) => item.field_name === field.name);
+              const keyIndex = keyFieldIndexes.get(field.name);
+              const style = keyIndex !== undefined ? ({ "--review-key-offset": `${keyIndex * 160}px` } as CSSProperties) : undefined;
+              if (!cell) return <td className={keyIndex !== undefined ? css["review-table__key-field"] : undefined} key={field.name} style={style}>—</td>;
+              const sourceChanged = cell.changed_from_source;
+              const changed = cell.changed_from_base || sourceChanged;
+              const classes = [css.cell, changed && css.changed, sourceChanged && css.sourceDifferent, keyIndex !== undefined && css["review-table__key-field"]].filter(Boolean).join(" ");
+              const differenceLabel = `${sourceChanged ? "，与源表不同" : ""}${cell.changed_from_base ? "，与基础版本不同" : ""}`;
+              return <td className={classes} key={field.name} style={style}><button aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End" aria-label={`${field.name}，当前值 ${displayValue(cell.current)}${differenceLabel}`} title={displayValue(cell.current)} onClick={() => selectCell(row.row_id, field.name)} onKeyDown={(event) => handleCellKeyDown(event, rowIndex, fieldIndex)} ref={(node) => { const key = cellKey(row.row_id, field.name); if (node) cellButtons.current.set(key, node); else cellButtons.current.delete(key); }} type="button"><span>{displayValue(cell.current)}</span>{changed && <small>{sourceChanged ? "源表差异" : "版本差异"}</small>}</button></td>;
+            })}
+          </tr>)}</tbody>
+        </table>
+        {!rows.length && <div className={css.empty}><EmptyState title={workspace.rows.length ? "当前筛选没有匹配行" : "当前页没有数据行"} description={workspace.rows.length ? "搜索与差异筛选仅作用于当前页，可清除筛选重新核对。" : "请核对当前页与导入来源；其他页的记录仍以分页结果为准。"} action={workspace.rows.length ? <Button variant="secondary" onClick={() => { setQuery(""); setFocusedField("all"); setRowState("all"); setChangedOnly(false); setSort(undefined); }} type="button">清除当前页筛选</Button> : undefined} /></div>}
       </div>
-      <footer className={css["table-pagination"]}><span>第 {workspace.pagination.page} / {Math.max(workspace.pagination.total_pages, 1)} 页 · 共 {workspace.pagination.total_rows} 行 · 方向键可在单元格间移动</span><div><Button variant="secondary" disabled={busy || workspace.pagination.page <= 1} onClick={() => onPageChange(workspace.pagination.page - 1)} type="button">上一页</Button><Button variant="secondary" disabled={busy || workspace.pagination.page >= workspace.pagination.total_pages} onClick={() => onPageChange(workspace.pagination.page + 1)} type="button">下一页</Button></div></footer>
+      <footer className={css.footer}><Pagination page={workspace.pagination.page} totalPages={workspace.pagination.total_pages} totalItems={workspace.pagination.total_rows} itemLabel="数据行" loading={busy} onPageChange={onPageChange} /><p>方向键移动单元格 · Enter 打开对照 · SKU / ASIN 列在宽屏固定</p></footer>
     </section>
-    <IssueList busy={busy} issues={workspace.latest_full_validation?.issues ?? []} onReviewIssue={onReviewIssue} />
+    <IssueReviewPanel busy={busy} issues={workspace.latest_full_validation?.issues ?? []} onReviewIssue={onReviewIssue} />
     {addingRow && <AddRowDrawer busy={busy} fields={workspace.fields} onAddRow={onAddRow} onClose={() => setAddingRow(false)} operator={operator} source={auditSource} sourceBatchIds={sourceBatchIds} />}
     {rowAction && <RowStateDrawer busy={busy} onAddRowNote={onAddRowNote} onChangeRowState={onChangeRowState} onClose={() => setRowActionId(undefined)} onReviseNote={onReviseNote} operator={operator} row={rowAction} source={auditSource} />}
     {selectedRow && selectedCell && selectedContract && <CellDrawer busy={busy} cell={selectedCell} contract={selectedContract} onAddCellNote={onAddCellNote} onClose={() => setSelected(undefined)} onRestoreField={onRestoreField} onReviseNote={onReviseNote} onSetField={onSetField} operator={operator} row={selectedRow} source={auditSource} />}

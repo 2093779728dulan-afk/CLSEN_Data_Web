@@ -1,7 +1,8 @@
 .control {
   width: 100%;
+  min-width: 0;
   min-height: var(--control-height-large);
-  padding: 8px 11px;
+  padding: var(--space-2) var(--space-3);
   color: var(--color-text);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -10,29 +11,44 @@
   font: inherit;
   line-height: 1.3;
   transition:
-    border-color var(--motion-duration-fast) var(--motion-ease-standard),
-    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+    border-color var(--motion-interaction) var(--motion-ease-standard),
+    box-shadow var(--motion-interaction) var(--motion-ease-standard),
+    background-color var(--motion-interaction) var(--motion-ease-standard);
 }
 
-.control:hover:not(:disabled) { border-color: var(--color-primary); }
+.control::placeholder { color: var(--color-text-muted); opacity: 1; }
+.control::selection { color: var(--color-on-primary); background: var(--color-primary); }
+.control:hover:not(:disabled):not(:read-only):not([aria-invalid="true"]) { border-color: var(--color-primary); }
+.control[readonly] { background: var(--color-surface-muted); box-shadow: none; }
+
+.select { padding-inline-end: var(--space-7); cursor: pointer; }
+.select:hover:not(:disabled):not([aria-invalid="true"]) { border-color: var(--color-primary); }
+.select[multiple], .select[size]:not([size="1"]) { padding-inline-end: var(--space-3); }
 
 .control:focus-visible {
   border-color: var(--color-focus);
   box-shadow: var(--focus-ring);
-  outline: 1px solid var(--color-focus);
-  outline-offset: 1px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 
 .control:disabled {
   color: var(--color-text-muted);
   cursor: not-allowed;
   background: var(--color-surface-muted);
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .control[aria-invalid="true"] {
   border-color: var(--color-danger);
   box-shadow: var(--danger-ring);
+}
+
+.control[aria-invalid="true"]:focus-visible { outline-color: var(--color-danger); }
+
+@media (forced-colors: active) {
+  .control:focus-visible { outline-color: Highlight; }
+  .control[aria-invalid="true"] { outline-color: Mark; }
 }
 
 @media (prefers-reduced-motion: reduce) {

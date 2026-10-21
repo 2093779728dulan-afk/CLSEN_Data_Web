@@ -30,6 +30,10 @@ describe("visual baseline approval", () => {
 });
 
 describe("visual baseline command", () => {
+  it("limits an incremental update to the selected stories", () => {
+    expect(createVisualBaselineCommand("node", ".", "pages-catalog-import-review").args.slice(-2))
+      .toEqual(["--grep", "pages-catalog-import-review"]);
+  });
   it("uses the current Node runtime instead of spawning a Windows command shim", () => {
     const command = createVisualBaselineCommand("C:\\runtime\\node.exe", "C:\\project\\frontend");
 

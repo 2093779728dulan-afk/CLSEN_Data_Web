@@ -1,0 +1,29 @@
+.content { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-5) var(--space-6); }
+.content:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.receipt { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.receipt > div { display: grid; gap: var(--space-1); }
+.receipt span, .ledger dt, .move span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.ledger { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin: 0; padding: var(--space-4); background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+.ledger dd { display: grid; gap: var(--space-1); margin: var(--space-2) 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.ledger small, .move small { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: 400; line-height: 1.5; }
+.move { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-control); padding: var(--space-4); }
+.move h3 { grid-column: 1 / -1; }
+.move > div { display: grid; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
+.move h3, .totals h3 { margin: 0; font-size: var(--font-size-sm); font-weight: 600; }
+.totals { display: grid; gap: var(--space-3); }
+.totals dl { display: flex; gap: var(--space-3); flex-wrap: wrap; margin: 0; }
+.totals dl > div { display: flex; align-items: baseline; gap: var(--space-3); border-bottom: 1px solid var(--color-border); padding: var(--space-2) 0; min-width: 0; }
+.totals dt { color: var(--color-text-muted); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
+.totals dd { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+.operator { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.6; }
+.actions { display: flex; justify-content: flex-end; gap: var(--space-2); border-top: 1px solid var(--color-border); padding-top: var(--space-4); }
+.stage { padding: var(--space-6); }
+.stage h1 { margin: 0 0 var(--space-3); }
+@media (max-width: 600px) {
+  .content { padding: var(--space-4); }
+  .ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .move { grid-template-columns: 1fr; }
+  .actions { flex-direction: column-reverse; }
+  .actions > button { width: 100%; }
+  .stage { padding: var(--space-4); }
+}

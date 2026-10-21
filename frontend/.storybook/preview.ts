@@ -1,6 +1,5 @@
 import type { Preview } from "@storybook/react-vite";
 
-import "@fontsource-variable/noto-sans-sc";
 import "../src/design-system/tokens.css";
 import "../src/design-system/primitives.css";
 import "./preview.css";

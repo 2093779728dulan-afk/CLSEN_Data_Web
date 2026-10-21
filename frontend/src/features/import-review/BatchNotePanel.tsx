@@ -1,5 +1,4 @@
-import surfaceCss from "./ReviewSurfaces.module.css";
-import { Button } from "../../design-system";
+import { BatchNotesView } from "./BatchNotesView";
 import { useState, type FormEvent } from "react";
 
 import {
@@ -118,75 +117,11 @@ function BatchNotes({ batchId }: Props) {
 
   const busy = busyAction !== undefined || loadState !== "loaded";
 
-  return (
-    <section aria-label={`导入批次 #${batchId} 备注`} className={surfaceCss["batch-note-panel"]}>
-      <header className={surfaceCss["batch-note-panel__summary"]}>
-        <div className={surfaceCss["batch-note-panel__identity"]} aria-hidden="true">
-          <span>批次</span>
-          <strong>#{batchId}</strong>
-        </div>
-        <div>
-          <p className="section-kicker">原表级审核证据</p>
-          <h3>批次备注</h3>
-          <p>记录文件整体的核对结论或补充说明，不改变原始 CSV。</p>
-        </div>
-        <Button
-          aria-controls={contentId}
-          aria-expanded={expanded}
-          variant="secondary"
-          onClick={toggleExpanded}
-          type="button"
-        >
-          {expanded ? "收起批次备注" : "管理批次备注"}
-        </Button>
-      </header>
-
-      {expanded && (
-        <div className={surfaceCss["batch-note-panel__body"]} id={contentId}>
-          <section aria-label="已有批次备注" className={surfaceCss["batch-note-panel__ledger"]}>
-            <header>
-              <h4>已记录备注</h4>
-              {loadState === "loaded" && <span>{notes.length} 条</span>}
-            </header>
-            {loadState === "loading" && <p className="stage-placeholder" role="status">正在读取批次备注…</p>}
-            {loadState === "error" && (
-              <div className={surfaceCss["batch-note-panel__load-error"]}>
-                <p className="form-error" role="alert">{loadError}</p>
-                <Button variant="quiet" onClick={() => { void loadNotes(); }} type="button">重新加载批次备注</Button>
-              </div>
-            )}
-            {loadState === "loaded" && notes.length === 0 && <p className="stage-placeholder">这个导入批次还没有备注。</p>}
-            {notes.length > 0 && (
-              <ul className={surfaceCss["batch-note-list"]}>
-                {notes.map((note) => (
-                  <li key={note.note_key}>
-                    <p>{note.body}</p>
-                    <span>{note.author_username} · 仅审核人员 · 第 {note.revision_number} 版</span>
-                    <NoteRevisionEditor busy={busy} internalOnly note={note} onRevise={reviseNote} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <form className={surfaceCss["batch-note-panel__form"]} onSubmit={(event) => { void appendNote(event); }}>
-            <div>
-              <p className="section-kicker">追加记录</p>
-              <h4>补充批次说明</h4>
-            </div>
-            <label className="field-stack">
-              批次备注内容
-              <textarea maxLength={4096} onChange={(event) => setBody(event.target.value)} rows={3} value={body} />
-            </label>
-            <p className="stage-placeholder">批次备注仅审核人员可见，不进入已发布版本的查看页面。</p>
-            {actionError && <p className="form-error" role="alert">{actionError}</p>}
-            {notice && <p aria-live="polite" className="form-notice">{notice}</p>}
-            <Button variant="secondary" disabled={busy || !body.trim()} type="submit">
-              {busyAction === "append" ? "正在追加…" : "追加批次备注"}
-            </Button>
-          </form>
-        </div>
-      )}
-    </section>
-  );
+  return <BatchNotesView
+    batchId={batchId} expanded={expanded} contentId={contentId} loadState={loadState} notes={notes}
+    body={body} busy={busy} busyAction={busyAction} loadError={loadError} actionError={actionError} notice={notice}
+    onToggle={toggleExpanded} onRetry={() => { void loadNotes(); }} onBodyChange={setBody}
+    onAppend={(event) => { void appendNote(event); }}
+    renderRevision={(note) => <NoteRevisionEditor busy={busy} internalOnly note={note} onRevise={reviseNote} />}
+  />;
 }

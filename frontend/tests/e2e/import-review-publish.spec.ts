@@ -505,7 +505,7 @@ test("orchestrates upload, review, publication, and immutable-version viewing ag
   await page.getByLabel("生成草稿原因").fill("浏览器主流程验收");
   await page.getByRole("button", { name: "生成审核草稿" }).click();
   await expect(page.getByRole("heading", { name: "草稿审核 · v1" })).toBeVisible();
-  await expect(page.getByText("当前筛选没有行。关闭“仅看差异”或更改搜索条件。")).toBeVisible();
+  await expect(page.getByText("当前筛选没有匹配行", { exact: true })).toBeVisible();
   await page.getByLabel("仅看差异").uncheck();
   await expect(page.getByRole("button", { name: "ordered_product_sales，当前值 10.00" })).toBeVisible();
 

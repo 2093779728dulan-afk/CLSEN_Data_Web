@@ -1,0 +1,42 @@
+.header.header > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+}
+.header.header > .groups > th { height: 28px; color: var(--color-text-muted); font-weight: 600; }
+.header.header > .columns > th { top: 28px; height: 40px; min-width: 72px; background: var(--color-surface); }
+.header.header > tr > .frozen { z-index: calc(var(--z-sticky) + 1); box-shadow: 1px 0 0 var(--color-border); }
+/* The retained legacy leading-column rule already uses !important. */
+.header.header > tr > .leading { z-index: calc(var(--z-sticky) + 2) !important; background: var(--color-surface-muted); box-shadow: 1px 0 0 var(--color-border); }
+.header.header .sort { display: flex; align-items: center; gap: var(--space-1); width: calc(100% - var(--space-2)); min-width: 0; min-height: 38px; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: inherit; font: inherit; font-weight: 650; text-align: left; cursor: pointer; transition: color var(--motion-interaction) var(--motion-ease-standard); }
+.label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.header.header .sortIcon { width: 14px; height: 14px; flex-shrink: 0; margin-left: auto; color: var(--color-text-muted); }
+.header.header .stat { flex-shrink: 0; margin: 0; padding: 1px var(--space-1); border-radius: var(--radius-control); color: var(--color-text-muted); background: var(--color-surface-muted); font-size: 10px; font-weight: 500; }
+.cell[data-compact] .stat { width: 6px; height: 6px; padding: 0; border-radius: var(--radius-pill); background: var(--color-text-muted); font-size: 0; }
+.header.header > tr > th[aria-sort="ascending"], .header.header > tr > th[aria-sort="descending"] { color: var(--color-primary-strong); background: var(--color-info-bg); box-shadow: inset 0 -2px var(--color-primary); }
+.header.header th[aria-sort="ascending"] .sortIcon, .header.header th[aria-sort="descending"] .sortIcon { color: var(--color-primary); }
+.header.header .sort:hover { color: var(--color-primary-strong); }
+.header.header .sort:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; box-shadow: var(--focus-ring); }
+.header.header .resizer { position: absolute; top: 0; right: -8px; z-index: calc(var(--z-sticky) + 2); display: grid; place-items: center; width: 24px; height: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--color-border); cursor: col-resize; touch-action: none; }
+.resizer > span { width: 2px; height: 18px; border-radius: var(--radius-pill); background: currentColor; transition: color var(--motion-interaction) var(--motion-ease-standard); }
+.header.header .resizer:hover, .header.header .resizer:focus-visible, .cell[data-resizing] .resizer { color: var(--color-primary); }
+.header.header .resizer:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -3px; background: var(--color-info-bg); }
+@media (max-width: 768px) { .header.header > .columns > th, .header.header .sort { height: 44px; min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .header.header .sort, .resizer > span { transition: none; } }
+.story { padding: var(--space-4); color: var(--color-text); }
+.story p { color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.6; }
+.scroll { max-width: 100%; overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.table { table-layout: fixed; border-spacing: 0; font-size: var(--font-size-sm); }
+.table td { padding: var(--space-3) var(--space-2); overflow: hidden; border-bottom: 1px solid var(--color-border); background: var(--color-surface); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.identity { position: sticky; z-index: 1; }

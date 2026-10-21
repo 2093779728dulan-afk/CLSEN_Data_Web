@@ -20,7 +20,6 @@ import type {
   UndoPublishedMoveRequest,
   UndoablePublishedMoveResponse,
   VersionDetailResponse,
-  VersionLineageResponse,
   VersionSummaryResponse,
 } from "../../api/generated";
 import type { Principal, ReportType } from "../../api/types";
@@ -33,6 +32,8 @@ import {
   ReturnDedupStagingSupersededError,
 } from "../workbench/workbenchApi";
 import "./VersionHistory.css";
+import { RevisionConfirmationView, MoveConfirmationView, UndoMoveConfirmationView, RollbackConfirmationView } from "./VersionCommandViews";
+import { VersionHistoryView } from "./VersionHistoryView";
 import { VersionRows } from "./VersionRows";
 import { BatchReviewHistory } from "../batch-review/BatchReviewHistory";
 
@@ -121,14 +122,14 @@ type ActiveDraftTargetPreview = {
   publication?: VersionSummaryResponse;
 };
 
-type MoveTargetPreview =
+export type MoveTargetPreview =
   | { kind: "empty" }
   | PublishedTargetPreview
   | ActiveDraftTargetPreview
   | { datasetId: number; kind: "pointerless" }
   | { kind: "invalid"; message: string };
 
-type MoveDecision =
+export type MoveDecision =
   | "create"
   | "merge_published"
   | "replace_published"
@@ -245,41 +246,6 @@ function undoMoveErrorMessage(reason: unknown) {
   return reason instanceof Error ? reason.message : "跨日期移动撤销未完成。";
 }
 
-function reportTypeLabel(reportType: ReportType) {
-  return reportType === "business_report" ? "经营报告" : "退货报告";
-}
-
-function statusLabel(version: VersionSummaryResponse) {
-  if (version.is_current_publication) return "当前发布";
-  if (version.is_active_draft) return "活动草稿";
-  if (version.status === "ready_for_publish") return "待发布";
-  if (version.status === "published") return "历史发布";
-  if (version.status === "discarded") return "已废弃";
-  return "草稿";
-}
-
-function formatTimestamp(value: string | null) {
-  if (!value) return "—";
-  const instant = new Date(value);
-  if (Number.isNaN(instant.getTime())) return value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    hour12: false,
-    timeStyle: "short",
-  }).format(instant);
-}
-
-function lineageLabel(lineage: VersionLineageResponse) {
-  const labels: Record<VersionLineageResponse["lineage_type"], string> = {
-    base: "基础版本",
-    draft_predecessor: "草稿前序",
-    merge_source: "合并来源",
-    merge_target: "合并目标",
-    moved_source: "跨日来源",
-  };
-  return `${labels[lineage.lineage_type]} · v${lineage.version_no}`;
-}
-
 function errorMessage(reason: unknown) {
   if (reason instanceof ApiRequestError && reason.status === 409) {
     return "发布指针或版本状态已变化，请刷新版本记录后重新确认。";
@@ -339,46 +305,8 @@ function PublishedRevisionDialog({
     }
   };
 
-  return (
-    <div className="version-history__dialog-layer" role="presentation">
-      <form
-        aria-label="创建发布修订"
-        className="version-history__dialog"
-        onSubmit={(event) => { void submit(event); }}
-        role="dialog"
-      >
-        <header>
-          <div><span>PUBLISHED REVISION</span><h2>基于 v{source.version_no} 创建修订</h2></div>
-          <button aria-label="关闭创建修订" disabled={submitting} onClick={onClose} type="button">×</button>
-        </header>
-        <p>当前发布版本保持在线；系统会创建一个新的审核草稿，审核并发布后才会切换发布指针。</p>
-        <dl>
-          <div><dt>报告日</dt><dd>{source.report_date}</dd></div>
-          <div><dt>当前发布</dt><dd>v{source.version_no}</dd></div>
-        </dl>
-        <label>
-          修订原因
-          <textarea
-            disabled={submitting}
-            onChange={(event) => {
-              setReason(event.target.value);
-              operationKey.current = undefined;
-            }}
-            required
-            rows={4}
-            value={reason}
-          />
-        </label>
-        {error && <p className="version-history__error" role="alert">{error}</p>}
-        <footer>
-          <button className="version-history__secondary" disabled={submitting} onClick={onClose} type="button">取消</button>
-          <button className="version-history__primary" disabled={submitting || !reason.trim()} type="submit">
-            {submitting ? "正在创建…" : "确认创建修订"}
-          </button>
-        </footer>
-      </form>
-    </div>
-  );
+  return <RevisionConfirmationView source={source} reason={reason} submitting={submitting} error={error} onClose={onClose}
+    onReasonChange={value => { setReason(value); operationKey.current = undefined; }} onSubmit={event => { void submit(event); }} />;
 }
 
 function PublishedMoveDialog({
@@ -524,101 +452,13 @@ function PublishedMoveDialog({
     }
   };
 
-  return (
-    <div className="version-history__dialog-layer" role="presentation">
-      <form
-        aria-label="已发布数据跨日期移动"
-        aria-modal="true"
-        className="version-history__dialog version-history__dialog--move"
-        onSubmit={(event) => { void submitMove(event); }}
-        role="dialog"
-      >
-        <header>
-          <div><span>ADMIN DATE MOVE</span><h2>移动当前发布版本</h2></div>
-          <button aria-label="关闭跨日期移动" disabled={submitting} onClick={onClose} type="button">×</button>
-        </header>
-
-        <div className="version-history__move-route" aria-label="移动日期范围">
-          <div><span>来源报告日</span><strong>{source.report_date}</strong><small>v{source.version_no} 保持发布</small></div>
-          <span aria-hidden="true">→</span>
-          <div><span>目标报告日</span><strong>{targetDate || "尚未选择"}</strong><small>{reportTypeLabel(source.report_type)}</small></div>
-        </div>
-
-        <div className="version-history__target-check">
-          <label>目标报告日<input disabled={submitting} max="9999-12-31" min="2000-01-01" onChange={(event) => changeTargetDate(event.target.value)} required type="date" value={targetDate} /></label>
-          <button className="version-history__secondary" disabled={submitting || checking || !targetDate || targetDate === source.report_date} onClick={() => { void inspectTarget(); }} type="button">{checking ? "正在检查…" : "检查目标日期"}</button>
-        </div>
-
-        {targetPreview?.kind === "empty" && (
-          <section className="version-history__target-state version-history__target-state--empty">
-            <strong>目标日期尚无数据</strong>
-            <p>将创建新的目标数据集和活动草稿；来源发布版本在审核期间继续生效。</p>
-          </section>
-        )}
-
-        {targetPreview?.kind === "published" && (
-          <section className="version-history__target-state">
-            <strong>目标日期已有发布版本 v{targetPreview.publication.version_no}</strong>
-            <p>选择如何生成审核草稿。此步骤不会立即切换任一日期的发布指针。</p>
-            <fieldset className="version-history__decision-list">
-              <legend>目标处理方式</legend>
-              <label><input aria-label="合并目标发布版本" checked={decision === "merge_published"} disabled={submitting} name="published-target" onChange={() => changeDecision("merge_published")} type="radio" />合并目标发布版本<span>保留目标与来源数据，行冲突由服务端阻断，绝不自动覆盖。</span></label>
-              <label><input aria-label="替换目标发布版本" checked={decision === "replace_published"} disabled={submitting} name="published-target" onChange={() => changeDecision("replace_published")} type="radio" />替换目标发布版本<span>审核草稿只以来源版本为基础；最终生效仍需完整校验和确认。</span></label>
-              <label><input aria-label="取消本次移动" checked={decision === "client_cancel"} disabled={submitting} name="published-target" onChange={() => changeDecision("client_cancel")} type="radio" />取消本次移动<span>关闭流程，不向服务器发送写请求。</span></label>
-            </fieldset>
-          </section>
-        )}
-
-        {targetPreview?.kind === "active_draft" && (
-          <section className="version-history__target-state version-history__target-state--draft">
-            <strong>目标日期已有活动草稿 v{targetPreview.draft.version_no}</strong>
-            <p>所有选项都绑定当前草稿修订与指针时间；目标状态变化时服务器将拒绝命令。</p>
-            <fieldset className="version-history__decision-list">
-              <legend>活动草稿处理方式</legend>
-              <label><input aria-label="合并到活动草稿" checked={decision === "merge_draft"} disabled={submitting} name="draft-target" onChange={() => changeDecision("merge_draft")} type="radio" />合并到活动草稿<span>生成合并草稿并保留两侧谱系，旧活动草稿作为已审计前序版本封存。</span></label>
-              <label><input aria-label="记录取消，保留活动草稿" checked={decision === "cancel_draft"} disabled={submitting} name="draft-target" onChange={() => changeDecision("cancel_draft")} type="radio" />记录取消，保留活动草稿<span>服务器记录取消决定，不修改来源发布或目标草稿。</span></label>
-              {targetPreview.publication && <label><input aria-label="强制重建并合并目标发布" checked={decision === "force_merge"} disabled={submitting} name="draft-target" onChange={() => changeDecision("force_merge")} type="radio" />强制重建并合并目标发布<span>废弃当前活动草稿，以目标发布版本与来源版本合并重建。</span></label>}
-              <label><input aria-label="强制重建，仅保留来源版本" checked={decision === "force_replace"} disabled={submitting} name="draft-target" onChange={() => changeDecision("force_replace")} type="radio" />强制重建，仅保留来源版本<span>废弃当前活动草稿，新草稿只复制来源发布版本。</span></label>
-            </fieldset>
-          </section>
-        )}
-
-        {targetPreview?.kind === "pointerless" && (
-          <section className="version-history__target-state version-history__target-state--blocked">
-            <strong>目标日期只有历史版本，但没有活动草稿或当前发布指针。</strong>
-            <p>当前移动 API 无法可靠表达这个目标状态，系统不会猜测或自动覆盖。</p>
-          </section>
-        )}
-
-        {targetPreview?.kind === "invalid" && (
-          <section className="version-history__target-state version-history__target-state--blocked">
-            <strong>目标指针状态不完整</strong><p>{targetPreview.message} 系统不会继续创建草稿。</p>
-          </section>
-        )}
-
-        {targetPreview && decision && decision !== "client_cancel" && targetPreview.kind !== "pointerless" && targetPreview.kind !== "invalid" && (
-          <label>移动原因<textarea disabled={submitting} maxLength={1000} onChange={(event) => { setReason(event.target.value); resetCommandKey(); }} required rows={3} value={reason} /></label>
-        )}
-
-        {mergeTargetVersionId && <MergeDecisionMatrix disabled={submitting} onStateChange={(state) => { setMergeState(state); resetCommandKey(); }} sourceId={source.version_id} sourceKind="dataset_version" targetVersionId={mergeTargetVersionId} />}
-
-        {forceRebuild && (
-          <label className="version-history__force-confirm"><input checked={forceConfirmed} disabled={submitting} onChange={(event) => { setForceConfirmed(event.target.checked); resetCommandKey(); }} type="checkbox" />我确认目标活动草稿会被废弃，但审计记录会保留。</label>
-        )}
-
-        {moveError && <p className="version-history__dialog-error" role="alert">{moveError}</p>}
-        <p className="version-history__warning">这里只创建目标日期的审核草稿。来源发布数据在最终审核生效前不会被撤下。</p>
-        <footer>
-          <button className="version-history__secondary" disabled={submitting} onClick={onClose} type="button">返回版本记录</button>
-          {decision === "client_cancel" ? (
-            <button className="version-history__secondary" disabled={submitting} onClick={onClose} type="button">关闭且不创建移动草稿</button>
-          ) : commandTarget ? (
-            <button className={forceRebuild ? "version-history__danger" : "version-history__primary"} disabled={submitting || !reason.trim() || (forceRebuild && !forceConfirmed) || (mergeTargetVersionId !== undefined && !mergeState.ready)} type="submit">{submitting ? "正在提交…" : submitLabel}</button>
-          ) : null}
-        </footer>
-      </form>
-    </div>
-  );
+  return <MoveConfirmationView source={source} targetDate={targetDate} targetPreview={targetPreview} decision={decision} reason={reason}
+    submitting={submitting} checking={checking} forceRebuild={forceRebuild} forceConfirmed={forceConfirmed} changeTargetDate={changeTargetDate}
+    changeDecision={changeDecision} onForceConfirmedChange={value => { setForceConfirmed(value); resetCommandKey(); }}
+    onReasonChange={value => { setReason(value); resetCommandKey(); }} onInspectTarget={() => { void inspectTarget(); }} commandReady={Boolean(commandTarget)}
+    mergeReady={mergeTargetVersionId === undefined || mergeState.ready} moveError={moveError} submitLabel={submitLabel} onClose={onClose}
+    onSubmit={event => { void submitMove(event); }}
+    mergeMatrix={mergeTargetVersionId ? <MergeDecisionMatrix disabled={submitting} onStateChange={state => { setMergeState(state); resetCommandKey(); }} sourceId={source.version_id} sourceKind="dataset_version" targetVersionId={mergeTargetVersionId} /> : undefined} />;
 }
 
 function UndoPublishedMoveDialog({
@@ -690,147 +530,12 @@ function UndoPublishedMoveDialog({
     }
   };
 
-  return (
-    <div className="version-history__dialog-layer" role="presentation">
-      <form
-        aria-label="撤销跨日期移动确认"
-        aria-modal="true"
-        className="version-history__dialog version-history__dialog--move"
-        onSubmit={(event) => { void submitUndo(event); }}
-        role="dialog"
-      >
-        <header>
-          <div><span>ADMIN MOVE REVERSAL</span><h2>撤销跨日期移动</h2></div>
-          <button aria-label="关闭撤销确认" disabled={submitting} onClick={onClose} type="button">×</button>
-        </header>
-
-        <p>系统将同时锁定两个报告日，并在一个事务内恢复两侧发布指针。</p>
-        <div className="version-history__move-route version-history__move-route--reverse" aria-label="撤销后的日期恢复路线">
-          <div>
-            <span>恢复来源报告日</span>
-            <strong>{move.source_report_date}</strong>
-            <small>恢复版本 #{move.restore_source_version_id}</small>
-          </div>
-          <span aria-hidden="true">←</span>
-          <div>
-            <span>撤销目标报告日</span>
-            <strong>{move.target_report_date}</strong>
-            <small>{move.restore_target_version_id === null ? "恢复为无发布版本" : `恢复版本 #${move.restore_target_version_id}`}</small>
-          </div>
-        </div>
-
-        <dl>
-          <div><dt>当前目标版本</dt><dd>#{move.moved_target_version_id}</dd></div>
-          <div><dt>原移动命令</dt><dd>#{move.move_command_id}</dd></div>
-          <div><dt>移动完成时间</dt><dd>{formatTimestamp(move.completed_at)}</dd></div>
-        </dl>
-        <label>
-          撤销原因
-          <textarea
-            disabled={submitting}
-            maxLength={1000}
-            onChange={(event) => {
-              setReason(event.target.value);
-              setUndoError(undefined);
-              operationKey.current = undefined;
-            }}
-            required
-            rows={4}
-            value={reason}
-          />
-        </label>
-        {undoError && <p className="version-history__dialog-error" role="alert">{undoError}</p>}
-        <p className="version-history__warning">任一日期已有新发布或活动草稿时，服务器会拒绝整个操作，不会只恢复一侧。</p>
-        <footer>
-          <button className="version-history__secondary" disabled={submitting} onClick={onClose} type="button">保留当前移动</button>
-          <button className="version-history__danger" disabled={submitting || !reason.trim()} type="submit">
-            {submitting ? "正在撤销…" : "确认撤销跨日期移动"}
-          </button>
-        </footer>
-      </form>
-    </div>
-  );
-}
-
-function VersionSpine({
-  canAdminister,
-  currentPublication,
-  onForceRebuildRequest,
-  onRollback,
-  onSelect,
-  selectedVersionId,
-  versions,
-}: {
-  canAdminister: boolean;
-  currentPublication?: VersionSummaryResponse;
-  onForceRebuildRequest?: (draft: VersionSummaryResponse) => void;
-  onRollback: (version: VersionSummaryResponse) => void;
-  onSelect: (version: VersionSummaryResponse) => void;
-  selectedVersionId?: number;
-  versions: VersionSummaryResponse[];
-}) {
-  return (
-    <ol className="version-history__spine">
-      {versions.map((version) => {
-        const rollbackEligible = canAdminister
-          && version.status === "published"
-          && !version.is_current_publication
-          && currentPublication?.dataset_id === version.dataset_id;
-        return (
-          <li
-            className={`version-history__spine-item version-history__spine-item--${version.status}${version.is_current_publication ? " version-history__spine-item--current" : ""}`}
-            key={version.version_id}
-          >
-            <span className="version-history__node" aria-hidden="true" />
-            <article aria-current={selectedVersionId === version.version_id ? "true" : undefined}>
-              <button
-                aria-label={`查看版本 v${version.version_no}，${statusLabel(version)}`}
-                className="version-history__select"
-                onClick={() => onSelect(version)}
-                type="button"
-              >
-                <span className="version-history__version-no">v{version.version_no}</span>
-                <span className={`version-history__state version-history__state--${version.is_current_publication ? "published" : version.is_active_draft ? "draft" : version.status}`}>
-                  {statusLabel(version)}
-                </span>
-                <small>{formatTimestamp(version.created_at)}</small>
-                <span className="version-history__revision">数据 r{version.data_revision} · 审核 r{version.review_revision}</span>
-              </button>
-              <div className="version-history__item-actions">
-                {rollbackEligible && <button onClick={() => onRollback(version)} type="button">回滚到 v{version.version_no}</button>}
-                {canAdminister && version.is_active_draft && onForceRebuildRequest && (
-                  <button onClick={() => onForceRebuildRequest(version)} type="button">请求重建 v{version.version_no}</button>
-                )}
-              </div>
-            </article>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-function LineageList({
-  emptyText,
-  items,
-}: {
-  emptyText: string;
-  items: VersionLineageResponse[];
-}) {
-  if (items.length === 0) return <p className="version-history__lineage-empty">{emptyText}</p>;
-  return (
-    <ul className="version-history__lineage-list">
-      {items.map((item) => (
-        <li key={`${item.version_id}:${item.lineage_type}:${item.lineage_ordinal}`}>
-          <span>{lineageLabel(item)}</span>
-          <small>{item.report_date} · {reportTypeLabel(item.report_type)}</small>
-        </li>
-      ))}
-    </ul>
-  );
+  return <UndoMoveConfirmationView move={move} reason={reason} submitting={submitting} undoError={undoError} onClose={onClose}
+    onReasonChange={value => { setReason(value); setUndoError(undefined); operationKey.current = undefined; }} onSubmit={event => { void submitUndo(event); }} />;
 }
 
 type VersionHistoryContentProps = VersionHistoryProps & {
+  onRouteFilterChange?: (filter: VersionHistoryFilter) => void;
   routeBatchReviewRunId?: number;
   routeReportDate?: string;
   routeReportType?: ReportType;
@@ -848,6 +553,7 @@ function VersionHistoryContent({
   routeBatchReviewRunId,
   routeReportDate,
   routeReportType,
+  onRouteFilterChange,
 }: VersionHistoryContentProps) {
   const canAdminister = principal.roles.includes("admin");
   const canManageData = canAdminister || principal.roles.includes("data_manager");
@@ -1108,147 +814,20 @@ function VersionHistoryContent({
     ]);
   };
 
-  return (
-    <main className="version-history" id="main-content">
-      <header className="version-history__hero">
-        <div>
-          <p className="version-history__kicker">IMMUTABLE VERSION LINEAGE</p>
-          <h1>版本记录</h1>
-          <p>{batchReviewMode ? `仅显示批量任务 #${routeBatchReviewRunId} 产生且当前仍为待发布的草稿。` : "每个报告日与报表类型独立维护发布指针。历史版本不会覆盖，回滚也会留下新的发布事件。"}</p>
-        </div>
-        {!batchReviewMode ? <form aria-label="版本筛选" className="version-history__filters">
-          <label>报告日期<input onChange={(event) => setReportDate(event.target.value)} type="date" value={reportDate} /></label>
-          <label>报表类型<select onChange={(event) => setReportType(event.target.value as ReportType)} value={reportType}><option value="business_report">经营报告</option><option value="return_report">退货报告</option></select></label>
-        </form> : <a className="version-history__secondary" href={`/review/batch/${routeBatchReviewRunId}`}>返回批量任务</a>}
-      </header>
-
-      {canManageData && !batchReviewMode && <BatchReviewHistory />}
-      {isViewer && <p className="version-history__boundary">查看人员仅能读取已发布版本和查看人员可见备注。</p>}
-      {canAdminister && undoLookupUnavailable && (
-        <p className="version-history__boundary">撤销状态暂时无法读取；已隐藏撤销入口，版本浏览不受影响。</p>
-      )}
-      {notice && <p className="version-history__notice" aria-live="polite">{notice}</p>}
-      {error && <p className="version-history__error" role="alert">{error}</p>}
-
-      <section className="version-history__docket" aria-labelledby="version-docket-title">
-        <div>
-          <span>{batchReviewMode ? "BATCH REVIEW RESULTS" : "REPORT SLICE"}</span>
-          <h2 id="version-docket-title">{batchReviewMode ? `批量任务 #${routeBatchReviewRunId} · 待发布草稿` : `${reportTypeLabel(reportType)} · ${reportDate}`}</h2>
-        </div>
-        <dl>
-          <div><dt>当前发布</dt><dd>{currentPublication ? `v${currentPublication.version_no}` : "—"}</dd></div>
-          <div><dt>活动草稿</dt><dd>{activeDraft ? `v${activeDraft.version_no}` : "—"}</dd></div>
-          <div><dt>可见版本</dt><dd>{versions.length}</dd></div>
-        </dl>
-      </section>
-
-      {loading ? (
-        <p className="version-history__loading">{batchReviewMode ? "正在读取任务的待发布草稿…" : "正在读取该日期的版本谱系…"}</p>
-      ) : versions.length === 0 ? (
-        <section className="version-history__empty">
-          <span aria-hidden="true">v</span>
-          <div><h2>{batchReviewMode ? "此任务当前没有待发布草稿。" : `该日期的${reportTypeLabel(reportType)}还没有版本。`}</h2><p>{batchReviewMode ? "草稿发布、退回或发生状态变化后会自动离开此筛选。" : "完成导入、审核与发布后，版本证据会出现在这里。"}</p></div>
-        </section>
-      ) : (
-        <div className="version-history__workspace">
-          <section aria-labelledby="version-list-title" className="version-history__list-panel">
-            <header><p>VERSION SPINE</p><h2 id="version-list-title">不可变版本脊柱</h2></header>
-            <VersionSpine
-              canAdminister={canAdminister}
-              currentPublication={currentPublication}
-              onForceRebuildRequest={onForceRebuildRequest}
-              onRollback={openRollback}
-              onSelect={selectVersion}
-              selectedVersionId={selectedVersionId}
-              versions={versions}
-            />
-          </section>
-
-          <section aria-labelledby="version-detail-title" className="version-history__detail-panel">
-            {detailLoading && <p className="version-history__loading">正在读取版本详情…</p>}
-            {!detailLoading && detail && (
-              <>
-                <header className="version-history__detail-heading">
-                  <div><span>VERSION #{detail.version_id}</span><h2 id="version-detail-title">v{detail.version_no} · {statusLabel(detail)}</h2></div>
-                  <div className="version-history__detail-actions">
-                    <a href={`/${canManageData ? "review" : "published"}/${detail.report_date}?report_type=${detail.report_type}`}>{detail.is_active_draft && canManageData ? "继续审核草稿" : "返回日期工作台"}</a>
-                    <span className={`version-history__seal version-history__seal--${detail.is_current_publication ? "published" : detail.is_active_draft ? "draft" : detail.status}`}>{statusLabel(detail)}</span>
-                    {canManageData && detail.is_current_publication && (
-                      <button
-                        className="version-history__move-action"
-                        disabled={Boolean(activeDraft) || !detail.published_at}
-                        onClick={() => setRevisionSource(detail)}
-                        title={activeDraft
-                          ? "该报告已有活动草稿，需先完成或废弃该草稿。"
-                          : !detail.published_at
-                            ? "当前发布缺少发布时间，无法建立并发预期。"
-                            : undefined}
-                        type="button"
-                      >
-                        创建修订
-                      </button>
-                    )}
-                    {canAdminister && detail.is_current_publication && (
-                      <button
-                        className="version-history__move-action"
-                        disabled={Boolean(activeDraft) || !detail.published_at}
-                        onClick={() => setMoveSource(detail)}
-                        title={activeDraft ? "来源日期已有活动草稿，需先完成或废弃该草稿。" : undefined}
-                        type="button"
-                      >
-                        移动到其他日期
-                      </button>
-                    )}
-                    {selectedUndoableMove && (
-                      <button
-                        className="version-history__undo-move-action"
-                        onClick={() => setUndoTarget(selectedUndoableMove)}
-                        type="button"
-                      >
-                        撤销跨日期移动
-                      </button>
-                    )}
-                  </div>
-                </header>
-                {detail.status === "published" && <VersionRows key={detail.version_id} versionId={detail.version_id} versionNo={detail.version_no} reportDate={detail.report_date} />}
-                {canManageData && detail.is_current_publication && activeDraft && (
-                  <p className="version-history__source-draft-block">该报告已有活动草稿 v{activeDraft.version_no}；请先完成或废弃该草稿，再创建新的修订。</p>
-                )}
-                <dl className="version-history__facts">
-                  <div><dt>创建时间</dt><dd>{formatTimestamp(detail.created_at)}</dd></div>
-                  <div><dt>封存时间</dt><dd>{formatTimestamp(detail.sealed_at)}</dd></div>
-                  <div><dt>发布时间</dt><dd>{formatTimestamp(detail.published_at)}</dd></div>
-                  <div><dt>修订</dt><dd>数据 r{detail.data_revision} / 审核 r{detail.review_revision}</dd></div>
-                </dl>
-
-                <div className="version-history__lineage-grid">
-                  <section><h3>父版本</h3><LineageList emptyText="没有父版本；这是该链的起点。" items={detail.parents} /></section>
-                  <section><h3>后续版本</h3><LineageList emptyText="没有后续版本。" items={detail.children} /></section>
-                </div>
-
-                <section className="version-history__notes" aria-labelledby="viewer-notes-title">
-                  <header><h3 id="viewer-notes-title">查看人员可见备注</h3><span>{detail.viewer_visible_notes.length} 条</span></header>
-                  {detail.viewer_visible_notes.length > 0 ? (
-                    <ol>{detail.viewer_visible_notes.map((note) => <li key={note.note_key}><p>{note.body}</p><span>修订 {note.revision_number} · {formatTimestamp(note.created_at)}</span></li>)}</ol>
-                  ) : <p>此版本没有查看人员可见备注。</p>}
-                </section>
-              </>
-            )}
-          </section>
-        </div>
-      )}
-
+  return <VersionHistoryView reportDate={reportDate} reportType={reportType}
+    setReportDate={(nextDate) => { setReportDate(nextDate); onRouteFilterChange?.({ reportDate: nextDate, reportType }); }}
+    setReportType={(nextType) => { setReportType(nextType); onRouteFilterChange?.({ reportDate, reportType: nextType }); }}
+    batchReviewMode={batchReviewMode} routeBatchReviewRunId={routeBatchReviewRunId} canAdminister={canAdminister} canManageData={canManageData} isViewer={isViewer}
+    undoLookupUnavailable={undoLookupUnavailable} notice={notice} error={error} versions={versions} currentPublication={currentPublication} activeDraft={activeDraft}
+    selectedVersionId={selectedVersionId} loading={loading} detailLoading={detailLoading} detail={detail} selectedUndoableMove={selectedUndoableMove}
+    onForceRebuildRequest={onForceRebuildRequest} openRollback={openRollback} selectVersion={selectVersion} onRevision={setRevisionSource} onMove={setMoveSource}
+    onUndoMove={() => setUndoTarget(selectedUndoableMove)} onRetry={() => void loadVersions(selectedVersionId)}
+    batchHistory={canManageData && !batchReviewMode ? <BatchReviewHistory /> : undefined}
+    versionRows={detail?.status === "published" ? <VersionRows key={detail.version_id} versionId={detail.version_id} versionNo={detail.version_no} reportDate={detail.report_date} /> : undefined}>
       {rollbackTarget && currentPublication && (
-        <div className="version-history__dialog-layer" role="presentation">
-          <form aria-label="管理员回滚确认" className="version-history__dialog" onSubmit={(event) => { void submitRollback(event); }} role="dialog">
-            <header><div><span>ADMIN ROLLBACK</span><h2>回滚到 v{rollbackTarget.version_no}</h2></div><button aria-label="关闭回滚确认" disabled={rollbackBusy} onClick={closeRollback} type="button">×</button></header>
-            <p>只切换 {reportDate} · {reportTypeLabel(reportType)} 的发布指针。</p>
-            <dl><div><dt>当前发布</dt><dd>v{currentPublication.version_no}</dd></div><div><dt>回滚目标</dt><dd>v{rollbackTarget.version_no}</dd></div></dl>
-            <label>回滚原因<textarea disabled={rollbackBusy} onChange={(event) => { setRollbackReason(event.target.value); rollbackKey.current = undefined; }} required rows={4} value={rollbackReason} /></label>
-            <p className="version-history__warning">回滚不会删除当前版本；系统会追加一条发布事件，并立即让看板读取目标版本。</p>
-            <footer><button className="version-history__secondary" disabled={rollbackBusy} onClick={closeRollback} type="button">取消</button><button className="version-history__danger" disabled={rollbackBusy || !rollbackReason.trim()} type="submit">{rollbackBusy ? "正在回滚…" : `确认回滚到 v${rollbackTarget.version_no}`}</button></footer>
-          </form>
-        </div>
+        <RollbackConfirmationView current={currentPublication} target={rollbackTarget} reportDate={reportDate} reportType={reportType}
+          reason={rollbackReason} submitting={rollbackBusy} error={error} onClose={closeRollback}
+          onReasonChange={value => { setRollbackReason(value); rollbackKey.current = undefined; }} onSubmit={event => { void submitRollback(event); }} />
       )}
 
       {revisionSource && (
@@ -1277,12 +856,11 @@ function VersionHistoryContent({
           requiresReturnDedup={reportType === "return_report"}
         />
       )}
-    </main>
-  );
+  </VersionHistoryView>;
 }
 
 function RoutedVersionHistory(props: VersionHistoryProps) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedBatchRun = Number(searchParams.get("batch_review_run_id"));
   const requestedDate = searchParams.get("report_date");
   const requestedType = searchParams.get("report_type");
@@ -1294,6 +872,12 @@ function RoutedVersionHistory(props: VersionHistoryProps) {
     : undefined;
   return <VersionHistoryContent
     {...props}
+    onRouteFilterChange={({ reportDate, reportType }) => setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set("report_date", reportDate);
+      next.set("report_type", reportType);
+      return next;
+    })}
     routeBatchReviewRunId={Number.isSafeInteger(requestedBatchRun) && requestedBatchRun > 0 ? requestedBatchRun : undefined}
     routeReportDate={routeReportDate}
     routeReportType={routeReportType}

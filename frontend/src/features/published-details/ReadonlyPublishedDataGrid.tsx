@@ -112,14 +112,14 @@ export function ReadonlyPublishedDataGrid({
     <div className={styles["published-grid__actions"]}>
       <span>{response ? `${response.pagination.total_items.toLocaleString("zh-CN")} 行 · 点击报告日期查看单日摘要` : "等待列结构"}</span>
       <div>
-        <button
+        <Button
           aria-controls="published-details-column-settings"
           aria-expanded={settingsOpen}
           disabled={columns.length === 0}
           onClick={() => setSettingsOpen((current) => !current)}
           ref={settingsTriggerRef}
           type="button"
-        >列设置</button>
+        >列设置</Button>
         {exportUrl
           ? <a download href={exportUrl}>导出 CSV</a>
           : <Button aria-describedby="published-grid-export-reason" disabled type="button">导出 CSV</Button>}
@@ -134,7 +134,7 @@ export function ReadonlyPublishedDataGrid({
       onClose={closeSettings}
     />}
     {error ? <ErrorState title="已发布明细读取失败" description={error} action={<Button onClick={onRetry}>重新读取明细</Button>} /> : !response ? <div aria-live="polite" className={styles["published-grid__state"]} role="status">正在读取只读明细和列结构…</div>
-      : <div className={styles["published-grid__scroll"]} ref={layout.containerRef} role="region" tabIndex={0}>
+      : <div className={styles["published-grid__scroll"]} ref={layout.containerRef} role="region" tabIndex={0} aria-label={`${tableLabel}可滚动表格`}>
         <table aria-label={tableLabel} style={{ width: `max(100%, ${SYSTEM_COLUMNS_WIDTH + visibleColumns.reduce((total, column) => total + (layout.widths[column.column_id] ?? 168), 0)}px)` }}>
           <DataTableHeader
             columns={visibleColumns}

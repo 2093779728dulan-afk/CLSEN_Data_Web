@@ -1,0 +1,3 @@
+.message { animation: feedback-enter var(--motion-content-enter) var(--motion-ease-enter); }
+@keyframes feedback-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .message { animation: none; } }

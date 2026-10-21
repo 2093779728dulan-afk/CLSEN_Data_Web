@@ -10,6 +10,14 @@ param(
     [string]$Profile,
 
     [Parameter()]
+    [ValidateSet("checks", "browser", "build", "a11y", "visual")]
+    [string]$FrontendStage,
+
+    [Parameter()]
+    [ValidateRange(1, 4)]
+    [int]$StorybookShard,
+
+    [Parameter()]
     [ValidateSet("8.0", "8.4")]
     [string]$MySqlVersion,
 
@@ -330,6 +338,14 @@ function Write-Stage0Identity {
 if ($Profile -ne "mysql-compatibility" -and $MySqlVersion) {
     throw "MySqlVersion is accepted only by mysql-compatibility."
 }
+if ($Profile -ne "frontend-full" -and ($FrontendStage -or $StorybookShard)) {
+    throw "FrontendStage and StorybookShard are frontend-full parameters."
+}
+if ($FrontendStage -in @("a11y", "visual")) {
+    if (-not $StorybookShard) { throw "A StorybookShard from 1 to 4 is required." }
+} elseif ($StorybookShard) {
+    throw "StorybookShard is accepted only by the a11y and visual stages."
+}
 if ($Stage0IdentityOnly -and ($ListOnly -or $ValidateOnly)) {
     throw "Stage0IdentityOnly cannot be combined with ListOnly or ValidateOnly."
 }
@@ -447,60 +463,82 @@ if ($Profile -eq "windows-smoke") {
 
 if ($Profile -eq "frontend-full") {
     if ($ListOnly) {
-        Write-Output ($profileDefinition.commands | ConvertTo-Json -Compress)
+        $commands = @($profileDefinition.commands)
+        if ($FrontendStage) {
+            $commands = @(switch ($FrontendStage) {
+                "checks" { $commands[0..3] }
+                "browser" { $commands[4] }
+                "build" { $commands[5]; $commands[8..9] }
+                "a11y" { "$($commands[6]) --shard=$StorybookShard/4 --fully-parallel --workers=1 --reporter=line" }
+                "visual" { "$($commands[7]) --shard=$StorybookShard/4 --fully-parallel --workers=1 --reporter=line" }
+            })
+        }
+        Write-Output (ConvertTo-Json -InputObject $commands -Compress)
         exit 0
     }
     Push-Location -LiteralPath (Join-Path $repositoryRoot "frontend")
     try {
         $pnpm = Resolve-PnpmCommand
-        Invoke-NativeChecked "frontend lint" { & $pnpm lint }
-        Invoke-NativeChecked "frontend typecheck" { & $pnpm typecheck }
-        Invoke-NativeChecked "frontend design-system token policy" { & $pnpm test:tokens }
-        Invoke-NativeChecked "frontend unit tests" { & $pnpm test --run }
-        $previousPlaywrightPort = $env:PLAYWRIGHT_PORT
-        $previousCutoverRun = $env:PLAYWRIGHT_CUTOVER_RUN
-        $previousPlaywrightSource = $env:VITE_PRODUCT_ANALYTICS_SOURCE
-        $portListener = [Net.Sockets.TcpListener]::new(
-            [Net.IPAddress]::Loopback,
-            0
-        )
-        try {
-            $portListener.Start()
-            $env:PLAYWRIGHT_PORT = [string](
-                ([Net.IPEndPoint]$portListener.LocalEndpoint).Port
+        if (-not $FrontendStage -or $FrontendStage -eq "checks") {
+            Invoke-NativeChecked "frontend lint" { & $pnpm lint }
+            Invoke-NativeChecked "frontend typecheck" { & $pnpm typecheck }
+            Invoke-NativeChecked "frontend design-system token policy" { & $pnpm test:tokens }
+            Invoke-NativeChecked "frontend unit tests" { & $pnpm test --run }
+        }
+        if (-not $FrontendStage -or $FrontendStage -eq "browser") {
+            $previousPlaywrightPort = $env:PLAYWRIGHT_PORT
+            $previousCutoverRun = $env:PLAYWRIGHT_CUTOVER_RUN
+            $previousPlaywrightSource = $env:VITE_PRODUCT_ANALYTICS_SOURCE
+            $portListener = [Net.Sockets.TcpListener]::new(
+                [Net.IPAddress]::Loopback,
+                0
             )
-        }
-        finally {
-            $portListener.Stop()
-        }
-        try {
-            $env:PLAYWRIGHT_CUTOVER_RUN = "1"
-            $env:VITE_PRODUCT_ANALYTICS_SOURCE = "p0_catalog"
-            Invoke-NativeChecked "frontend browser tests" {
-                & $pnpm exec playwright test
-            }
-        }
-        finally {
-            $env:PLAYWRIGHT_PORT = $previousPlaywrightPort
-            $env:PLAYWRIGHT_CUTOVER_RUN = $previousCutoverRun
-            $env:VITE_PRODUCT_ANALYTICS_SOURCE = $previousPlaywrightSource
-        }
-        Invoke-NativeChecked "frontend Storybook static build" {
-            & $pnpm storybook:build
-        }
-        Invoke-NativeChecked "frontend Storybook accessibility gate" {
-            & $pnpm test:a11y
-        }
-        Invoke-NativeChecked "frontend Storybook visual gate" {
-            & $pnpm test:visual
-        }
-        foreach ($source in @("legacy_parser", "p0_catalog")) {
-            $previous = $env:VITE_PRODUCT_ANALYTICS_SOURCE
             try {
-                $env:VITE_PRODUCT_ANALYTICS_SOURCE = $source
-                Invoke-NativeChecked "frontend $source production build" { & $pnpm build }
+                $portListener.Start()
+                $env:PLAYWRIGHT_PORT = [string](
+                    ([Net.IPEndPoint]$portListener.LocalEndpoint).Port
+                )
             }
-            finally { $env:VITE_PRODUCT_ANALYTICS_SOURCE = $previous }
+            finally { $portListener.Stop() }
+            try {
+                $env:PLAYWRIGHT_CUTOVER_RUN = "1"
+                $env:VITE_PRODUCT_ANALYTICS_SOURCE = "p0_catalog"
+                Invoke-NativeChecked "frontend browser tests" {
+                    & $pnpm exec playwright test
+                }
+            }
+            finally {
+                $env:PLAYWRIGHT_PORT = $previousPlaywrightPort
+                $env:PLAYWRIGHT_CUTOVER_RUN = $previousCutoverRun
+                $env:VITE_PRODUCT_ANALYTICS_SOURCE = $previousPlaywrightSource
+            }
+        }
+        if (-not $FrontendStage -or $FrontendStage -eq "build") {
+            Invoke-NativeChecked "frontend Storybook static build" { & $pnpm storybook:build }
+        }
+        if (-not $FrontendStage -or $FrontendStage -eq "a11y") {
+            Invoke-NativeChecked "frontend Storybook accessibility gate" {
+                if ($FrontendStage) {
+                    & $pnpm test:a11y "--shard=$StorybookShard/4" --fully-parallel --workers=1 --reporter=line
+                } else { & $pnpm test:a11y }
+            }
+        }
+        if (-not $FrontendStage -or $FrontendStage -eq "visual") {
+            Invoke-NativeChecked "frontend Storybook visual gate" {
+                if ($FrontendStage) {
+                    & $pnpm test:visual "--shard=$StorybookShard/4" --fully-parallel --workers=1 --reporter=line
+                } else { & $pnpm test:visual }
+            }
+        }
+        if (-not $FrontendStage -or $FrontendStage -eq "build") {
+            foreach ($source in @("legacy_parser", "p0_catalog")) {
+                $previous = $env:VITE_PRODUCT_ANALYTICS_SOURCE
+                try {
+                    $env:VITE_PRODUCT_ANALYTICS_SOURCE = $source
+                    Invoke-NativeChecked "frontend $source production build" { & $pnpm build }
+                }
+                finally { $env:VITE_PRODUCT_ANALYTICS_SOURCE = $previous }
+            }
         }
     }
     finally { Pop-Location }

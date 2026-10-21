@@ -3,7 +3,6 @@
   inset: 0;
   z-index: var(--z-dialog);
   background: var(--color-overlay);
-  animation: overlay-in var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .content {
@@ -22,7 +21,6 @@
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-raised);
   transform: translate(-50%, -50%);
-  animation: content-in var(--motion-duration-enter) var(--motion-ease-standard);
 }
 
 .body {
@@ -100,13 +98,20 @@
 .close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .close svg { width: 20px; height: 20px; }
 
+/* shadcn/ui Dialog data-state fade/zoom pattern, adapted to project tokens. */
+.overlay[data-state="open"] { animation: overlay-in var(--motion-overlay-enter) var(--motion-ease-enter); }
+.overlay[data-state="closed"] { animation: overlay-out var(--motion-overlay-exit) var(--motion-ease-exit); }
+.content[data-state="open"] { animation: content-in var(--motion-overlay-enter) var(--motion-ease-enter); }
+.content[data-state="closed"] { animation: content-out var(--motion-overlay-exit) var(--motion-ease-exit); }
 @keyframes overlay-in {
   from { opacity: 0; }
 }
 
 @keyframes content-in {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + var(--space-2))); }
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.98); }
 }
+@keyframes overlay-out { to { opacity: 0; } }
+@keyframes content-out { to { opacity: 0; transform: translate(-50%, -50%) scale(.98); } }
 
 @media (max-width: 600px) {
   .content {
@@ -121,6 +126,25 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .overlay,
-  .content { animation: none; }
+  .overlay[data-state],
+  .content[data-state] { animation: none; }
 }
+
+/* Radix Dialog / shadcn Sheet pattern; identical focus and dismiss semantics. */
+.content.drawer {
+  top: 0;
+  right: 0;
+  left: auto;
+  width: min(560px, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  transform: none;
+}
+.drawer[data-state="open"] { animation: drawer-in var(--motion-overlay-enter) var(--motion-ease-enter); }
+.drawer[data-state="closed"] { animation: drawer-out var(--motion-overlay-exit) var(--motion-ease-exit); }
+@keyframes drawer-in { from { opacity: 0; transform: translateX(100%); } }
+@keyframes drawer-out { to { opacity: 0; transform: translateX(100%); } }
+@media (max-width: 600px) { .content.drawer { border-radius: 0; } }
+@media (prefers-reduced-motion: reduce) { .drawer[data-state] { animation: none; } }

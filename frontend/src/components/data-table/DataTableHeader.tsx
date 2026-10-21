@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import css from "./DataTableHeader.module.css";
 
 import type { ColumnGroupSpan } from "./columnPresentation";
 import { clampColumnWidth, recommendedWidth } from "./columnPresentation";
@@ -58,13 +60,13 @@ export function DataTableHeader({ groups, columns, widths, frozenLeft, sort, onS
   const orderedLeadingColumns = leadingColumns ?? (leadingColumn ? [leadingColumn] : []);
   let leadingLeft = 0;
 
-  return <thead className="data-table-header">
-    <tr className="data-table-header__groups">
+  return <thead className={`data-table-header ${css.header}`}>
+    <tr className={`data-table-header__groups ${css.groups}`}>
       {orderedLeadingColumns.map((column, index) => {
         const left = leadingLeft;
         leadingLeft += column.width;
         return <th
-          className={`data-table-header__leading ${column.className ?? ""}`.trim()}
+          className={`data-table-header__leading ${css.leading} ${column.className ?? ""}`.trim()}
           key={`${column.label}:${index}`}
           rowSpan={2}
           scope="col"
@@ -73,19 +75,21 @@ export function DataTableHeader({ groups, columns, widths, frozenLeft, sort, onS
       })}
       {groups.map((group, index) => <th colSpan={group.colSpan} key={`${group.key}:${index}`} scope="colgroup">{group.label}</th>)}
     </tr>
-    <tr className="data-table-header__columns">
+    <tr className={`data-table-header__columns ${css.columns}`}>
       {columns.map((column) => {
         const width = clampColumnWidth(draftWidths[column.column_id] ?? widths[column.column_id] ?? recommendedWidth(column));
         const isFrozen = Object.hasOwn(frozenLeft, column.column_id);
         const ariaSort = sort?.columnId === column.column_id ? sort.direction === "asc" ? "ascending" : "descending" : "none";
         const stickyStyle = isFrozen ? { left: frozenLeft[column.column_id], width } : { width };
-        return <th aria-sort={ariaSort} className={isFrozen ? "data-table-header__frozen" : undefined} key={column.column_id} onClick={() => onSort(nextSort(sort, column.column_id))} scope="col" style={stickyStyle} title={column.source_header}>
-          <button aria-label={`按 ${column.source_header} 排序`} className="data-table-header__sort" onClick={(event) => { event.stopPropagation(); onSort(nextSort(sort, column.column_id)); }} type="button">
-            <span>{column.source_header}</span>{column.participates_in_statistics && <small>统计</small>}<i aria-hidden="true">{ariaSort === "ascending" ? "↑" : ariaSort === "descending" ? "↓" : "↕"}</i>
+        const SortIcon = ariaSort === "ascending" ? ArrowUp : ariaSort === "descending" ? ArrowDown : ArrowUpDown;
+        return <th aria-sort={ariaSort} className={`${css.cell} ${isFrozen ? `data-table-header__frozen ${css.frozen}` : ""}`} data-compact={width < 144 || undefined} data-resizing={Object.hasOwn(draftWidths, column.column_id) || undefined} key={column.column_id} onClick={() => onSort(nextSort(sort, column.column_id))} scope="col" style={stickyStyle} title={column.source_header}>
+          <button aria-label={`按 ${column.source_header} 排序`} className={`data-table-header__sort ${css.sort}`} onClick={(event) => { event.stopPropagation(); onSort(nextSort(sort, column.column_id)); }} type="button">
+            <span className={css.label}>{column.source_header}</span>{column.participates_in_statistics && <small className={css.stat} title="参与统计">统计</small>}<SortIcon aria-hidden="true" className={css.sortIcon} />
           </button>
           <button
             aria-label={`调整“${column.source_header}”列宽`}
-            className="data-table-resizer"
+            className={`data-table-resizer ${css.resizer}`}
+            title="拖动调整列宽；聚焦后用左右方向键调整"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => {
               if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -116,7 +120,7 @@ export function DataTableHeader({ groups, columns, widths, frozenLeft, sort, onS
               window.addEventListener("pointercancel", onEnd);
             }}
             type="button"
-          />
+          ><span aria-hidden="true" /></button>
         </th>;
       })}
     </tr>

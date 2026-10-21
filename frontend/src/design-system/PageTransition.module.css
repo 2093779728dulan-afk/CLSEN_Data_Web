@@ -1,0 +1,6 @@
+.page { min-width: 0; }
+
+/* Also follow a changed system preference while the page remains mounted. */
+@media (prefers-reduced-motion: reduce) {
+  .page { opacity: 1 !important; transform: none !important; }
+}

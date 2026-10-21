@@ -1,0 +1,29 @@
+.form { display: grid; gap: var(--space-5); padding: var(--space-6); min-width: 0; }
+.form p, .form dl { margin: 0; }
+.form p { line-height: 1.7; color: var(--color-text-muted); }
+.form > label { display: grid; gap: var(--space-2); font-weight: 600; font-size: var(--font-size-base); }
+.form textarea { resize: vertical; font-weight: 400; min-height: 100px; }
+.form dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-4); background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: var(--radius-control); padding: var(--space-4); }
+.form dt { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.form dd { margin: var(--space-1) 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.form footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.route { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface-muted); padding: var(--space-4); }
+.route > div { display: grid; gap: var(--space-2); min-width: 0; }
+.route span, .route small { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.route strong { font-size: var(--font-size-lg); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.targetCheck { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); }
+.targetCheck label { display: grid; gap: var(--space-2); font-weight: 600; }
+.targetState { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.decisions { display: grid; gap: var(--space-3); border: 0; margin: 0; padding: 0; min-width: 0; }
+.decisions legend { font-weight: 600; margin-bottom: var(--space-3); }
+.form :global(.ui-status) p { color: inherit; }
+.stage { padding: var(--space-6); }
+@media (max-width: 600px) {
+  .form { padding: var(--space-4); gap: var(--space-4); }
+  .route { grid-template-columns: 1fr; }
+  .route > span { display: none; }
+  .route > div + span + div { border-top: 1px solid var(--color-border); padding-top: var(--space-3); }
+  .targetCheck { grid-template-columns: 1fr; }
+  .form footer { flex-direction: column-reverse; }
+  .form footer button { width: 100%; }
+}

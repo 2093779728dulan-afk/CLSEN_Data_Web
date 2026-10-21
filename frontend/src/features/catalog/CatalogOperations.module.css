@@ -1,0 +1,26 @@
+.operations { display: grid; gap: var(--space-6); min-width: 0; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.heading > div { min-width: 0; }
+.heading h2 { margin: 0 0 var(--space-2); }
+.heading p { margin: 0; color: var(--color-text-muted); line-height: 1.7; }
+.loading { display: grid; gap: var(--space-4); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.identifier { font-family: var(--font-mono); color: var(--color-text); }
+.date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.workflow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.workflow > div { padding: var(--space-4); background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.workflow svg { width: var(--space-5); height: var(--space-5); color: var(--color-primary); margin-bottom: var(--space-3); }
+.workflow strong { display: block; font-size: var(--font-size-base); }
+.workflow p { font-size: var(--font-size-sm); color: var(--color-text-muted); line-height: 1.7; margin-bottom: 0; }
+.prerequisites { margin: 0; padding-left: var(--space-6); line-height: 1.9; }
+.history { display: grid; gap: var(--space-3); padding: 0; margin: 0; list-style: none; }
+.history > li { display: flex; gap: var(--space-4); align-items: center; justify-content: space-between; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.history p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.history a { font-weight: 600; }
+.pagination { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); font-variant-numeric: tabular-nums; }
+.sources > li { padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.sources strong, .history a { overflow-wrap: anywhere; }
+.action { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-primary); font-weight: 600; }
+.action svg { width: var(--space-4); height: var(--space-4); }
+.exportPanel { min-width: 0; }
+.exportPanel input { max-width: 100%; }
+@media (max-width: 768px) { .workflow { grid-template-columns: 1fr; } .heading { flex-wrap: wrap; } .history > li { align-items: flex-start; flex-wrap: wrap; } .pagination { justify-content: flex-start; flex-wrap: wrap; } }

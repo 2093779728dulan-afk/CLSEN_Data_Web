@@ -1,0 +1,28 @@
+.frame { min-width: 0; overflow: hidden; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+.heading h3 { margin: 0; font-size: var(--font-size-sm); font-weight: 600; }
+.heading > span { color: var(--color-text-muted); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; }
+.hint { margin: 0; padding: var(--space-2) var(--space-4); color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.6; }
+.scroller { max-width: 100%; max-height: min(65vh, 560px); overflow: auto; border-top: 1px solid var(--color-border-subtle); }
+.scroller:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--font-size-sm); }
+.table th, .table td { min-width: 160px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); border-right: 1px solid var(--color-border-subtle); vertical-align: top; }
+.table tr > :last-child { border-right: 0; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.table thead th { position: sticky; top: 0; z-index: var(--z-sticky); color: var(--color-text-muted); background: var(--color-surface-muted); text-align: right; font-size: var(--font-size-xs); font-weight: 600; }
+.table tr > th:first-child { position: sticky; left: 0; min-width: 116px; z-index: var(--z-sticky); text-align: left; background: var(--color-surface-muted); border-right: 1px solid var(--color-border); }
+.table thead th:first-child { z-index: calc(var(--z-sticky) + 1); }
+.table tbody th { font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 500; white-space: nowrap; }
+.table td { text-align: right; background: var(--color-surface); }
+.table tbody tr:hover td { background: var(--color-info-bg); }
+.label { display: block; max-width: 216px; margin-inline-start: auto; overflow-wrap: anywhere; line-height: 1.6; }
+.number { display: block; width: max-content; margin-inline-start: auto; font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.quality { display: block; margin-top: var(--space-1); }
+.caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.story { min-width: 0; max-width: 1100px; margin: 0 auto; padding: var(--space-6); color: var(--color-text); }
+.story h1 { margin: 0 0 var(--space-2); font-size: var(--font-size-lg); }
+.story > p { color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.6; }
+.storyControls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-4) 0; }
+.storyControls label { display: grid; gap: var(--space-1); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+@media (max-width: 600px) { .story { padding: var(--space-4); } }

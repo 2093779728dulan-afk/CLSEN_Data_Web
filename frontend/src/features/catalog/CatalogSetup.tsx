@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { commandApi, requestApi, StableOperationKeyStore } from "../../api/client";
-import { Button } from "../../design-system";
+import { CatalogSetupView } from "./CatalogSetupView";
 import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
 import type { AnalyticsReadiness, CatalogScopeStatusResponse, ReturnInitializationPreview, ReturnDedupStagingResponse } from "../../api/generated";
 
@@ -99,45 +98,8 @@ export function CatalogSetup({ editable = false, onGenerationReady }: { editable
     } catch { if (active.current === ticket) { setProgress(undefined); setError("首次快照尚未完成。来源或报表可能发生变化，请刷新核对；相同提交沿用操作编号，不会重复发布日报。"); } }
     finally { if (active.current === ticket) setBusy(false); }
   };
-  return <section className="catalog-panel" aria-label="商品分析初始化">
-    <h2>商品分析准备状态</h2>
-    <p>报表发布与商品主档批准是两个步骤；款式映射须审核后生效。</p>
-    {error && <p role="alert">{error}</p>}
-    {progress && <p role="status">{progress}</p>}
-    {!current && !error && <p role="status">正在读取初始化状态…</p>}
-    {current && <>
-      <ul>
-        <li>来源报表：{current.readiness.published_reports} 份已发布；日期范围 {current.readiness.coverage_from ?? "无"} 至 {current.readiness.coverage_to ?? "无"}（中间日期可能缺报）。</li>
-        <li>经营报告：{current.readiness.published_business_reports ?? 0} 份已发布；提供销售指标与商品来源。</li>
-        <li>退货报告：{current.readiness.published_return_reports ?? 0} 份已发布；提供退货事实与商品来源。缺报不等于零退货。</li>
-        <li>账号来源范围：{current.scope.status === "confirmed" ? `已确认（${current.scope.seller_account_display_name}）` : "待管理员确认"}</li>
-        <li>商品主档：{current.readiness.catalog_approved ? "已有批准版本" : "待生成候选、审核并批准"}</li>
-        <li>退货去重快照：{current.readiness.return_snapshot_present ? "已建立，读取分析时仍会校验是否匹配最新报表" : "尚未建立"}</li>
-      </ul>
-      <p>处理顺序：确认来源范围 → 建立首次退货快照 → 生成商品候选 → 审核并批准 → 读取产品分析。</p>
-      <p>{current.readiness.prerequisites_present ? "基础资料已建立。产品总表会进一步核对日期范围、映射和快照一致性。" : "初始化尚未完成，产品分析暂不可用；已有报表可从每日数据查看。"}</p>
-      {editable && current.scope.status === "unconfirmed" && (current.scope.permissions.can_confirm ? <form onSubmit={event => void confirm(event)}>
-        <h3>确认本环境的报表来源</h3>
-        <p>适用站点为 Amazon 美国站。请填写这些报表所属账号的稳定标识，不要填写密码或访问密钥；本次只确认来源，不批准商品映射。</p>
-        <label>来源账号标识<input required maxLength={255} value={account} onChange={event => setAccount(event.target.value)} disabled={busy} /></label>
-        <label>账号显示名称<input required maxLength={128} value={name} onChange={event => setName(event.target.value)} disabled={busy} /></label>
-        <label>确认依据<input required maxLength={1000} value={reason} onChange={event => setReason(event.target.value)} disabled={busy} /></label>
-        <label><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} disabled={busy} />我确认当前站点报表属于上述同一账号，理解确认后不能通过此表单改为其他账号。</label>
-        <Button type="submit" disabled={busy || !acknowledged || !account.trim() || !name.trim() || !reason.trim()}>确认来源范围</Button>
-      </form> : <p>请联系管理员确认来源范围；当前账号不能执行该操作。</p>)}
-      {current.scope.status === "confirmed" && !current.readiness.return_snapshot_present && <div>
-        <p>首次快照使用已发布退货报告，不改变日报版本、发布记录或商品映射。已发布空报告可以确认零退货；没有报告时不能按零处理。</p>
-        {editable ? <>
-          <Button disabled={busy || (current.readiness.published_return_reports ?? 0) === 0} onClick={() => void prepareInitialization()}>准备首次退货快照</Button>
-          {preview && <div>
-            <p>将使用 {preview.published_return_reports} 份退货报告，范围 {preview.coverage_from} 至 {preview.coverage_to}。经营报告将在生成商品候选时一并使用。</p>
-            <Button disabled={busy} onClick={() => void initialize()}>确认建立首次快照</Button>
-          </div>}
-        </> : <p>请由管理员或数据管理员在商品主档维护页完成初始化。</p>}
-      </div>}
-      {!editable && <Link to="/catalog">查看商品主档与初始化说明</Link>}
-    </>}
-    <p><Link to="/">查看已发布报表</Link></p>
-    <Button disabled={busy} onClick={() => setRefresh(value => value + 1)}>刷新准备状态</Button>
-  </section>;
+  return <CatalogSetupView current={current} editable={editable} busy={busy} error={error} progress={progress} preview={preview}
+    fields={{ account, name, reason, acknowledged }}
+    onFieldsChange={changes => { if (changes.account !== undefined) setAccount(changes.account); if (changes.name !== undefined) setName(changes.name); if (changes.reason !== undefined) setReason(changes.reason); if (changes.acknowledged !== undefined) setAcknowledged(changes.acknowledged); }}
+    onConfirm={event => void confirm(event)} onPrepare={() => void prepareInitialization()} onInitialize={() => void initialize()} onRefresh={() => setRefresh(value => value + 1)} />;
 }

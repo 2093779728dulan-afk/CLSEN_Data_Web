@@ -1,0 +1,95 @@
+.controls { min-width: 0; container: catalog-section / inline-size; }
+.cellLabel { display: grid; gap: var(--space-2); min-width: 0; }
+.cellLabel > span { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: 500; }
+.clearable { position: relative; min-width: 0; }
+.suggested { display: grid; gap: var(--space-2); min-width: 0; }
+.selectable { display: flex; align-items: flex-start; gap: var(--space-1); min-width: 0; }
+.controls .cellLabel .control { width: 100%; min-width: 0; min-height: var(--control-height-large); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-control); box-shadow: var(--shadow-control); color: var(--color-text); font: inherit; line-height: 1.5; }
+.controls .clearable .control { padding-right: var(--space-8); }
+.controls .cellLabel textarea.control { resize: vertical; overflow-wrap: anywhere; }
+.controls .cellLabel select.control { padding-right: var(--space-7); cursor: pointer; }
+.controls .cellLabel .control:hover:not(:disabled):not([aria-invalid="true"]) { border-color: var(--color-primary); }
+.controls .cellLabel .control:focus-visible { border-color: var(--color-focus); box-shadow: var(--focus-ring); outline: 2px solid transparent; outline-offset: 2px; }
+.controls .cellLabel .control[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: var(--danger-ring); }
+.controls .cellLabel .control:disabled { background: var(--color-surface-muted); color: var(--color-text-muted); cursor: not-allowed; }
+.controls .clear { position: absolute; right: var(--space-1); top: var(--space-1); min-height: var(--space-7); min-width: var(--space-7); width: var(--space-7); padding: 0; border-color: transparent; box-shadow: none; }
+.controls .selectClear { min-width: var(--control-height-large); min-height: var(--control-height-large); padding: var(--space-2); box-shadow: none; flex-shrink: 0; }
+.controls .clear:disabled, .controls .selectClear:disabled { visibility: hidden; }
+.controls .manualAction { justify-self: start; min-height: var(--space-7); padding: var(--space-1) var(--space-2); font-size: var(--font-size-xs); color: var(--color-primary-strong); }
+.preview { margin: 0; padding: var(--space-2) var(--space-3); border-left: 2px solid var(--color-border); color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.7; overflow-wrap: anywhere; }
+.controls .reviewCards { display: block; min-width: 0; container: catalog-editor / inline-size; }
+.controls .reviewCards thead { display: none; }
+.controls .reviewCards tbody { display: grid; gap: var(--space-4); padding: var(--space-4); }
+.controls .reviewCards tbody tr {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4);
+  padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card);
+  background: var(--color-surface); min-width: 0;
+}
+.controls .reviewCards tbody tr:global(.is-dirty) { border-color: var(--color-primary); background: var(--color-info-bg); }
+.controls .reviewCards tbody td { grid-column: 1 / -1; display: block; min-width: 0; width: auto; padding: 0; border: 0; overflow-wrap: anywhere; }
+.controls .reviewCards tbody td[hidden] { display: none; }
+.controls .reviewCards tbody td::before { display: none; }
+.controls .reviewCards tbody td:first-child { padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); box-shadow: none; }
+.controls .reviewCards tbody td:first-child strong { display: block; }
+.controls .reviewCards tbody td:first-child small { display: block; max-width: none; }
+.controls .reviewCards tbody td:focus-within { background: transparent; }
+.controls .mappingTable tbody td:global(.catalog-mapping-details) { grid-column: 1; order: 1; align-self: center; }
+.controls .reviewCards tbody td:global(.catalog-row-action) { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.controls .mappingTable tbody td:global(.catalog-row-action) { grid-column: 2; order: 2; }
+.controls .reviewCards tbody td:global(.catalog-row-action) > span { margin: 0; }
+.controls .mappingTable tbody td:global(.catalog-mapping-details):has(details[open]) { grid-column: 1 / -1; }
+.controls .mappingTable summary { cursor: pointer; color: var(--color-primary-strong); font-size: var(--font-size-sm); padding-block: var(--space-2); }
+.controls .mappingTable details[open] > div { padding-top: var(--space-3); }
+.controls .reviewCards .selectable > select { flex: 1; min-width: 0; }
+.controls .reviewCards .preview { font-size: var(--font-size-sm); color: var(--color-text); background: var(--color-page); border-left-color: var(--color-primary); }
+.controls .mappingTable .decisionGroup { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.controls .mappingTable .decisionGroup > label { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.controls .mappingTable .decisionGroup > label:has(:checked) { border-color: var(--color-primary); background: var(--color-info-bg); }
+.controls .mappingTable .decisionGroup > label:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.controls .mappingTable input[type="radio"] { width: 16px; height: 16px; min-height: 0; margin: 2px 0 0; padding: 0; box-shadow: none; }
+.controls .skuTable tbody tr { grid-template-columns: minmax(0, 1fr); }
+.controls .skuTable tbody td:global(.catalog-row-action) { padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); }
+@container catalog-editor (min-width: 660px) {
+  .controls .skuTable tbody tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .controls .skuTable tbody td[data-review-field="standard_color"],
+  .controls .skuTable tbody td[data-review-field="standard_size"],
+  .controls .skuTable tbody td[data-review-field="status"] { grid-column: auto; }
+}
+.mappingHint { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.7; }
+@container catalog-section (max-width: 900px) {
+  .controls :global(.catalog-review-table--styles),
+  .controls :global(.catalog-review-table--styles) tbody { display: block; width: 100%; }
+  .controls :global(.catalog-review-table--styles) thead { display: none; }
+  .controls :global(.catalog-review-table--styles) tbody tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: none;
+    gap: var(--space-4); padding: var(--space-4); width: 100%;
+  }
+  .controls :global(.catalog-review-table--styles) tbody td:nth-child(n) {
+    display: block; grid-area: auto; min-width: 0; width: auto; padding: 0; border: 0;
+  }
+  .controls :global(.catalog-review-table--styles) tbody td:first-child,
+  .controls :global(.catalog-review-table--styles) tbody td[data-review-field="standard_name"],
+  .controls :global(.catalog-review-table--styles) tbody td[data-review-field="change_reason"],
+  .controls :global(.catalog-review-table--styles) tbody td:global(.catalog-row-action) { grid-column: 1 / -1; }
+  .controls :global(.catalog-review-table--styles) tbody td:first-child { padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); }
+  .controls :global(.catalog-review-table--styles) tbody td:first-child small { display: block; max-width: none; }
+}
+@container catalog-editor (max-width: 540px) {
+  .controls .reviewCards tbody { padding: var(--space-3); }
+  .controls .reviewCards tbody tr { grid-template-columns: minmax(0, 1fr); padding: var(--space-3); }
+  .controls .mappingTable tbody td:global(.catalog-row-action), .controls .mappingTable tbody td:global(.catalog-mapping-details) { grid-column: 1; }
+  .controls .mappingTable tbody td:global(.catalog-row-action) { justify-content: flex-start; }
+}
+.controls .exceptionTable { display: block; min-width: 0; }
+.controls .exceptionTable thead { display: none; }
+.controls .exceptionTable tbody { display: grid; gap: var(--space-3); padding: var(--space-3); }
+.controls .exceptionTable tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.controls .exceptionTable tbody tr:global(.is-dirty) { background: var(--color-info-bg); border-color: var(--color-primary); }
+.controls .exceptionTable tbody td { min-width: 0; padding: 0; border: 0; display: block; width: auto; }
+.controls .exceptionTable tbody td:first-child { grid-column: 1 / -1; padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); box-shadow: none; }
+.controls .exceptionTable tbody td:first-child small { display: block; max-width: none; }
+.controls .exceptionTable tbody td:last-child { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.controls .exceptionTable tbody td::before { display: none; }
+@media (max-width: 900px) { .controls .exceptionTable tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .controls .exceptionTable tbody tr { grid-template-columns: minmax(0, 1fr); } .controls .exceptionTable tbody td:last-child { justify-content: flex-start; } }
+@media (forced-colors: active) { .controls .cellLabel .control:focus-visible { outline-color: Highlight; } .controls .cellLabel .control[aria-invalid="true"] { outline-color: Mark; } }

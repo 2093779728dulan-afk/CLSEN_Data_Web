@@ -17,7 +17,7 @@ it.each(["catalog_snapshot_unavailable"])("explains %s without futile retries or
   }));
   render(<MemoryRouter><AuthzGenerationProvider boundary={{ principalId: 1, roles: ["admin"], siteConfigVersionId: 1, siteId: 1 }} onRevoked={() => undefined}><CatalogUnmatchedPage /></AuthzGenerationProvider></MemoryRouter>);
   expect(await screen.findByRole("heading", { name: "待处理清单尚未就绪" })).toBeVisible();
-  expect(await screen.findByText(/74 份已发布/)).toBeVisible();
+  expect(await screen.findByLabelText("已发布报表")).toHaveTextContent("74 份");
   expect(screen.getByRole("link", { name: "前往批量维护，完成初始化" })).toHaveAttribute("href", "/catalog/maintenance");
   expect(screen.queryByRole("button", { name: "重新读取" })).not.toBeInTheDocument();
   expect(screen.queryByText("The catalog operation could not be completed.")).not.toBeInTheDocument();

@@ -1,0 +1,60 @@
+.value {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-1);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+.number {
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--metric-value-size, var(--font-size-base));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.compact { --metric-value-size: var(--font-size-sm); }
+.compact .number { white-space: nowrap; }
+.value .detail, .value .partial {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  line-height: 1.6;
+}
+.value .partial {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  color: var(--color-warning);
+}
+.partial svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.coverage { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.missing_report .number, .undefined_denominator .number {
+  display: inline-flex;
+  padding: 2px var(--space-2);
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.number svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+.story { max-width: 1120px; padding: var(--space-6); margin: 0 auto; color: var(--color-text); }
+.story h1 { margin: 0 0 var(--space-2); font-size: var(--font-size-lg); }
+.story p { color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.6; }
+.samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--space-3); padding: 0; list-style: none; }
+.sample { min-width: 0; padding: var(--space-4); display: grid; align-content: start; gap: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.sample > strong { font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: 500; }
+.large { --metric-value-size: var(--font-size-xl); }
+@media (max-width: 600px) { .story { padding: var(--space-4); } }

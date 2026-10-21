@@ -1,0 +1,22 @@
+.panel { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-5); }
+.heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: var(--space-3); }
+.heading h3 { display: flex; gap: var(--space-2); align-items: center; margin: 0; font-size: var(--font-size-base); }
+.heading h3 svg { width: 18px; height: 18px; color: var(--color-primary); }
+.heading p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.7; }
+.list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; min-width: 0; }
+.source { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); min-width: 0; }
+.sourceHeader, .revealHeading, .copyActions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.sourceId { font: var(--font-size-xs) var(--font-mono); color: var(--color-text-muted); }
+.preview { min-width: 0; font-size: var(--font-size-sm); line-height: 1.7; }
+.preview :global(.safe-source-ref) { min-width: 0; flex-wrap: wrap; overflow-wrap: anywhere; }
+.revealed { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-3); border-radius: var(--radius-control); background: var(--color-page); border: 1px solid var(--color-border-subtle); }
+.revealHeading strong { font-size: var(--font-size-xs); }
+.revealed output { display: block; font: var(--font-size-sm) var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.copyActions { justify-content: start; }
+.copyActions > span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.loading { padding: var(--space-4); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-card); }
+.loading p { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.panel :global(.ui-status) { flex-wrap: wrap; }
+.panel :global(.ui-status__action) { flex-shrink: 0; }
+.panel :global(.ui-status__action) button { white-space: nowrap; }
+@media (max-width: 600px) { .panel { padding: var(--space-4); } .sourceHeader > button { width: 100%; } }

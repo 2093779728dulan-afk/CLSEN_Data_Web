@@ -1,0 +1,60 @@
+.page { display: grid; gap: var(--space-5); min-width: 0; }
+.header { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); }
+.header > div { min-width: 0; }
+.header > button { flex-shrink: 0; }
+.header h2 { margin: var(--space-2) 0; font-size: var(--font-size-xl); font-weight: 600; letter-spacing: -.02em; }
+.header p { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.6; }
+.version { display: flex; flex-wrap: wrap; gap: var(--space-3); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.version > span:first-child { font-family: var(--font-mono); }
+.workspace { min-width: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: clip; }
+.controls { padding: var(--space-5) var(--space-5) var(--space-2); border-bottom: 1px solid var(--color-border-subtle); }
+.resultHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--space-5); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.views { display: inline-flex; padding: var(--space-1); gap: var(--space-1); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-page); }
+.views button { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.views button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-control); border-color: var(--color-border); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-4); padding: 0 var(--space-5) var(--space-5); }
+.card { display: flex; flex-direction: column; min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); transition: border-color var(--motion-interaction) var(--motion-ease-standard); }
+.card:hover { border-color: var(--color-primary); }
+.cardHeading { display: flex; align-items: center; gap: var(--space-2); }
+.cardHeading > div { flex: 1; min-width: 0; }
+.productIcon { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex-shrink: 0; border-radius: var(--radius-control); background: var(--color-page); color: var(--color-text-muted); }
+.productIcon svg { width: 20px; height: 20px; stroke-width: 1.5; }
+.code { font-size: var(--font-size-sm); font-weight: 600; font-family: var(--font-mono); overflow-wrap: anywhere; }
+.cardHeading small { display: block; margin-top: var(--space-1); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.card h3 { margin: var(--space-4) 0 var(--space-2); font-size: var(--font-size-base); font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.card h3 a { color: var(--color-text); text-decoration: none; }
+.card h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.category { margin: 0 0 var(--space-4); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin: auto 0 0; padding-block: var(--space-3); border-top: 1px solid var(--color-border-subtle); }
+.metrics dt { min-block-size: 3em; color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.5; }
+.metrics dd { margin: var(--space-2) 0 0; color: var(--color-text); font-size: var(--font-size-base); font-weight: 500; font-variant-numeric: tabular-nums; }
+.cardFooter { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); font-size: var(--font-size-xs); }
+.cardFooter > span { color: var(--color-text-muted); overflow-wrap: anywhere; }
+.cardFooter a, .table a { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-primary-strong); text-decoration: none; }
+.cardFooter a:hover, .table a:hover { text-decoration: underline; }
+.cardFooter svg, .table svg { width: 14px; height: 14px; }
+.tableFrame { padding: 0 var(--space-5) var(--space-5); min-width: 0; }
+.tableHint { margin: 0 0 var(--space-3); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.table { min-width: 850px; }
+.table th, .table td { vertical-align: middle; }
+.table th { white-space: nowrap; }
+.table td:nth-child(2) { min-width: 180px; max-width: 300px; overflow-wrap: anywhere; }
+.table strong { font-weight: 500; }
+.table small { display: block; margin-top: var(--space-1); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.table td:first-child a { font-family: var(--font-mono); font-weight: 600; }
+.table td:last-child a { white-space: nowrap; }
+.date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.footer { border-top: 1px solid var(--color-border-subtle); padding: var(--space-3) var(--space-5); }
+.empty { padding: 0 var(--space-5) var(--space-5); }
+.guide { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.guide summary { width: fit-content; cursor: pointer; }
+.guide dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 0; }
+.guide dt { color: var(--color-text); font-weight: 500; }
+.guide dd { margin: var(--space-2) 0 0; line-height: 1.6; }
+.loading p { margin: 0 0 var(--space-4); color: var(--color-text-muted); }
+.loading .cards { padding: 0; }
+@media (max-width: 700px) { .header { flex-direction: column; } .header h2 { font-size: var(--font-size-lg); } .header > button { align-self: start; } .controls, .resultHeading, .footer, .guide { padding-inline: var(--space-4); } .cards, .tableFrame, .empty { padding-inline: var(--space-4); } .guide dl { grid-template-columns: 1fr; } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-3); } .resultHeading { align-items: start; } .pageNote { display: none; } }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+.preview { align-self: flex-start; margin-block: var(--space-2); }
+.table td:last-child button { display: flex; margin-bottom: var(--space-2); }

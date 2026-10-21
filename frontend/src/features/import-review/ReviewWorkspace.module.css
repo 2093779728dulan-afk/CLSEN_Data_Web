@@ -435,8 +435,8 @@
   padding: 0 8px;
   align-items: center;
   justify-content: center;
-  color: rgba(18, 35, 45, 0.62);
-  font: 700 9px var(--data);
+  color: var(--color-text-muted);
+  font: 700 var(--font-size-xs) var(--font-mono);
 }
 
 .review-data__toolbar h3,
@@ -468,9 +468,9 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px 16px;
-  color: rgba(18, 35, 45, 0.58);
-  font-family: var(--data);
-  font-size: 10px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
 }
 
 .table-pagination > span {
@@ -835,6 +835,11 @@
 }
 
 @media (max-width: 620px) {
+  /* Keep narrow viewports scrollable: frozen business columns must not cover editable cells. */
+  .review-table__key-field {
+    position: static;
+  }
+
   .workbench-heading,
   .review-data__summary,
   .publish-gate {

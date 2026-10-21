@@ -1,0 +1,21 @@
+.workspace { display: grid; gap: var(--space-5); min-width: 0; }
+.heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-3); }
+.heading h2 { margin: 0; font-size: var(--font-size-lg); }
+.workspace h3 { margin: 0; font-size: var(--font-size-base); }
+.workspace p { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-5); align-items: start; }
+.summary, .form, .entry { min-width: 0; padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.summary dl { margin: var(--space-5) 0 0; display: grid; gap: var(--space-4); }
+.summary dt, .actions > span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.summary dd { margin: var(--space-1) 0 0; font-family: var(--font-mono); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+.form { display: grid; gap: var(--space-5); }
+.textarea { width: 100%; box-sizing: border-box; resize: vertical; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); font: inherit; line-height: 1.6; }
+.textarea:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.textarea:disabled { background: var(--color-surface-muted); cursor: not-allowed; }
+.actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.entry { display: grid; justify-items: start; gap: var(--space-3); }
+.steps { list-style-position: inside; padding: 0; margin: var(--space-3) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); width: 100%; }
+.steps li { padding: var(--space-4); border-radius: var(--radius-card); background: var(--color-surface-muted); font-size: var(--font-size-sm); }
+.steps span { display: block; margin-top: var(--space-2); color: var(--color-text-muted); line-height: 1.6; }
+.loading { display: grid; gap: var(--space-4); }
+@media (max-width: 700px) { .layout, .steps { grid-template-columns: minmax(0, 1fr); } .summary, .form, .entry { padding: var(--space-4); } .summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } .actions { align-items: stretch; flex-direction: column; } }

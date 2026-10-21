@@ -1,0 +1,3 @@
+.spinner { width: 16px; height: 16px; flex-shrink: 0; animation: spin var(--motion-duration-spin) linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

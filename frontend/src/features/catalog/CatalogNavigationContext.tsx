@@ -1,8 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export type CatalogListState = { query: string; sort: string; page: number; view: "cards" | "table" };
-const initialList: CatalogListState = { query: "", sort: "code", page: 1, view: "cards" };
+export type CatalogListState = { query: string; status: "all" | "enabled" | "disabled"; sort: string; page: number; view: "cards" | "table" };
+const initialList: CatalogListState = { query: "", status: "all", sort: "code", page: 1, view: "cards" };
 const CatalogNavigationContext = createContext<{
   list: CatalogListState;
   setList: (value: CatalogListState) => void;

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import styles from "./StatusMessage.module.css";
 
 export type StatusMessageProps = {
   kind: "info" | "success" | "warning" | "danger";
@@ -9,7 +10,7 @@ export type StatusMessageProps = {
 
 export function StatusMessage({ kind, title, children, action }: StatusMessageProps) {
   return (
-    <section className={`ui-status ui-status--${kind}`} role={kind === "danger" ? "alert" : "status"}>
+    <section className={`ui-status ui-status--${kind} ${styles.message}`} role={kind === "danger" ? "alert" : "status"}>
       <div>
         <strong>{title}</strong>
         {children != null ? <span className="ui-status__body">{children}</span> : null}

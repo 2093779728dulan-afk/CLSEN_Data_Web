@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 export function createVisualBaselineCommand(
   nodeExecutable = process.execPath,
   workingDirectory = process.cwd(),
+  storyFilter?: string,
 ) {
   return {
     executable: nodeExecutable,
@@ -13,6 +14,7 @@ export function createVisualBaselineCommand(
       "playwright.storybook.config.ts",
       "tests/storybook/visual.spec.ts",
       "--update-snapshots",
+      ...(storyFilter ? ["--grep", storyFilter] : []),
     ],
   };
 }

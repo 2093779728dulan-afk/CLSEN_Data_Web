@@ -1,7 +1,7 @@
-import { Button, EmptyState, ErrorState, Input } from "../../design-system";
+import { Button, EmptyState, ErrorState } from "../../design-system";
 import styles from "./PublishedDetailLedgerPage.module.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiRequestError } from "../../api/client";
 import type { Principal } from "../../api/types";
@@ -27,6 +27,7 @@ import {
   type PublishedDateExpansion,
 } from "./PublishedDateSummaries";
 import { ReadonlyPublishedDataGrid } from "./ReadonlyPublishedDataGrid";
+import { PublishedDetailLedgerView } from "./PublishedDetailLedgerView";
 
 
 export type PublishedDetailLedgerPageProps = {
@@ -757,76 +758,16 @@ export function PublishedDetailLedgerPage({
     : "列设置与导出将在全部明细列结构加载后可用。";
   const ownerMatches = "ownerKey" in rangeResolution && rangeResolution.ownerKey === currentRangeOwnerKey;
 
-  return <main className={styles["published-ledger"]} data-site-id={siteId} id="main-content">
-    <header className={styles["published-ledger__header"]}>
-      <div>
-        <nav aria-label="面包屑"><Link to={`/?month=${view.from.slice(0, 7)}`}>发布数据总表</Link><span aria-hidden="true">/</span><span>已发布明细台账</span></nav>
-        <h1>跨日期已发布明细</h1>
-        <p>比较选定范围内每天的当前发布快照，并在原范围内展开一个日期。</p>
-      </div>
-      <dl className={styles["published-ledger__scope"]}>
-        <div><dt>当前范围</dt><dd>{rangeLabel.from_date} — {rangeLabel.to_date}</dd></div>
-        <div><dt>报告口径</dt><dd>{view.reportType === "business_report" ? "经营报告原始明细" : "退货报告原始明细"}</dd></div>
-        <div><dt>读取身份</dt><dd>{principal.display_name} · 只读</dd></div>
-        <div><dt>报告时区</dt><dd>{reportingTimezone}</dd></div>
-      </dl>
-    </header>
-
-    <section aria-label="已发布明细筛选" className={styles["published-ledger__controls"]}>
-      <div className={styles["published-ledger__tab-line"]}>
-        <div aria-label="报表类型" className={styles["published-ledger__tabs"]} role="tablist">
-          <button aria-selected={view.reportType === "business_report"} onClick={() => commitView({ expandedDate: undefined, reportType: "business_report" })} role="tab" type="button">经营明细</button>
-          <button aria-selected={view.reportType === "return_report"} onClick={() => commitView({ expandedDate: undefined, reportType: "return_report" })} role="tab" type="button">退货明细</button>
-        </div>
-        <div aria-label="查看方式" className={styles["published-ledger__tabs"] + " " + styles["published-ledger__tabs--mode"]} role="tablist">
-          <button aria-controls="published-ledger-results" aria-selected={view.mode === "summary"} onClick={() => commitView({ mode: "summary" })} role="tab" type="button">按日期摘要</button>
-          <button aria-controls="published-ledger-results" aria-selected={view.mode === "rows"} onClick={() => commitView({ expandedDate: undefined, mode: "rows" })} role="tab" type="button">全部明细</button>
-        </div>
-      </div>
-
-      <div className={styles["published-ledger__toolbar"]}>
-        <form className={styles["published-ledger__date-form"]} onSubmit={applyDateRange}>
-          <label>开始日期<Input aria-label="开始日期" onChange={(event) => setDateDraft((current) => ({ ...current, from: event.target.value }))} type="date" value={dateDraft.from} /></label>
-          <span aria-hidden="true">至</span>
-          <label>结束日期<Input aria-label="结束日期" onChange={(event) => setDateDraft((current) => ({ ...current, to: event.target.value }))} type="date" value={dateDraft.to} /></label>
-          <Button type="submit">应用日期范围</Button>
-        </form>
-        <div aria-label="快捷日期范围" className={styles["published-ledger__quick-ranges"]} role="group">
-          <Button onClick={() => commitView({ ...rollingRange(today, 7), expandedDate: undefined })} type="button">7 天</Button>
-          <Button onClick={() => commitView({ ...rollingRange(today, 30), expandedDate: undefined })} type="button">30 天</Button>
-          <Button onClick={() => commitView({ expandedDate: undefined, from: `${today.slice(0, 7)}-01`, to: today })} type="button">本月</Button>
-          <Button disabled={rangeResolution.status === "loading" && ownerMatches} onClick={resolveAllPublished} type="button">全部已发布</Button>
-        </div>
-        <form className={styles["published-ledger__search"]} onSubmit={applySearch}>
-          <label>搜索<Input
-            aria-label="搜索已发布原始字段和报告日期"
-            maxLength={200}
-            onChange={(event) => setSearchDraft(event.target.value.slice(0, 200))}
-            placeholder="原始字段或 YYYY-MM-DD"
-            type="search"
-            value={searchDraft}
-          /></label>
-          <Button type="submit">搜索</Button>
-        </form>
-        {view.mode === "summary" && !expandedReportDate && <div className={styles["published-ledger__staged-actions"]}>
-          <Button aria-describedby="published-ledger-stage-reason" disabled type="button">列设置</Button>
-          <Button aria-describedby="published-ledger-stage-reason" disabled type="button">导出 CSV</Button>
-        </div>}
-      </div>
-      {view.mode === "summary" && !expandedReportDate && <p className={styles["published-ledger__stage-reason"]} id="published-ledger-stage-reason">{exportReason}</p>}
-      {dateError && <p className={styles["published-ledger__filter-error"]} role="alert">{dateError}</p>}
-      {rangeResolution.status === "error" && ownerMatches && <ErrorState title="已发布范围读取失败" description={rangeResolution.message} action={<Button onClick={resolveAllPublished}>重试全部已发布范围</Button>} />}
-    </section>
-
-    {conflictNotice && <p aria-live="assertive" className={styles["published-ledger__conflict"]} role="status">{conflictNotice}</p>}
-
-    <section aria-labelledby={view.mode === "summary" ? "summary-mode-title" : "rows-mode-title"} className={styles["published-ledger__results"]} id="published-ledger-results" role="tabpanel">
-      <header className={styles["published-ledger__results-header"]}>
-        <div><p>当前发布快照</p><h2 id={view.mode === "summary" ? "summary-mode-title" : "rows-mode-title"}>{view.mode === "summary" ? "按日期摘要" : "全部明细"}</h2></div>
-        {view.mode === "rows" && activeRowsResponse
-          ? <span>{activeRowsResponse.pagination.total_items.toLocaleString("zh-CN")} 行</span>
-          : activeResponse && <span>{activeResponse.pagination.total_items.toLocaleString("zh-CN")} 个发布日期</span>}
-      </header>
+  return <PublishedDetailLedgerView siteId={siteId} displayName={principal.display_name} reportingTimezone={reportingTimezone}
+    reportType={view.reportType} mode={view.mode} range={rangeLabel} dateDraft={dateDraft} dateError={dateError}
+    searchDraft={searchDraft} resolvingRange={rangeResolution.status === "loading" && ownerMatches}
+    stagedReason={view.mode === "summary" && !expandedReportDate ? exportReason : undefined} conflictNotice={conflictNotice}
+    count={view.mode === "rows" ? activeRowsResponse?.pagination.total_items : activeResponse?.pagination.total_items}
+    onDateDraft={setDateDraft} onApplyDates={applyDateRange} onSearchDraft={setSearchDraft} onSearch={applySearch}
+    onReportType={reportType => commitView({ expandedDate: undefined, reportType })}
+    onMode={mode => commitView(mode === "rows" ? { expandedDate: undefined, mode } : { mode })}
+    onQuickRange={value => value === "all" ? resolveAllPublished() : commitView(value === "month" ? { expandedDate: undefined, from: `${today.slice(0, 7)}-01`, to: today } : { ...rollingRange(today, value), expandedDate: undefined })}
+    rangeError={rangeResolution.status === "error" && ownerMatches ? <ErrorState title="已发布范围读取失败" description={rangeResolution.message} action={<Button onClick={resolveAllPublished}>重试全部已发布范围</Button>} /> : undefined}>
       {rangeResolution.status === "loading" && ownerMatches ? <div aria-label="正在解析全部已发布范围" className={styles["published-ledger__range-state"]} role="status">正在解析全部已发布范围…</div>
         : rangeResolution.status === "empty" && ownerMatches ? <EmptyState title="当前报表类型还没有任何已发布明细。" description="筛选工具仍可使用；可切换报表类型或指定日期范围。" />
           : view.mode === "rows" ? <ReadonlyPublishedDataGrid
@@ -866,8 +807,7 @@ export function PublishedDetailLedgerPage({
             />}
             response={activeResponse}
           />}
-    </section>
-  </main>;
+  </PublishedDetailLedgerView>;
 }
 
 export default PublishedDetailLedgerPage;

@@ -1,0 +1,12 @@
+.form { display: grid; gap: var(--space-4); min-width: 0; }
+.dataGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.field { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+.actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface-muted); }
+.facts > div:last-child { grid-column: 1 / -1; }
+.facts dt { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.facts dd { margin: var(--space-1) 0 0; font-size: var(--font-size-sm); font-family: var(--font-mono); overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .dataGrid { grid-template-columns: 1fr; }
+  .actions > button { flex: 1; }
+}

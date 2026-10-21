@@ -1,0 +1,64 @@
+.page, .content { display: grid; gap: var(--space-5); min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
+.header { display: grid; grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); gap: var(--space-6); padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.ticket { display: grid; align-content: start; gap: var(--space-2); padding-right: var(--space-5); border-right: 1px solid var(--color-border-subtle); }
+.ticket svg { width: var(--space-8); height: var(--space-8); color: var(--color-primary); margin-bottom: var(--space-2); }
+.ticket span, .eyebrow { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.ticket strong { font-family: var(--font-mono); font-size: var(--font-size-xl); overflow-wrap: anywhere; }
+.ticket small, .variantHeading small { color: var(--color-text-muted); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
+.heading { min-width: 0; }
+.heading h2 { font-size: var(--font-size-xl); line-height: 1.45; margin: var(--space-3) 0; overflow-wrap: anywhere; }
+.heading p { margin: 0 0 var(--space-3); color: var(--color-text-muted); }
+.badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.summary { font-size: var(--font-size-xs); line-height: 1.65; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface); }
+.metrics > div { padding: var(--space-4) var(--space-5); border-right: 1px solid var(--color-border-subtle); }
+.metrics > div:last-child { border: 0; }
+.metrics dt { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.metrics dd { margin: var(--space-2) 0 0; font-size: var(--font-size-xl); font-variant-numeric: tabular-nums; }
+.hierarchy { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: var(--space-4); gap: var(--space-4); background: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-card); }
+.hierarchy li { display: grid; gap: var(--space-1); min-width: 0; }
+.hierarchy strong { font-size: var(--font-size-xs); color: var(--color-text); }
+.hierarchy small { font-size: var(--font-size-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.actions { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: start; gap: var(--space-3); }
+.actions > section { flex: 1 1 320px; min-width: 0; }
+.variants { display: grid; gap: var(--space-4); min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.sectionHeading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: var(--space-3); }
+.sectionHeading > div { min-width: 0; }
+.sectionHeading h3 { margin: 0 0 var(--space-2); font-size: var(--font-size-lg); }
+.sectionHeading p { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); line-height: 1.65; }
+.sectionHeading > span { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.variant { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); overflow: clip; }
+.variantHeading { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-4) var(--space-5); }
+.variantHeading > div { flex: 1 1 250px; min-width: 0; }
+.variantHeading h4 { font-family: var(--font-mono); font-size: var(--font-size-base); margin: var(--space-2) 0; overflow-wrap: anywhere; }
+.variantSummary { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: baseline; padding: var(--space-3) var(--space-5); background: var(--color-surface-muted); border-top: 1px solid var(--color-border-subtle); }
+.variantSummary strong { font-size: var(--font-size-xs); font-weight: 600; }
+.variantBody { padding: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); border-top: 1px solid var(--color-border); }
+.variantBody[hidden] { display: none; }
+.variantBody > section { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.aliasTable td { overflow-wrap: anywhere; vertical-align: top; }
+.aliasTable td:first-child { max-width: 280px; }
+.aliasTable td:last-child { max-width: 240px; }
+.evidenceList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-4); }
+.evidenceRow { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-card); }
+.evidenceRow > header { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.sourceField { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); min-width: 0; overflow-wrap: anywhere; }
+.sourceField > strong { color: var(--color-text-muted); font-weight: 500; }
+.locator { padding: var(--space-4); background: var(--color-surface-muted); border-radius: var(--radius-control); font-size: var(--font-size-xs); line-height: 1.8; overflow-wrap: anywhere; }
+.locator a { color: var(--color-primary-strong); font-weight: 600; }
+.locator p { margin: var(--space-2) 0 0; color: var(--color-text-muted); }
+.trace { display: grid; gap: var(--space-2); font-size: var(--font-size-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.trace summary { cursor: pointer; color: var(--color-text); }
+.trace span { display: block; margin-block: var(--space-2); }
+.trace code { color: var(--color-text-muted); }
+@media (max-width: 700px) {
+  .header { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-4); }
+  .ticket { border-right: 0; border-bottom: 1px solid var(--color-border-subtle); padding: 0 0 var(--space-4); }
+  .ticket svg { display: none; }
+  .metrics, .hierarchy { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metrics > div { padding: var(--space-4); }
+  .variantHeading, .variantSummary, .variantBody { padding: var(--space-4); }
+}
+
+.actionsLabel { font-size: var(--font-size-sm); font-weight: 600; margin-bottom: var(--space-3); }

@@ -1,4 +1,5 @@
 import css from "./DateWorkbenchPage.module.css";
+import cellCss from "./WorkbenchCell.module.css";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -482,12 +483,15 @@ describe("DateWorkbenchPage", () => {
 
   it("shows the authoritative original after save and undo without patching again on blur", async () => {
     const authoritative = page("draft");
+    authoritative.permissions.can_undo = false;
     authoritative.head!.data_revision = 2;
     const authoritativeCell = authoritative.rows[0]!.cells.find((cell) => cell.column_id === columnId)!;
     authoritativeCell.cell_revision = 2;
     authoritativeCell.current = "Original";
     authoritativeCell.changed = false;
-    api.loadWorkbench.mockResolvedValueOnce(page("draft")).mockResolvedValueOnce(authoritative);
+    const initial = page("draft");
+    initial.permissions.can_undo = false;
+    api.loadWorkbench.mockResolvedValueOnce(initial).mockResolvedValueOnce(authoritative);
     api.writeWorkbenchCell.mockResolvedValue({
       cell: {
         base: "Original",
@@ -513,16 +517,36 @@ describe("DateWorkbenchPage", () => {
 
     renderPage();
     const cell = await screen.findByRole("textbox", { name: "Title，第 1 行" });
+    expect(screen.getByRole("button", { name: "撤销上次修改" })).toBeDisabled();
     fireEvent.change(cell, { target: { value: "Updated" } });
     fireEvent.blur(cell);
     await waitFor(() => expect(api.writeWorkbenchCell).toHaveBeenCalledTimes(1));
     expect(cell).toHaveValue("Updated");
+    await waitFor(() => expect(screen.getByRole("button", { name: "撤销上次修改" })).toBeEnabled());
 
     await user.click(screen.getByRole("button", { name: "撤销上次修改" }));
     const revertedCell = await screen.findByRole("textbox", { name: "Title，第 1 行" });
     expect(revertedCell).toHaveValue("Original");
+    expect(screen.getByRole("button", { name: "撤销上次修改" })).toBeDisabled();
     fireEvent.blur(revertedCell);
     expect(api.writeWorkbenchCell).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables stale undo availability with Chinese feedback and enables it after a new save", async () => {
+    api.loadWorkbench.mockResolvedValue(page("draft"));
+    api.undoWorkbench.mockRejectedValue(new ApiRequestError(409, "nothing_to_undo", "There is no still-current workbench change to undo."));
+    api.writeWorkbenchCell.mockResolvedValue(mutationResult("New edit", 1));
+    const user = userEvent.setup();
+    renderPage();
+    const cell = await screen.findByRole("textbox", { name: "Title，第 1 行" });
+    await user.click(screen.getByRole("button", { name: "撤销上次修改" }));
+    expect(await screen.findByText("当前没有可撤销的修改；已撤销或被后续修改覆盖的记录不能再次撤销。" )).toBeVisible();
+    expect(screen.getByRole("button", { name: "撤销上次修改" })).toBeDisabled();
+    expect(screen.queryByText("There is no still-current workbench change to undo.")).not.toBeInTheDocument();
+    fireEvent.change(cell, { target: { value: "New edit" } });
+    fireEvent.blur(cell);
+    await waitFor(() => expect(screen.getByRole("button", { name: "撤销上次修改" })).toBeEnabled());
+    expect(screen.queryByText("当前没有可撤销的修改；已撤销或被后续修改覆盖的记录不能再次撤销。" )).not.toBeInTheDocument();
   });
 
   it("contains long read-only values inside their cells and exposes the full text", async () => {
@@ -549,7 +573,7 @@ describe("DateWorkbenchPage", () => {
     fireEvent.change(cell, { target: { value: "Updated" } });
     fireEvent.blur(cell);
 
-    expect(await screen.findByText("保存失败")).toHaveClass(css["cell-error"]!);
+    expect((await screen.findByText("保存失败")).closest('[role="alert"]')).toHaveClass(cellCss.error!);
   });
 
   it.each([

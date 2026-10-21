@@ -1,4 +1,4 @@
-import css from "./ReviewWorkspace.module.css";
+import css from "./ReviewDataTable.module.css";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -109,6 +109,23 @@ const workspace: ReviewWorkspace = {
 };
 
 describe("ReviewDataTable", () => {
+  it("announces source and base differences independently and keeps filter recovery local", async () => {
+    const local = structuredClone(workspace);
+    const cell = local.rows[0]!.cells[1]!;
+    cell.source = cell.current;
+    cell.changed_from_source = false;
+    const onPageChange = vi.fn();
+    render(<ReviewDataTable busy={false} onAddCellNote={vi.fn()} onAddRow={vi.fn()} onAddRowNote={vi.fn()} onChangeRowState={vi.fn()} onPageChange={onPageChange} onRestoreField={vi.fn()} onReviewIssue={vi.fn()} onReviseNote={vi.fn()} onSetField={vi.fn()} workspace={local} />);
+    expect(screen.getByRole("button", { name: "sales，当前值 42.50，与基础版本不同" })).toHaveTextContent("版本差异");
+    expect(screen.getByRole("button", { name: "管理第 1 行状态，当前 active" })).toHaveTextContent("有效");
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox", { name: "搜索当前页" }), "not-here");
+    expect(screen.getByText("当前筛选没有匹配行")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "清除当前页筛选" }));
+    expect(screen.getByRole("searchbox", { name: "搜索当前页" })).toHaveValue("");
+    expect(screen.getByRole("checkbox", { name: "仅看差异" })).not.toBeChecked();
+    expect(onPageChange).not.toHaveBeenCalled();
+  });
   it("prefills row and field audit reasons from the authenticated operator", async () => {
     const user = userEvent.setup();
     render(<ReviewDataTable busy={false} onAddCellNote={vi.fn()} onAddRow={vi.fn()} onAddRowNote={vi.fn()} onChangeRowState={vi.fn()} onPageChange={vi.fn()} onRestoreField={vi.fn()} onReviewIssue={vi.fn()} onReviseNote={vi.fn()} onSetField={vi.fn()} operator={{ id: 3, username: "manager", display_name: "录入审核" }} workspace={workspace} />);
@@ -312,9 +329,25 @@ describe("ReviewDataTable", () => {
 
     const issue = screen.getByRole("article", { name: /警告.*销售额与源文件不同/ });
     expect(within(issue).getByRole("button", { name: "确认警告" })).toBeDisabled();
-    await user.type(within(issue).getByLabelText("审核说明"), "与原表核对后确认此差异");
+    await user.type(within(issue).getByRole("textbox", { name: "审核说明" }), "与原表核对后确认此差异");
     await user.click(within(issue).getByRole("button", { name: "确认警告" }));
     expect(reviewIssue).toHaveBeenCalledWith(expect.objectContaining({ id: 701 }), "acknowledge", "与原表核对后确认此差异");
+  });
+
+  it("retains issue comments after a rejected review and retries explicitly", async () => {
+    const reviewIssue = vi.fn().mockRejectedValueOnce(new Error("虚构响应未确认")).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<ReviewDataTable busy={false} onAddCellNote={vi.fn()} onAddRow={vi.fn()} onAddRowNote={vi.fn()} onChangeRowState={vi.fn()} onPageChange={vi.fn()} onRestoreField={vi.fn()} onReviewIssue={reviewIssue} onReviseNote={vi.fn()} onSetField={vi.fn()} workspace={workspace} />);
+    const issue = screen.getByRole("article", { name: /警告.*销售额与源文件不同/ });
+    const input = within(issue).getByRole("textbox", { name: "审核说明" });
+    await user.type(input, "保留这条审核依据");
+    await user.click(within(issue).getByRole("button", { name: "确认警告" }));
+    expect(await within(issue).findByRole("alert")).toHaveTextContent("虚构响应未确认");
+    expect(input).toHaveValue("保留这条审核依据"); expect(reviewIssue).toHaveBeenCalledTimes(1);
+    await user.click(within(issue).getByRole("button", { name: "确认警告" }));
+    expect(reviewIssue).toHaveBeenCalledTimes(2);
+    expect(reviewIssue.mock.calls[0]).toEqual(reviewIssue.mock.calls[1]);
+    expect(within(issue).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("freezes business keys and supports column focus, sorting, difference navigation, and arrow keys", async () => {

@@ -1,8 +1,7 @@
 import { Info } from "lucide-react";
 import { useState } from "react";
-import { Dialog } from "../../design-system";
+import { Button, Dialog } from "../../design-system";
 import helpCss from "./LedgerMetricHelp.module.css";
-import css from "./ProductAnalytics.module.css";
 
 export type LedgerHelpKey = "identity" | "variants" | "units" | "sales" | "returns" | "sessions" | "conversion" | "average";
 const definitions: Record<LedgerHelpKey, { title: string; source: string; formula: string; rule: string }> = {
@@ -22,7 +21,7 @@ export function LedgerMetricHelp({ metric, from, to, returnBasis, factBasis, cat
   const [open, setOpen] = useState(false);
   const help = definitions[metric];
   return <>
-    <button className={css["ledger-help-trigger"]} type="button" aria-label={`${help.title}说明`} aria-haspopup="dialog" onClick={(event) => { event.currentTarget.focus(); setOpen(true); }}><Info size={14} aria-hidden="true" /></button>
+    <Button variant="quiet" type="button" aria-label={`${help.title}说明`} aria-haspopup="dialog" onClick={(event) => { event.currentTarget.focus(); setOpen(true); }}><Info size={14} aria-hidden="true" /></Button>
     <Dialog open={open} onOpenChange={setOpen} contentClassName={helpCss.dialog} title={help.title} closeLabel="关闭指标说明" eyebrow="指标说明" description="了解这个数字从哪里来，以及如何使用。">
       <div className={helpCss.body}>
         <section className={helpCss.source}><h3>数据来源</h3><p>{help.source}</p></section>

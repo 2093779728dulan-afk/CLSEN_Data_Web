@@ -1,0 +1,67 @@
+import { expect, test } from "@playwright/test";
+import { openStory } from "./storybookGateSupport";
+
+for (const width of [1280, 768, 390]) {
+  test(`detail ledger filters, expands, configures columns and navigates at ${width}px`, async ({ page }) => {
+    const api: string[] = [];
+    await page.route(url => url.pathname.startsWith("/api/"), route => { api.push(route.request().url()); return route.abort(); });
+    await page.setViewportSize({ width, height: 900 });
+    await openStory(page, "pages-published-detail-ledger--reference");
+    await expect(page.getByRole("heading", { name: "跨日期已发布明细", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "展开 2026-09-12 明细", exact: true }).click();
+    await expect(page.getByRole("region", { name: "2026-09-12 展开明细", exact: true })).toContainText("SAMPLE-BLUE-S");
+    await page.getByRole("button", { name: "收起 2026-09-12 明细", exact: true }).click();
+    await page.getByRole("tab", { name: "全部明细", exact: true }).click();
+    await page.getByRole("button", { name: "列设置", exact: true }).click();
+    await page.getByRole("checkbox", { name: "销售额", exact: true }).uncheck();
+    await page.getByRole("button", { name: "关闭列设置", exact: true }).click();
+    await expect(page.getByRole("button", { name: "列设置", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "按 销售额 排序", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "列设置", exact: true }).click();
+    await page.getByRole("checkbox", { name: "销售额", exact: true }).check();
+    await page.getByRole("button", { name: "关闭列设置", exact: true }).click();
+    await expect(page.getByRole("button", { name: "列设置", exact: true })).toBeFocused();
+    await page.getByRole("button", { name: "按 销售额 排序", exact: true }).click();
+    await expect(page.getByRole("columnheader", { name: /销售额/ })).toHaveAttribute("aria-sort", "ascending");
+    await expect(page.getByRole("table", { name: "经营报告已发布原始明细", exact: true }).locator("tbody tr").first()).toContainText("0.00");
+    await page.getByRole("tab", { name: "退货明细", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "按 退货数量 排序", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "按日期摘要", exact: true }).click();
+    await expect(page.getByText("退货数量 · 全日 0", { exact: true })).toBeVisible();
+    await page.getByLabel("开始日期", { exact: true }).fill("2026-09-13");
+    await page.getByRole("button", { name: "应用日期范围", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("开始日期不能晚于结束日期");
+    await page.getByLabel("开始日期", { exact: true }).fill("2026-09-01");
+    await page.getByRole("button", { name: "应用日期范围", exact: true }).click();
+    await page.getByRole("searchbox", { name: "搜索已发布原始字段和报告日期", exact: true }).fill("not-found");
+    await page.getByRole("button", { name: "搜索", exact: true }).click();
+    await expect(page.getByText("所选范围内没有当前已发布明细。", { exact: true })).toBeVisible();
+    await page.getByRole("searchbox", { name: "搜索已发布原始字段和报告日期", exact: true }).fill("");
+    await page.getByRole("button", { name: "搜索", exact: true }).click();
+    const link = page.getByRole("link", { name: "查看 2026-09-12 单日摘要", exact: true });
+    await expect(link).toHaveAttribute("href", /return_to=.*report_type%3Dreturn_report/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await link.click();
+    await expect(page.getByRole("heading", { name: "虚构导航目的地", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(api).toEqual([]);
+  });
+}
+test("detail ledger loading, empty, read recovery and local expansion recovery", async ({ page }) => {
+  await openStory(page, "pages-published-detail-ledger--read-failure");
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.getByRole("button", { name: "重新读取日期摘要", exact: true }).click();
+  await expect(page.getByText("当前发布 v3", { exact: true })).toHaveCount(3);
+  await openStory(page, "pages-published-detail-ledger--expansion-failure");
+  await page.getByRole("button", { name: "重试 2026-09-12 展开明细", exact: true }).click();
+  await expect(page.getByRole("region", { name: "2026-09-12 展开明细", exact: true })).toContainText("SAMPLE-BLUE-S");
+  await openStory(page, "pages-published-detail-ledger--expansion-loading");
+  await expect(page.getByText("正在读取 2026-09-12 的匹配明细…", { exact: true })).toBeVisible();
+  await openStory(page, "pages-published-detail-ledger--loading");
+  await expect(page.getByRole("status", { name: "正在读取日期摘要", exact: true })).toBeAttached();
+  await openStory(page, "pages-published-detail-ledger--empty");
+  await expect(page.getByText("所选范围内没有当前已发布明细。", { exact: true })).toBeVisible();
+  await openStory(page, "pages-published-detail-ledger--scope-changed");
+  await expect(page.getByRole("status").filter({ hasText: "发布数据已更新" })).toBeVisible();
+});

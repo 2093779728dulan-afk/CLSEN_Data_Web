@@ -36,6 +36,67 @@ type SchemaMemberKind = Literal["parse_baseline", "dataset_version"]
 type WorkbenchOperationCommand = SetWorkbenchCellCommand | UndoWorkbenchCellCommand
 
 
+LATEST_UNDOABLE_CELL_SQL = sa.text(
+    """
+    SELECT candidates.*
+    FROM (
+        SELECT 'extension' AS ledger_kind,
+               changes.id AS change_id, changes.row_id,
+               changes.column_id, NULL AS field_name,
+               changes.before_value, changes.after_value,
+               changes.cell_revision, changes.data_revision,
+               changes.occurred_at
+        FROM extension_cell_changes AS changes
+        INNER JOIN version_extension_cells AS cells
+            ON cells.version_id = changes.version_id
+           AND cells.row_id = changes.row_id
+           AND cells.column_id = changes.column_id
+           AND cells.cell_revision = changes.cell_revision
+        WHERE changes.version_id = :version_id
+          AND changes.actor_user_id = :actor_user_id
+          AND changes.operation = 'set'
+        UNION ALL
+        SELECT 'standard' AS ledger_kind,
+               events.id AS change_id, changes.row_id,
+               columns.column_id, changes.field_name,
+               changes.before_value_json AS before_value,
+               changes.after_value_json AS after_value,
+               events.data_revision AS cell_revision,
+               events.data_revision,
+               events.occurred_at
+        FROM data_change_events AS events
+        INNER JOIN field_changes AS changes
+            ON changes.version_id = events.version_id
+           AND changes.id = events.id
+        INNER JOIN version_table_columns AS columns
+            ON columns.version_id = changes.version_id
+           AND columns.standard_field_name = changes.field_name
+        WHERE events.version_id = :version_id
+          AND events.actor_user_id = :actor_user_id
+          AND changes.operation = 'set'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM field_changes AS later_changes
+              INNER JOIN data_change_events AS later_events
+                  ON later_events.version_id =
+                     later_changes.version_id
+                 AND later_events.id = later_changes.id
+              WHERE later_changes.version_id = changes.version_id
+                AND later_changes.row_id = changes.row_id
+                AND later_changes.field_name = changes.field_name
+                AND later_events.data_revision >
+                    events.data_revision
+          )
+    ) AS candidates
+    ORDER BY candidates.data_revision DESC,
+             candidates.occurred_at DESC,
+             candidates.ledger_kind,
+             candidates.change_id DESC
+    LIMIT 1
+    """
+)
+
+
 @dataclass(frozen=True, slots=True)
 class SchemaMember:
     member_ordinal: int
@@ -737,65 +798,7 @@ class MySqlWorkbenchMutationRepository:
             draft = MySqlReviewRepository._lock_active_head(connection, command.head)
             candidate = (
                 connection.execute(
-                    sa.text(
-                        """
-                        SELECT candidates.*
-                        FROM (
-                            SELECT 'extension' AS ledger_kind,
-                                   changes.id AS change_id, changes.row_id,
-                                   changes.column_id, NULL AS field_name,
-                                   changes.before_value, changes.after_value,
-                                   changes.cell_revision, changes.data_revision,
-                                   changes.occurred_at
-                            FROM extension_cell_changes AS changes
-                            INNER JOIN version_extension_cells AS cells
-                                ON cells.version_id = changes.version_id
-                               AND cells.row_id = changes.row_id
-                               AND cells.column_id = changes.column_id
-                               AND cells.cell_revision = changes.cell_revision
-                            WHERE changes.version_id = :version_id
-                              AND changes.actor_user_id = :actor_user_id
-                              AND changes.operation = 'set'
-                            UNION ALL
-                            SELECT 'standard' AS ledger_kind,
-                                   events.id AS change_id, changes.row_id,
-                                   columns.column_id, changes.field_name,
-                                   changes.before_value_json AS before_value,
-                                   changes.after_value_json AS after_value,
-                                   events.data_revision AS cell_revision,
-                                   events.data_revision,
-                                   events.occurred_at
-                            FROM data_change_events AS events
-                            INNER JOIN field_changes AS changes
-                                ON changes.version_id = events.version_id
-                               AND changes.id = events.id
-                            INNER JOIN version_table_columns AS columns
-                                ON columns.version_id = changes.version_id
-                               AND columns.standard_field_name = changes.field_name
-                            WHERE events.version_id = :version_id
-                              AND events.actor_user_id = :actor_user_id
-                              AND changes.operation = 'set'
-                              AND NOT EXISTS (
-                                  SELECT 1
-                                  FROM field_changes AS later_changes
-                                  INNER JOIN data_change_events AS later_events
-                                      ON later_events.version_id =
-                                         later_changes.version_id
-                                     AND later_events.id = later_changes.id
-                                  WHERE later_changes.version_id = changes.version_id
-                                    AND later_changes.row_id = changes.row_id
-                                    AND later_changes.field_name = changes.field_name
-                                    AND later_events.data_revision >
-                                        events.data_revision
-                              )
-                        ) AS candidates
-                        ORDER BY candidates.data_revision DESC,
-                                 candidates.occurred_at DESC,
-                                 candidates.ledger_kind,
-                                 candidates.change_id DESC
-                        LIMIT 1
-                        """
-                    ),
+                    LATEST_UNDOABLE_CELL_SQL,
                     {
                         "version_id": command.head.version_id,
                         "actor_user_id": command.actor_user_id,

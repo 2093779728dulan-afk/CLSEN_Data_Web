@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { requestApi } from "../../api/client";
 import type { MergeDecisionRequest } from "../../api/generated";
-import { Button, Pagination, Select } from "../../design-system";
+import { Button, FormField, Input, Pagination, Select, Skeleton, StatusBadge, StatusMessage, Table } from "../../design-system";
 import { auditOperatorLabel, defaultAuditReason, type AuditOperator } from "./auditReason";
-import decisionCss from "./ReviewDecision.module.css";
+import decisionCss from "./MergeDecisionMatrix.module.css";
 
 const CONFLICTS_PER_PAGE = 4;
 
@@ -36,7 +36,7 @@ type MergeConflictPreview = {
   source_values: Record<string, string | null>;
 };
 
-type MergePreviewResponse = {
+export type MergePreviewResponse = {
   report_type: "business_report" | "return_report";
   target_version_id: number;
   source_kind: "parse_baseline" | "dataset_version";
@@ -57,6 +57,8 @@ export type MergeDecisionState = {
 
 type Props = {
   disabled?: boolean;
+  /** Storybook supplies fictional previews; production uses the original read API. */
+  loadPreview?: (path: string) => Promise<MergePreviewResponse>;
   onStateChange: (state: MergeDecisionState) => void;
   operator?: AuditOperator;
   sourceId: number;
@@ -113,6 +115,7 @@ function generatedDecisionReason(
 
 export function MergeDecisionMatrix({
   disabled = false,
+  loadPreview = requestApi,
   onStateChange,
   operator,
   sourceId,
@@ -124,6 +127,7 @@ export function MergeDecisionMatrix({
   const [drafts, setDrafts] = useState<Record<string, DecisionDraft>>({});
   const [error, setError] = useState<string>();
   const [page, setPage] = useState(1);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const [pageAction, setPageAction] = useState<MergeDecisionRequest["action"] | "">("");
   const callbackRef = useRef(onStateChange);
   const requestId = useRef(0);
@@ -138,7 +142,7 @@ export function MergeDecisionMatrix({
     setPage(1);
     setPageAction("");
     callbackRef.current({ decisions: [], ready: false });
-    void requestApi<MergePreviewResponse>(
+    void loadPreview(
       `/api/datasets/merge-preview?target_version_id=${targetVersionId}`
       + `&source_kind=${sourceKind}&source_id=${sourceId}`,
     ).then((response) => {
@@ -157,7 +161,7 @@ export function MergeDecisionMatrix({
       setError(caught instanceof Error ? caught.message : "重复行对照读取失败。");
     });
     return () => { requestId.current += 1; };
-  }, [sourceId, sourceKind, targetVersionId]);
+  }, [loadPreview, previewAttempt, sourceId, sourceKind, targetVersionId]);
 
   const state = useMemo<MergeDecisionState>(() => {
     if (!conflicts || error) return { decisions: [], ready: false };
@@ -222,20 +226,21 @@ export function MergeDecisionMatrix({
   return (
     <section aria-label="重复记录合并决定" className={decisionCss["merge-matrix"]}>
       <header>
-        <div><strong>重复记录确认</strong><span>每页 {CONFLICTS_PER_PAGE} 组 · 目标版本 × 本次源表</span></div>
-        {conflicts && <b>{conflicts.length} 组重复记录 · 已处理 {completedCount}/{conflicts.length}</b>}
+        <div><h3>重复记录确认</h3><span>每页 {CONFLICTS_PER_PAGE} 组 · 目标版本 #{targetVersionId} × {sourceKind === "parse_baseline" ? "解析来源" : "来源版本"} #{sourceId}</span></div>
+        {conflicts && <div className={decisionCss.progress}><span>{conflicts.length} 组重复记录 · 已处理 {completedCount}/{conflicts.length}</span><StatusBadge label={state.ready ? "可以继续" : "待确认"} tone={state.ready ? "good" : "warn"} /></div>}
       </header>
       {reportType && <aside className={decisionCss["merge-matrix__rule"]}><strong>为什么需要处理？</strong><p>{reportType === "business_report" ? "经营报告按“子 ASIN + SKU”识别同一业务记录。" : "退货报告按“退货日期 + 订单号 + SKU + ASIN + FNSKU + 数量 + 牌照编号”识别同一业务记录。"}目标版本与本次源表出现相同业务键时，系统不会自行删除或覆盖。全部字段完全相同时，默认保留目标行并填写依据，所有分页一并处理；你仍可改选。有差异的记录需人工决定。默认选择不会立即写入，确认生成草稿后才执行。</p></aside>}
-      {operator && <p className="stage-placeholder">决定依据会自动带入当前操作人和冲突行来源 · {auditOperatorLabel(operator)}。</p>}
-      {!conflicts && !error && <p role="status">正在生成完整冲突矩阵…</p>}
-      {error && <p className="form-error" role="alert">{error} 请重新选择合并方式后重试。</p>}
-      {conflicts?.length === 0 && <p className={decisionCss["merge-matrix__clear"]}>没有重复业务键，可以安全保留两侧记录。</p>}
+      {operator && <p className={decisionCss.operator}>决定依据会自动带入当前操作人和冲突行来源 · {auditOperatorLabel(operator)}。</p>}
+      {!conflicts && !error && <div aria-label="正在读取重复记录" className={decisionCss.loading} role="status"><p>正在生成完整冲突矩阵…</p><Skeleton height={100} /><Skeleton height={100} /></div>}
+      {error && <div className={decisionCss.readFailure}><StatusMessage kind="danger" title="重复记录读取失败" action={<Button disabled={disabled} onClick={() => setPreviewAttempt(attempt => attempt + 1)}>重新读取重复记录</Button>}>{error} 当前无法确认合并决定，请重新读取后核对。</StatusMessage></div>}
+      {conflicts?.length === 0 && <StatusMessage kind="success" title="没有重复记录">没有重复业务键，可以安全保留两侧记录。</StatusMessage>}
       {conflicts && conflicts.length > 0 && (
         <div className={decisionCss["merge-matrix__page-actions"]}>
-          <label>当前页统一处理方式<Select aria-label="当前页统一处理方式" disabled={disabled} onChange={(event) => setPageAction(event.target.value as MergeDecisionRequest["action"] | "")} value={pageAction}><option value="">请选择</option><option value="keep_target">保留目标行</option><option value="keep_source">保留来源行</option><option value="keep_both">两行都保留</option></Select></label>
+          <FormField label="当前页统一处理方式"><Select aria-label="当前页统一处理方式" disabled={disabled} onChange={(event) => setPageAction(event.target.value as MergeDecisionRequest["action"] | "")} value={pageAction}><option value="">请选择</option><option value="keep_target">保留目标行</option><option value="keep_source">保留来源行</option><option value="keep_both">两行都保留</option></Select></FormField>
           <Button disabled={disabled || !pageAction || !pageHasPending} onClick={applyActionToPendingPage} variant="secondary">应用到当前页未处理项</Button>
         </div>
       )}
+      {!operator && conflicts && conflicts.length > 0 && <p className={decisionCss.operator}>当前页统一处理只设置处理方式；填写每组决定依据后才能继续。</p>}
       <div className={decisionCss["merge-matrix__list"]}>{visibleConflicts.map((conflict) => {
         const index = conflicts?.indexOf(conflict) ?? 0;
         const key = pairKey(conflict);
@@ -246,7 +251,7 @@ export function MergeDecisionMatrix({
           <article aria-label={`重复记录 ${index + 1}`} key={key}>
             <div className={decisionCss["merge-matrix__pair-heading"]}>
               <div><strong>重复记录 {index + 1}</strong><span>目标第 {conflict.target_row_ordinal} 行 · 来源第 {conflict.source_row_ordinal} 行</span></div>
-              <em>{differences.length === 0 ? "字段完全相同" : `${differences.length} 个字段不同`}</em>
+              <StatusBadge label={differences.length === 0 ? "字段完全相同" : `${differences.length} 个字段不同`} tone={differences.length === 0 ? "good" : "warn"} />
             </div>
             <dl className={decisionCss["merge-matrix__comparison"]}>
               {fields.slice(0, 6).map((name) => (
@@ -254,23 +259,23 @@ export function MergeDecisionMatrix({
                   <dt>{fieldLabels[name] ?? name}</dt>
                   {conflict.target_values[name] === conflict.source_values[name]
                     ? <dd className={decisionCss["merge-matrix__same-value"]}><span>{display(conflict.target_values[name])}</span><em>两侧相同</em></dd>
-                    : <dd><span>{display(conflict.target_values[name])}</span><i>→</i><span>{display(conflict.source_values[name])}</span></dd>}
+                    : <dd><div><small>目标行</small><span>{display(conflict.target_values[name])}</span></div><div><small>来源行</small><span>{display(conflict.source_values[name])}</span></div></dd>}
                 </div>
               ))}
             </dl>
             <details>
               <summary>查看两行的全部字段</summary>
-              <table><thead><tr><th>字段</th><th>目标行</th><th>来源行</th></tr></thead><tbody>{fieldNames(conflict).map((name) => <tr key={name}><th>{fieldLabels[name] ?? name}</th><td>{display(conflict.target_values[name])}</td><td>{display(conflict.source_values[name])}</td></tr>)}</tbody></table>
+              <div aria-label={`重复记录 ${index + 1} 完整字段，可横向滚动`} className={decisionCss.tableScroll} role="region" tabIndex={0}><Table aria-label={`重复记录 ${index + 1} 全部字段`}><thead><tr><th scope="col">字段</th><th scope="col">目标行</th><th scope="col">来源行</th></tr></thead><tbody>{fieldNames(conflict).map((name) => <tr key={name}><th scope="row">{fieldLabels[name] ?? name}</th><td>{display(conflict.target_values[name])}</td><td>{display(conflict.source_values[name])}</td></tr>)}</tbody></Table></div>
             </details>
             <div className={decisionCss["merge-matrix__decision"]}>
-              <label>处理方式<select aria-label={`重复记录 ${index + 1} 处理方式`} disabled={disabled} onChange={(event) => { const action = event.target.value ? event.target.value as MergeDecisionRequest["action"] : undefined; updateDraft(key, { action, reason: draft.automaticReason ? (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : "") : draft.reason.trim() || (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : ""), automaticReason: false }); }} value={draft.action ?? ""}><option value="">请选择</option><option value="keep_target">保留目标行</option><option value="keep_source">保留来源行</option><option value="keep_both">两行都保留</option></select></label>
-              <label>决定依据<input aria-label={`重复记录 ${index + 1} 决定依据`} disabled={disabled} maxLength={1000} onChange={(event) => updateDraft(key, { reason: event.target.value, automaticReason: false })} placeholder="说明与原表核对后的判断" value={draft.reason} /></label>
+              <FormField label="处理方式"><Select aria-label={`重复记录 ${index + 1} 处理方式`} disabled={disabled} onChange={(event) => { const action = event.target.value ? event.target.value as MergeDecisionRequest["action"] : undefined; updateDraft(key, { action, reason: draft.automaticReason ? (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : "") : draft.reason.trim() || (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : ""), automaticReason: false }); }} value={draft.action ?? ""}><option value="">请选择</option><option value="keep_target">保留目标行</option><option value="keep_source">保留来源行</option><option value="keep_both">两行都保留</option></Select></FormField>
+              <FormField label="决定依据"><Input aria-label={`重复记录 ${index + 1} 决定依据`} disabled={disabled} maxLength={1000} onChange={(event) => updateDraft(key, { reason: event.target.value, automaticReason: false })} placeholder="说明与原表核对后的判断" value={draft.reason} /></FormField>
             </div>
           </article>
         );
       })}</div>
       {conflicts && conflicts.length > CONFLICTS_PER_PAGE && <Pagination itemLabel="重复记录" onPageChange={setPage} page={page} totalItems={conflicts.length} totalPages={totalPages} />}
-      {conflicts && conflicts.length > 0 && !state.ready && <p className={decisionCss["merge-matrix__pending"]}>完成每组重复记录的处理方式和决定依据后，才能继续生成草稿。</p>}
+      {conflicts && conflicts.length > 0 && !state.ready && <StatusMessage kind="info" title="仍有待处理记录">完成每组重复记录的处理方式和决定依据后，才能继续生成草稿。</StatusMessage>}
     </section>
   );
 }

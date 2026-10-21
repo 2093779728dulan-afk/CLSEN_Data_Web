@@ -1,5 +1,8 @@
 import css from "./DateWorkbenchPage.module.css";
-import { useEffect, useState, type CSSProperties } from "react";
+import cellCss from "./WorkbenchCell.module.css";
+import { useEffect, useId, useState, type CSSProperties } from "react";
+import { Check, CircleAlert, LoaderCircle, Pencil, TriangleAlert } from "lucide-react";
+import { Input } from "../../design-system";
 
 import { DataTableHeader, type DataTableSort, type SortCommand } from "../../components/data-table/DataTableHeader";
 import { ROW_NUMBER_WIDTH } from "../../components/data-table/columnPresentation";
@@ -30,6 +33,7 @@ function statusText(editor: CellEditorState | undefined) {
   if (editor.message) return editor.message;
   if (editor.state === "saving") return "正在保存…";
   if (editor.state === "saved") return "已保存";
+  if (editor.state === "editing") return "待保存";
   if (editor.state === "failed" || editor.state === "conflict") return "保存失败，请重试。";
   return undefined;
 }
@@ -48,12 +52,21 @@ type EditableCellInputProps = {
 
 function EditableCellInput({ authoritativeValue, column, editor, revision, rowId, rowOrdinal, onDiscardCell, onEditCell, onSaveCell }: EditableCellInputProps) {
   const [input, setInput] = useState(editor?.input ?? authoritativeValue);
+  const descriptionId = useId();
+  const failed = editor?.state === "failed" || editor?.state === "conflict";
+  const status = statusText(editor);
+  const Icon = editor?.state === "saving" ? LoaderCircle : editor?.state === "saved" ? Check : editor?.state === "conflict" ? TriangleAlert : failed ? CircleAlert : Pencil;
 
   useEffect(() => {
     setInput(editor?.input ?? authoritativeValue);
   }, [authoritativeValue, editor?.input, revision]);
 
-  return <input
+  return <div className={cellCss.editor} data-save-state={editor?.state ?? "clean"}>
+    <Input
+    aria-describedby={descriptionId}
+    aria-invalid={failed || undefined}
+    aria-busy={editor?.state === "saving" || undefined}
+    className={cellCss.control}
     aria-label={`${column.source_header}，第 ${rowOrdinal} 行`}
     onBlur={(event) => { if (event.currentTarget.value !== authoritativeValue) onSaveCell(rowId, column, event.currentTarget.value, revision); }}
     onChange={(event) => {
@@ -71,7 +84,12 @@ function EditableCellInput({ authoritativeValue, column, editor, revision, rowId
     }}
     title={authoritativeValue}
     value={input}
-  />;
+  />
+    <div className={[cellCss.feedback, failed && cellCss.error, editor?.state === "saved" && cellCss.saved, !status && cellCss.hint].filter(Boolean).join(" ")} id={descriptionId} role={failed ? "alert" : status ? "status" : undefined}>
+      {status && <Icon aria-hidden="true" className={editor?.state === "saving" ? cellCss.spin : undefined} />}
+      <div>{editor?.state === "conflict" && <strong>版本冲突</strong>}{editor?.state === "failed" && <strong>未保存</strong>}<span>{status ?? "Enter 保存 · Esc 放弃"}</span>{failed && <small>输入已保留，核对后重新提交；Esc 放弃输入。</small>}</div>
+    </div>
+  </div>;
 }
 
 export function EditableDataGrid({ page, editors, layout, sort, onDiscardCell, onEditCell, onSaveCell, onSort }: Props) {
@@ -120,7 +138,7 @@ export function EditableDataGrid({ page, editors, layout, sort, onDiscardCell, o
             const status = statusText(editor);
             return <td className={`${isFrozen ? css["workbench-identity-cell"] : ""} ${cell.changed ? css["is-changed"] : ""} ${editor?.state === "failed" || editor?.state === "conflict" ? css["has-error"] : ""}`.trim()} key={column.column_id} style={style}>
               {cell.editable ? <EditableCellInput authoritativeValue={visibleValue} column={column} editor={editor} onDiscardCell={onDiscardCell} onEditCell={onEditCell} onSaveCell={onSaveCell} revision={cell.cell_revision} rowId={row.row_id} rowOrdinal={row.row_ordinal} /> : <span className={css["workbench-cell-value"]} title={visibleValue}>{visibleValue}</span>}
-              {status && <small className={`${css["workbench-cell-status"]} ${editor?.state === "failed" || editor?.state === "conflict" ? css["cell-error"] : ""}`.trim()} role={editor?.state === "failed" || editor?.state === "conflict" ? "alert" : "status"}>{status}</small>}
+              {!cell.editable && status && <small className={`${css["workbench-cell-status"]} ${editor?.state === "failed" || editor?.state === "conflict" ? css["cell-error"] : ""}`.trim()} role={editor?.state === "failed" || editor?.state === "conflict" ? "alert" : "status"}>{status}</small>}
             </td>;
           })}
         </tr>;

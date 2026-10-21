@@ -1,0 +1,70 @@
+import { expect, test } from "@playwright/test";
+import { openStory, prepareInteractiveStory } from "./storybookGateSupport";
+for (const width of [1280, 768, 390]) {
+  test(`row drawer adds, retains failures, excludes/restores, revises notes at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openStory(page, "patterns-row-review--add-failure"); const addTrigger = page.getByRole("button", { name: "新增纠错行", exact: true }); await addTrigger.click();
+    let drawer = page.getByRole("dialog", { name: "新增纠错行", exact: true });
+    await expect(drawer.getByRole("button", { name: "关闭新增纠错行", exact: true })).toBeFocused();
+    await drawer.getByRole("button", { name: "保存新增行", exact: true }).click();
+    await expect(drawer.getByRole("alert")).toContainText("必须填写 sku");
+    await drawer.getByRole("textbox", { name: "新增行字段 sku", exact: true }).fill("A-02");
+    await drawer.getByRole("textbox", { name: "新增行字段 sales", exact: true }).fill("55.10");
+    await drawer.getByRole("textbox", { name: "新增原因", exact: true }).fill("虚构补录核对");
+    await drawer.getByRole("button", { name: "保存新增行", exact: true }).click();
+    await expect(drawer.getByRole("alert")).toContainText("内容保留");
+    await expect(drawer.getByRole("textbox", { name: "新增行字段 sales", exact: true })).toHaveValue("55.10");
+    await expect(drawer.getByRole("textbox", { name: "新增原因", exact: true })).toHaveValue("虚构补录核对");
+    await drawer.getByRole("button", { name: "保存新增行", exact: true }).click(); await expect(drawer).toHaveCount(0); await expect(addTrigger).toBeFocused();
+    await expect(page.getByRole("button", { name: /sku，当前值 A-02/ })).toBeVisible();
+    await openStory(page, "patterns-row-review--state-failure"); await page.getByRole("button", { name: /管理第 1 行状态/ }).click();
+    drawer = page.getByRole("dialog", { name: "行状态操作", exact: true });
+    await drawer.getByRole("textbox", { name: "处理原因", exact: true }).fill("虚构重复行核对");
+    await drawer.getByRole("button", { name: "排除这一行", exact: true }).click();
+    await expect(drawer.getByRole("alert")).toContainText("内容保留");
+    await expect(drawer.getByRole("textbox", { name: "处理原因", exact: true })).toHaveValue("虚构重复行核对");
+    await drawer.getByRole("button", { name: "排除这一行", exact: true }).click(); await expect(drawer).toHaveCount(0);
+    const stateTrigger = page.getByRole("button", { name: "管理第 1 行状态，当前 excluded", exact: true }); await expect(stateTrigger).toBeFocused(); await stateTrigger.click();
+    await drawer.getByRole("textbox", { name: "行备注内容", exact: true }).fill("虚构行补充备注");
+    await drawer.getByRole("combobox", { name: "行备注可见范围", exact: true }).selectOption("viewer_visible");
+    await drawer.getByRole("button", { name: "追加行备注", exact: true }).click(); await expect(drawer.getByText("虚构行补充备注", { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "修订备注", exact: true }).first().click();
+    await drawer.getByRole("textbox", { name: "修订备注 fictional-row-note", exact: true }).fill("虚构行备注新修订");
+    await drawer.getByRole("button", { name: "保存新修订", exact: true }).click(); await expect(drawer.getByText("虚构行备注新修订", { exact: true })).toBeVisible();
+    await drawer.getByRole("button", { name: "恢复这一行", exact: true }).click(); await expect(drawer).toHaveCount(0);
+    await page.getByRole("button", { name: "管理第 1 行状态，当前 active", exact: true }).click();
+    await expect(drawer.getByText("虚构行备注新修订", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape"); await expect(drawer).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+test("row drawers preserve nullable values, deletion restriction, no-source and busy focus", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 650 });
+  await openStory(page, "patterns-row-review--no-source"); await prepareInteractiveStory(page, "patterns-row-review--no-source");
+  await expect(page.getByRole("button", { name: "新增纠错行", exact: true })).toBeDisabled();
+  await expect(page.getByText("当前草稿没有可关联的来源批次，请先核对导入来源。", { exact: true })).toBeVisible();
+  await openStory(page, "patterns-row-review--nullable"); await prepareInteractiveStory(page, "patterns-row-review--nullable");
+  let drawer = page.getByRole("dialog", { name: "新增纠错行", exact: true });
+  await expect(drawer.getByRole("checkbox", { name: "字段 quantity 使用空值", exact: true })).toBeChecked();
+  await expect(drawer.getByRole("textbox", { name: "新增行字段 quantity", exact: true })).toBeDisabled();
+  await drawer.getByRole("textbox", { name: "新增行字段 sku", exact: true }).fill("A-03"); await drawer.getByRole("textbox", { name: "新增行字段 sales", exact: true }).fill("60.20");
+  await drawer.getByRole("checkbox", { name: "字段 quantity 使用空值", exact: true }).uncheck();
+  await drawer.getByRole("button", { name: "保存新增行", exact: true }).click(); await expect(drawer.getByRole("alert")).toContainText("请输入有效整数");
+  await drawer.getByRole("checkbox", { name: "字段 quantity 使用空值", exact: true }).check();
+  await drawer.getByRole("button", { name: "保存新增行", exact: true }).click(); await expect(drawer).toHaveCount(0);
+  await openStory(page, "patterns-row-review--source-deleted"); await prepareInteractiveStory(page, "patterns-row-review--source-deleted");
+  await expect(page.getByRole("button", { name: "恢复这一行", exact: true })).toBeDisabled(); await expect(page.getByRole("alert")).toContainText("来源行不能");
+  await openStory(page, "patterns-row-review--manual-deleted"); await prepareInteractiveStory(page, "patterns-row-review--manual-deleted");
+  await page.getByRole("button", { name: "恢复这一行", exact: true }).click(); await expect(page.getByRole("button", { name: "管理第 1 行状态，当前 active", exact: true })).toBeVisible();
+  for (const state of ["add-saving", "state-saving"]) {
+    await openStory(page, `patterns-row-review--${state}`); await prepareInteractiveStory(page, `patterns-row-review--${state}`);
+    const add = state.startsWith("add"); drawer = page.getByRole("dialog", { name: add ? "新增纠错行" : "行状态操作", exact: true });
+    await expect(drawer.getByRole("textbox", { name: add ? "新增原因" : "处理原因", exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape"); await expect(drawer).toBeVisible();
+    const content = drawer.getByRole("region", { name: add ? "新增纠错行内容" : "行状态操作内容", exact: true }); await content.focus(); await expect(content).toBeFocused();
+    await content.locator("..").evaluate(el => { el.scrollTop = 0; }); await page.keyboard.press("PageDown"); await expect.poll(() => content.locator("..").evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  }
+  await openStory(page, "patterns-row-review--note-failure"); await prepareInteractiveStory(page, "patterns-row-review--note-failure");
+  await page.getByRole("textbox", { name: "修订备注 fictional-row-note", exact: true }).fill("虚构显式重试修订");
+  await page.getByRole("button", { name: "保存新修订", exact: true }).click(); await expect(page.getByText("虚构显式重试修订", { exact: true })).toBeVisible();
+});

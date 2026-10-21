@@ -10,7 +10,8 @@ describe("Pagination", () => {
     const onPageChange = vi.fn();
     render(<Pagination itemLabel="商品" onPageChange={onPageChange} page={2} totalItems={64} totalPages={3} />);
 
-    expect(screen.getByText("共 64 个商品 · 第 2 / 3 页")).toBeVisible();
+    expect(screen.getByText("共 64 个商品")).toBeVisible();
+    expect(screen.getByLabelText("第 2 / 3 页")).toHaveAttribute("aria-current", "page");
     await user.click(screen.getByRole("button", { name: "上一页" }));
     await user.click(screen.getByRole("button", { name: "下一页" }));
 

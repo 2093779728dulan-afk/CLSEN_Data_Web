@@ -298,6 +298,9 @@ describe("DraftReviewGate row and note commands", () => {
       visibility: "viewer_visible",
     });
 
+    await waitFor(() => expect(within(noteDrawer).getByRole("button", { name: "关闭行状态操作" })).toBeEnabled());
+    await user.click(within(noteDrawer).getByRole("button", { name: "关闭行状态操作" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "行状态操作" })).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "修订备注" }));
     const revisedBody = screen.getByLabelText("修订备注 version-note-1");
     await user.clear(revisedBody);

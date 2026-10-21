@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,8 +15,8 @@ describe("CatalogStylePage", () => {
       return Promise.resolve(new Response(JSON.stringify({ catalog_version_id: 4, style: { revision: 1, seller_sku_count: 2, source_summary: sourceSummary, standard_name: "标准款", status: "active", style_code: "A", style_id: 8, variant_count: 1 }, skus: [{ internal_display_sku: "A-BLUE-S", revision: 1, seller_sku_count: 2, sku_id: 9, source_summary: sourceSummary, standard_color: "蓝", standard_size: "S", status: "active", style_id: 8 }] }), { status: 200 }));
     }));
     render(<MemoryRouter initialEntries={["/catalog/styles/8"]}><Routes><Route element={<CatalogStylePage />} path="/catalog/styles/:style_id" /></Routes></MemoryRouter>);
-    expect(await screen.findByRole("heading", { name: "标准款" })).toBeVisible();
-    expect(screen.getByText("已启用")).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "标准款" })).toBeVisible());
+    expect(within(screen.getByRole("article", { name: "变体 A-BLUE-S" })).getByText("已启用")).toBeVisible();
     expect(screen.getAllByText("款式编号").length).toBeGreaterThan(0);
     expect(screen.getByText("A-BLUE-S")).toBeVisible();
     expect(screen.getByText("系统身份 SKU #9", { exact: false })).toBeVisible();
@@ -56,7 +56,7 @@ describe("CatalogStylePage", () => {
     }));
     render(<MemoryRouter initialEntries={["/catalog/styles/8"]}><Routes><Route element={<CatalogStylePage />} path="/catalog/styles/:style_id" /><Route element={<p>审核工作台</p>} path="/catalog/imports/:import_id" /></Routes></MemoryRouter>);
 
-    expect(await screen.findByRole("heading", { name: "新变体与 Seller SKU 候选" })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "新变体与 Seller SKU 候选" })).toBeVisible());
     expect(screen.getByText("2301-NAVY-L")).toBeVisible();
     await userEvent.click(screen.getByRole("link", { name: "进入审核" }));
     expect(screen.getByText("审核工作台")).toBeVisible();

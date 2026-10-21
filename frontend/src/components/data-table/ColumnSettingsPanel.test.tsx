@@ -49,7 +49,7 @@ describe("ColumnSettingsPanel", () => {
     expect(layout.setVisible).toHaveBeenLastCalledWith("sessions", true);
 
     fireEvent.dragStart(screen.getByText("SKU").closest("li")!);
-    fireEvent.drop(screen.getByRole("button", { name: "将拖动列放到末尾" }));
+    fireEvent.drop(screen.getByRole("region", { name: "将拖动列放到末尾" }));
     expect(layout.move).toHaveBeenCalledWith("sku", null);
   });
 

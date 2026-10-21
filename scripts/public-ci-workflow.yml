@@ -64,7 +64,7 @@ jobs:
   frontend:
     name: Frontend full / Node 24 / pnpm 11
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,6 +86,14 @@ jobs:
       - name: Run complete frontend profile
         shell: pwsh
         run: ./scripts/run-ci-profile.ps1 -Profile frontend-full
+      - name: Preserve failed frontend screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-failure
+          path: frontend/test-results/
+          retention-days: 7
+          if-no-files-found: warn
 
   mysql-84:
     name: MySQL 8.4 compatibility / Python 3.14

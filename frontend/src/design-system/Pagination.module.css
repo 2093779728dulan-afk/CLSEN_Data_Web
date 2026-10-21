@@ -15,9 +15,15 @@
 .actions {
   display: flex;
   gap: var(--space-2);
+  align-items: center;
 }
+
+.position { display: inline-flex; gap: var(--space-1); min-height: var(--control-height); padding: 0 var(--space-3); align-items: center; justify-content: center; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-sm); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.position > span { color: var(--color-text-muted); font-weight: 400; }
+.next { display: inline-flex; align-items: center; gap: var(--space-2); }
+.next svg { width: 16px; height: 16px; }
 
 @media (max-width: 600px) {
   .pagination { align-items: stretch; flex-direction: column; }
-  .actions > * { flex: 1; }
+  .actions > button { flex: 1; }
 }

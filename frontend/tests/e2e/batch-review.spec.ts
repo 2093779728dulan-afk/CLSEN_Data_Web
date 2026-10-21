@@ -36,7 +36,7 @@ function makeItem(index: number): Item {
   };
 }
 
-async function installBatchReviewApi(page: Page) {
+async function installBatchReviewApi(page: Page, rejectFirstAdvance = false) {
   const items = Array.from({ length: 6 }, (_, index) => makeItem(index + 1));
   let status = "preview";
   let revision = 0;
@@ -45,6 +45,8 @@ async function installBatchReviewApi(page: Page) {
   let acceptedAdvanceRequests = 0;
   let publicationWrites = 0;
   let failedOnce = false;
+  let rejectedAdvance = false;
+  const advanceCalls = new Map<number, number>();
 
   const snapshot = () => {
     const summary = {
@@ -97,6 +99,11 @@ async function installBatchReviewApi(page: Page) {
     if (advance && method === "POST") {
       const key = operationKey(route); const item = items.find((candidate) => candidate.id === Number(advance[1]));
       if (!item || item.status !== "queued") return json(route, { error: { code: "batch_review_state_conflict", message: "Item is not queued.", request_id: "e2e" } }, 409);
+      advanceCalls.set(item.id, (advanceCalls.get(item.id) ?? 0) + 1);
+      if (rejectFirstAdvance && item.id === 201 && !rejectedAdvance) {
+        rejectedAdvance = true;
+        return json(route, { error: { code: "advance_unavailable", message: "示例推进服务暂不可用，任务状态未改变。", request_id: "e2e-rejected-advance" } }, 503);
+      }
       acceptedAdvanceRequests += 1;
       item.operation_token = key; item.recovery_available = false; item.status = "validating"; active += 1; maximumActive = Math.max(maximumActive, active);
       await new Promise((resolve) => setTimeout(resolve, 180));
@@ -129,7 +136,7 @@ async function installBatchReviewApi(page: Page) {
     if (path.includes("publish") && method !== "GET") publicationWrites += 1;
     return json(route, { error: { code: "unhandled_e2e_request", message: `${method} ${path}`, request_id: "e2e" } }, 500);
   });
-  return { get acceptedAdvanceRequests() { return acceptedAdvanceRequests; }, get active() { return active; }, get maximumActive() { return maximumActive; }, get publicationWrites() { return publicationWrites; } };
+  return { advanceCalls, get acceptedAdvanceRequests() { return acceptedAdvanceRequests; }, get active() { return active; }, get maximumActive() { return maximumActive; }, get publicationWrites() { return publicationWrites; } };
 }
 
 test("confirms once, pauses, refreshes, resumes and isolates exceptions without publishing", async ({ page }) => {
@@ -142,7 +149,7 @@ test("confirms once, pauses, refreshes, resumes and isolates exceptions without 
 
   await expect.poll(() => fixture.maximumActive).toBe(3);
   await page.getByRole("button", { name: "暂停批量处理" }).click();
-  await expect(page.getByText("已暂停")).toBeVisible();
+  await expect(page.getByText("已暂停", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "恢复批量处理" })).toBeVisible();
   await expect.poll(() => fixture.active).toBe(0);
@@ -162,3 +169,54 @@ test("confirms once, pauses, refreshes, resumes and isolates exceptions without 
   await page.getByRole("link", { name: "查看全部待发布草稿" }).click();
   await expect(page.getByRole("heading", { name: `批量任务 #${runId} · 待发布草稿` })).toBeVisible();
 });
+
+for (const width of [1280, 390]) {
+  test(`rejected advance preserves authoritative state and requires explicit recovery at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: width === 390 ? "reduce" : "no-preference" });
+    const runtimeEvents: { action?: string; execution_outcome?: string; failed_count?: number }[] = [];
+    page.on("console", message => {
+      if (message.args().length === 2 && message.text().startsWith("batch_review_runtime")) {
+        void message.args()[1]!.jsonValue().then((event: unknown) => runtimeEvents.push(event as (typeof runtimeEvents)[number]));
+      }
+    });
+    const fixture = await installBatchReviewApi(page, true);
+    await page.goto(`/review/batch/${runId}`);
+    await expect(page.getByRole("heading", { name: "核对文件清单", exact: true })).toBeVisible();
+    await page.getByRole("checkbox", { name: "我已核对所选文件的报告日期和报表类型。", exact: true }).check();
+    await page.getByRole("button", { name: "开始批量审核（6 项）", exact: true }).click();
+    await expect.poll(() => runtimeEvents.some(event => event.action === "complete_pass" && event.execution_outcome === "completed_with_failure" && event.failed_count === 1)).toBe(true);
+    await expect(page.getByRole("alert")).toContainText("示例推进服务暂不可用，任务状态未改变。");
+    const firstRow = page.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "synthetic-001.csv", exact: true }) });
+    await expect(firstRow.getByText("排队中", { exact: true })).toBeVisible();
+    expect(fixture.advanceCalls.get(201)).toBe(1);
+    expect(fixture.acceptedAdvanceRequests).toBe(5);
+    await page.screenshot({ path: testInfo.outputPath(`integrated-batch-failure-${width}.png`), fullPage: true });
+
+    await page.getByRole("button", { name: "重新读取任务", exact: true }).click();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(firstRow.getByText("排队中", { exact: true })).toBeVisible();
+    expect(fixture.advanceCalls.get(201)).toBe(1);
+    await page.getByRole("button", { name: "暂停批量处理", exact: true }).click();
+    await expect(page.getByRole("button", { name: "恢复批量处理", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "恢复批量处理", exact: true })).toBeVisible();
+    expect(fixture.advanceCalls.get(201)).toBe(1);
+    await page.getByRole("button", { name: "恢复批量处理", exact: true }).click();
+    await expect(firstRow.getByText("待发布", { exact: true })).toBeVisible();
+    expect(fixture.advanceCalls.get(201)).toBe(2);
+    expect(fixture.acceptedAdvanceRequests).toBe(6);
+    expect(fixture.maximumActive).toBeLessThanOrEqual(3);
+    await page.reload();
+    await expect(firstRow.getByText("待发布", { exact: true })).toBeVisible();
+    expect(fixture.advanceCalls.get(201)).toBe(2);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`integrated-batch-recovered-${width}.png`), fullPage: true });
+    await page.getByRole("link", { name: "查看全部待发布草稿", exact: true }).click();
+    await expect(page.getByRole("heading", { name: `批量任务 #${runId} · 待发布草稿`, exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(firstRow.getByText("待发布", { exact: true })).toBeVisible();
+    expect(fixture.publicationWrites).toBe(0);
+  });
+}

@@ -1,0 +1,22 @@
+.editor { min-width: 0; padding-block: var(--space-2); white-space: normal; }
+.editor input.control { display: block; width: 100%; min-width: 0; height: 36px; margin: 0; padding-inline: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-text); box-shadow: none; font-family: var(--font-body); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; transition: border-color var(--motion-interaction) var(--motion-ease-standard), background-color var(--motion-interaction) var(--motion-ease-standard); }
+.editor input.control:hover { border-color: var(--color-border); background: var(--color-surface); }
+.editor input.control:focus { border-color: var(--color-focus); background: var(--color-surface); outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.editor input.control[aria-invalid="true"] { border-color: var(--color-danger-border); }
+.feedback { display: flex; align-items: flex-start; gap: var(--space-1); min-height: 20px; margin-top: var(--space-1); padding-inline: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-xs); line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+.feedback > svg { flex-shrink: 0; width: 14px; height: 14px; margin-top: var(--space-1); }
+.feedback > div { min-width: 0; }
+.feedback strong, .feedback span, .feedback small { display: block; }
+.feedback strong { font-weight: 650; }
+.feedback small { margin-top: var(--space-1); font: inherit; color: var(--color-text-muted); }
+.feedback.hint { opacity: 0; transition: opacity var(--motion-interaction) var(--motion-ease-standard); }
+.editor:focus-within .hint { opacity: 1; }
+.error { color: var(--color-danger-strong); }
+.saved { color: var(--color-success); }
+.editor[data-save-state="editing"] .feedback, .editor[data-save-state="saving"] .feedback { color: var(--color-primary); }
+.spin { animation: workbench-cell-spin var(--motion-duration-spin) linear infinite; }
+@keyframes workbench-cell-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .editor input.control, .feedback.hint { transition: none; }
+  .spin { animation: none; }
+}

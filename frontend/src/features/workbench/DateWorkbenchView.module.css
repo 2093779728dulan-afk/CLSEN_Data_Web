@@ -1,0 +1,40 @@
+.date-workbench { min-width: 0; display: grid; gap: var(--space-4); padding: var(--space-6); color: var(--color-text); }
+.links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.workbench-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.workbench-tabs button { gap: var(--space-3); }
+.workbench-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.workbench-filters > input { width: min(360px, 100%); }
+.workbench-filters > button { margin-left: auto; }
+.workbench-save-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.workbench-save-state svg { width: var(--space-4); height: var(--space-4); }
+.workbench-save-state small { margin-left: auto; font-size: var(--font-size-xs); }
+.saveError { display: inline-flex; color: var(--color-danger); }
+.grid { border-radius: var(--radius-card); }
+.grid:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.workbench-import-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--color-warning-border); border-radius: var(--radius-card); background: var(--color-warning-bg); }
+.workbench-import-status > div:first-child { flex: 1 1 300px; min-width: 0; }
+.workbench-import-status p { margin: var(--space-2) 0 0; overflow-wrap: anywhere; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.workbench-import-confirm > div:first-child { flex-basis: 100%; }
+.workbench-import-confirm > button { align-self: flex-end; }
+.workbench-empty { border: 1px dashed var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.workbench-empty > p { margin: 0; padding: 0 var(--space-4) var(--space-6); text-align: center; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.workbench-upload-button { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-height); padding: var(--space-2) var(--space-4); border-radius: var(--radius-control); background: var(--color-primary); color: var(--color-on-primary); cursor: pointer; font-size: var(--font-size-base); font-weight: 600; }
+.workbench-upload-button:hover { background: var(--color-primary-strong); }
+.workbench-upload-button:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.workbench-upload-button:has(input:disabled) { opacity: 0.6; cursor: wait; }
+.workbench-upload-button input { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.workbench-action-bar { position: sticky; bottom: 0; z-index: var(--z-fixed-action); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-control); }
+.footerCopy { display: flex; align-items: flex-start; gap: var(--space-2); flex: 1 1 280px; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.footerCopy svg { flex: none; width: var(--space-4); height: var(--space-4); }
+.workbench-action-bar > div:last-child { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+@media (max-width: 767px) {
+  .date-workbench { padding: var(--space-4) var(--space-3); }
+  .workbench-tabs button { flex: 1 1 140px; }
+  .workbench-filters > input { width: 100%; }
+  .workbench-save-state small { flex-basis: 100%; margin-left: 0; }
+  .workbench-import-confirm > div { width: 100%; }
+  .workbench-import-status > button, .workbench-import-status > label { width: 100%; }
+  .workbench-action-bar { position: static; padding: var(--space-3); }
+  .workbench-action-bar > div:last-child { width: 100%; }
+  .workbench-action-bar button { flex: 1 1 120px; }
+}

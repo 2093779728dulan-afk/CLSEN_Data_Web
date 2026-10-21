@@ -23,8 +23,8 @@ export function SeriesSelector({ available, selected, onChange }: { available: r
     if (selected.length <= 1 && available.length > 0) { setNotice("至少选择 1 项进行对比。"); return; }
     onChange(selected.filter((value) => value !== key)); setNotice("已移出比较。");
   };
-  return <fieldset className={css["series-selector"]}><legend>{title} <span>{countText}{available.length > 8 ? " · 同时最多对比 8 项" : ""}</span></legend>
+  return <section className={css["series-selector"]} role="group" aria-label={title}><div className={css["series-selector__heading"]}><strong>{title}</strong><span>{countText}{available.length > 8 ? " · 同时最多对比 8 项" : ""}</span></div>
     {available.length === 0 ? <p>当前维度没有可选数据。</p> : <div className={css["series-selector__options"]}>{available.map((item) => <Checkbox key={item.key} label={item.label} checked={selected.includes(item.key)} disabled={!selected.includes(item.key) && selected.length >= 8} onChange={(event) => toggle(item.key, event.target.checked)} />)}</div>}
     <p aria-live="polite" className={css["analytics-live"]}>{notice}</p>
-  </fieldset>;
+  </section>;
 }

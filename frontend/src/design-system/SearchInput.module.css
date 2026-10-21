@@ -1,0 +1,15 @@
+.group { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; min-height: var(--control-height-large); padding-inline: var(--space-3) var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); box-shadow: var(--shadow-control); transition: border-color var(--motion-interaction) var(--motion-ease-standard), box-shadow var(--motion-interaction) var(--motion-ease-standard); }
+.group:has(input:focus-visible) { border-color: var(--color-focus); box-shadow: var(--focus-ring); }
+.group:has(input[aria-invalid="true"]) { border-color: var(--color-danger); box-shadow: var(--danger-ring); }
+.group:has(input:disabled), .group:has(input[readonly]) { background: var(--color-surface-muted); }
+.searchIcon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-muted); }
+.group .input { flex: 1; width: 0; min-width: 0; min-height: calc(var(--control-height-large) - 2px); padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; outline: none; font-size: var(--font-size-sm); }
+/* The group owns focus; override legacy workspace input:focus-visible outlines. */
+.group .input:focus-visible { outline: none; box-shadow: none; }
+.input::-webkit-search-cancel-button { appearance: none; }
+.clear { display: grid; flex-shrink: 0; place-items: center; min-width: var(--control-height); min-height: var(--control-height); padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.clear svg { width: 14px; height: 14px; }
+.clear:hover:not(:disabled) { background: var(--color-surface-muted); color: var(--color-text); }
+.clear:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .group { transition: none; } }
+@media (forced-colors: active) { .group:focus-within { outline: 2px solid Highlight; } }

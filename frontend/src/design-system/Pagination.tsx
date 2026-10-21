@@ -25,11 +25,12 @@ export function Pagination({
   return (
     <nav aria-label="分页" className={styles.pagination}>
       <p aria-live="polite" className={styles.summary}>
-        共 {totalItems.toLocaleString("zh-CN")} 个{itemLabel} · 第 {page} / {pageCount} 页
+        共 {totalItems.toLocaleString("zh-CN")} 个{itemLabel}
       </p>
       <div className={styles.actions}>
-        <Button disabled={loading || page <= 1} icon={<ChevronLeft />} onClick={() => onPageChange(page - 1)}>上一页</Button>
-        <Button disabled={loading || page >= pageCount} icon={<ChevronRight />} onClick={() => onPageChange(page + 1)}>下一页</Button>
+        <Button disabled={loading || page <= 1} icon={<ChevronLeft />} onClick={() => onPageChange(page - 1)} variant="quiet">上一页</Button>
+        <span aria-atomic="true" aria-current="page" aria-label={`第 ${page} / ${pageCount} 页`} aria-live="polite" className={styles.position}>{page}<span aria-hidden="true"> / {pageCount}</span></span>
+        <Button disabled={loading || page >= pageCount} onClick={() => onPageChange(page + 1)} variant="quiet"><span className={styles.next}>下一页<ChevronRight aria-hidden="true" /></span></Button>
       </div>
     </nav>
   );

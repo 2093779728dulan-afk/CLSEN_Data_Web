@@ -1,14 +1,9 @@
-import css from "./BatchReviewPage.module.css";
-import { Button, ErrorState, LinkButton, Skeleton } from "../../design-system";
+import { BatchReviewView } from "./BatchReviewView";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ApiRequestError } from "../../api/client";
 import { BatchReviewApi } from "./batchReviewApi";
-import { BatchReviewCompletionActions } from "./BatchReviewCompletionActions";
-import { BatchReviewPreflightTable } from "./BatchReviewPreflightTable";
-import { BatchReviewProgressTable } from "./BatchReviewProgressTable";
-import { BatchReviewSummary } from "./BatchReviewSummary";
 import { runBatchReviewExecutor } from "./batchReviewExecutor";
 import type { BatchReviewItem, BatchReviewRun } from "./batchReviewTypes";
 
@@ -85,6 +80,10 @@ function BatchReviewRunPage({ runId }: { runId: number }) {
         {
           signal: controller.signal,
           onSnapshot: (next) => { if (!controller.signal.aborted) setRun(next); },
+          onEvent: (event) => console.info("batch_review_runtime", event),
+          onItemResult: (result) => {
+            if (!controller.signal.aborted && result.outcome === "failed") setError(pageError(result.error));
+          },
         },
       );
       if (!controller.signal.aborted) setRun(result);
@@ -136,26 +135,8 @@ function BatchReviewRunPage({ runId }: { runId: number }) {
     finally { setBusyItemId(undefined); }
   };
 
-  if (loading) return <main className={css["batch-review-page"]} id="main-content"><p role="status">正在读取批量任务…</p><Skeleton lines={4} /></main>;
-  if (!run) return <main className={css["batch-review-page"]} id="main-content"><ErrorState title="无法打开批量审核" description={error} action={<Button onClick={() => { setLoading(true); void load(); }}>重新读取</Button>} /></main>;
-
-  return <main className={css["batch-review-page"]} id="main-content">
-    <nav aria-label="批量审核导航"><LinkButton to="/versions">返回版本记录</LinkButton></nav>
-    <BatchReviewSummary run={run} />
-    {error ? <p className={"form-error"} role="alert">{error}</p> : null}
-    {run.status === "preview" ? <section aria-labelledby="batch-review-preflight-title" className={css["batch-review-panel"]}>
-      <div className={css["batch-review-heading-row"]}><div><p className={"eyebrow"}>服务端权威预检</p><h2 id="batch-review-preflight-title">核对文件清单</h2></div><Button variant="quiet" onClick={() => void load()} type="button">刷新预检</Button></div>
-      <BatchReviewPreflightTable items={run.items} onToggle={(itemId, selected) => setSelectedIds((current) => { const next = new Set(current); if (selected) next.add(itemId); else next.delete(itemId); return next; })} selectedIds={selectedIds} />
-      <label className={css["batch-review-confirmation"]}><input checked={accepted} onChange={(event) => setAccepted(event.currentTarget.checked)} type="checkbox" /><span>我已核对所选文件的报告日期和报表类型。</span></label>
-      <Button variant="primary" disabled={!accepted || selectedIds.size === 0 || busyAction === "confirm"} onClick={() => void confirm()} type="button">{busyAction === "confirm" ? "正在开始…" : `开始批量审核（${selectedIds.size} 项）`}</Button>
-    </section> : <section aria-labelledby="batch-review-progress-title" className={css["batch-review-panel"]}>
-      <div className={css["batch-review-heading-row"]}><div><p className={"eyebrow"}>服务器恢复状态</p><h2 id="batch-review-progress-title">处理进度</h2></div><div className={css["batch-review-actions"]}>
-        {run.allowed_actions.includes("pause") ? <Button variant="quiet" disabled={busyAction === "pause"} onClick={() => void changeState("pause")} type="button">{busyAction === "pause" ? "正在暂停…" : "暂停批量处理"}</Button> : null}
-        {run.allowed_actions.includes("resume") ? <Button variant="primary" disabled={busyAction === "resume"} onClick={() => void changeState("resume")} type="button">{busyAction === "resume" ? "正在恢复…" : "恢复批量处理"}</Button> : null}
-        <Button variant="quiet" onClick={() => void load()} type="button">刷新状态</Button>
-      </div></div>
-      <BatchReviewProgressTable busyItemId={busyItemId} items={run.items} onRetry={(item) => void retry(item)} />
-    </section>}
-    <BatchReviewCompletionActions run={run} />
-  </main>;
+  return <BatchReviewView run={run} loading={loading} error={error} selectedIds={selectedIds} accepted={accepted} busyAction={busyAction} busyItemId={busyItemId}
+    onRefresh={() => { if (!run) setLoading(true); void load(); }}
+    onToggle={(itemId, selected) => setSelectedIds((current) => { const next = new Set(current); if (selected) next.add(itemId); else next.delete(itemId); return next; })}
+    onAccept={setAccepted} onConfirm={() => void confirm()} onChangeState={(action) => void changeState(action)} onRetry={(item) => void retry(item)} />;
 }

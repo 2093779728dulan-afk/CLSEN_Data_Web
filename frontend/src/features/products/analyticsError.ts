@@ -8,6 +8,7 @@ export function analyticsError(error: unknown, fallback: string) {
     analytics_return_snapshot_required: "退货去重快照尚未建立。请从每日审核完成退货发布准备，再读取产品分析。",
     analytics_snapshot_stale: "退货快照与当前已发布报表不一致。请在每日审核更新退货发布准备；反复重读不会修复快照。",
     analytics_identity_fact_combination_invalid: "所选目录版本与事实口径不匹配，请重新选择版本或事实口径。",
+    analytics_catalog_version_required: "目录快照需要指定目录记录。请切换当前事实，读取后再选择目录快照。",
     catalog_snapshot_range_out_of_bounds: "所选日期超出目录快照覆盖范围，请调整日期或切换当前事实。",
     style_analytics_unavailable: "商品分析暂不可用，请检查初始化状态；若前置已齐全，请联系管理员核对。",
   };

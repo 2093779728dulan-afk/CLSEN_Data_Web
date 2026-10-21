@@ -45,7 +45,7 @@ test("return intake preserves context and requires explicit confirmation of a bu
     return route.fulfill({ json: body });
   });
   await page.goto(`/review/${date}?report_type=return_report&page=1`);
-  await expect(page.getByRole("button", { name: "退货报告未导入", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: /^退货报告\s*未导入$/ })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText(`${date} · 退货报告`, { exact: true })).toBeVisible();
   await page.reload();
   await expect(page).toHaveURL(/report_type=return_report/);

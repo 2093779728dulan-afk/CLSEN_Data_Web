@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowUpRight, X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Tooltip } from "../../design-system";
+import { Button, Tooltip } from "../../design-system";
 import type { StyleLedgerResponse } from "./productAnalyticsTypes";
 import css from "./ProductIdentityCell.module.css";
 
@@ -15,10 +15,10 @@ type Props = {
 export function ProductIdentityCell({ row, showName, detailUrl, ledgerUrl }: Props) {
   return <Dialog.Root>
     <Tooltip content={<span className={css.preview}><strong>款号 {row.style_code}</strong><span>{row.standard_name}</span><small>点击查看商品信息</small></span>} side="right">
-      <Dialog.Trigger asChild><button type="button" className={css.trigger} aria-label={`查看款号 ${row.style_code} 商品信息`}>
+      <Dialog.Trigger asChild><Button variant="quiet" type="button" className={css.trigger} aria-label={`查看款号 ${row.style_code} 商品信息`}>
         <span>{row.style_code}<ArrowUpRight size={14} aria-hidden="true" /></span>
         {showName && <span className={css.name}>{row.standard_name}</span>}
-      </button></Dialog.Trigger>
+      </Button></Dialog.Trigger>
     </Tooltip>
     <Dialog.Portal>
       <Dialog.Overlay className={css.overlay} />

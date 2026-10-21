@@ -1,9 +1,37 @@
 import { RefreshCw, Save } from "lucide-react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 
 import { Button } from "./Button";
 import { StatusBadge } from "./StatusBadge";
 import { StatusMessage } from "./StatusMessage";
+import { Checkbox } from "./Checkbox";
+import { Input } from "./Input";
+import { FormField } from "./FormField";
+
+function SaveFeedbackExample() {
+  const [saving, setSaving] = useState(false);
+  const [fail, setFail] = useState(false);
+  const [value, setValue] = useState("示例审核名称");
+  const [result, setResult] = useState<"success" | "failure">();
+  async function save() {
+    setSaving(true); setResult(undefined);
+    // Fictional latency in the story only; production awaits the actual request.
+    await new Promise(resolve => setTimeout(resolve, 800));
+    setResult(fail ? "failure" : "success"); setSaving(false);
+  }
+  return <div className="storybook-stack">
+    <p>复用按钮、表单和反馈组件。此样板仅演示，不写入真实数据。</p>
+    <FormField label="审核名称"><Input disabled={saving} onChange={event => { setValue(event.target.value); setResult(undefined); }} value={value} /></FormField>
+    <Checkbox checked={fail} disabled={saving} label="模拟本次保存失败" onChange={event => setFail(event.target.checked)} />
+    <div className="storybook-row"><Button icon={<Save />} loading={saving} loadingLabel="正在保存修改" onClick={() => void save()} variant="primary">保存修改</Button></div>
+    {saving && <StatusMessage kind="info" title="正在保存修改">请稍候，输入内容保留。</StatusMessage>}
+    {result === "success" && <StatusMessage kind="success" title="修改已保存">示例结果：{value}</StatusMessage>}
+    {result === "failure" && <StatusMessage kind="danger" title="保存失败">输入内容已保留。关闭失败模拟后，可以再次点击保存修改。</StatusMessage>}
+  </div>;
+}
+
+export const SaveFeedback: Story = { render: () => <SaveFeedbackExample /> };
 
 const meta = {
   title: "Design System/Actions and status",

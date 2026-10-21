@@ -214,13 +214,13 @@ describe("AdminConsole", () => {
     const user = userEvent.setup();
 
     render(<AdminConsole principal={administrator} />);
-    await screen.findByRole("heading", { name: "账号与角色" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "新建账号" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "新建账号" }));
     const form = screen.getByRole("form", { name: "创建账号" });
-    await user.type(within(form).getByLabelText("账号"), "reviewer");
-    await user.type(within(form).getByLabelText("显示名"), "每日审核员");
+    await user.type(within(form).getByRole("textbox", { name: "账号" }), "reviewer");
+    await user.type(within(form).getByRole("textbox", { name: "显示名" }), "每日审核员");
     await user.type(within(form).getByLabelText("邮箱（可选）"), "reviewer@example.com");
-    await user.type(within(form).getByLabelText("临时密码"), "Temporary-Password-42");
+    await user.type(within(form).getByLabelText(/^临时密码/), "Temporary-Password-42");
     await user.click(within(form).getByLabelText("数据管理员"));
     await user.click(within(form).getByRole("button", { name: "创建账号" }));
 
@@ -230,7 +230,7 @@ describe("AdminConsole", () => {
     expect(operationKeys).toHaveLength(2);
     expect(operationKeys[0]).toMatch(/^[0-9a-f-]{36}$/i);
     expect(operationKeys[1]).toBe(operationKeys[0]);
-    expect(within(form).getByLabelText("临时密码")).toHaveValue("");
+    expect(within(form).getByLabelText(/^临时密码/)).toHaveValue("");
   });
 
   it("uses a new UUID when the creation password changes after an uncertain response", async () => {
@@ -258,12 +258,12 @@ describe("AdminConsole", () => {
     const user = userEvent.setup();
 
     render(<AdminConsole principal={administrator} />);
-    await screen.findByRole("heading", { name: "账号与角色" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "新建账号" })).toBeEnabled());
     await user.click(screen.getByRole("button", { name: "新建账号" }));
     const form = screen.getByRole("form", { name: "创建账号" });
-    await user.type(within(form).getByLabelText("账号"), "reviewer");
-    await user.type(within(form).getByLabelText("显示名"), "每日审核员");
-    const password = within(form).getByLabelText("临时密码");
+    await user.type(within(form).getByRole("textbox", { name: "账号" }), "reviewer");
+    await user.type(within(form).getByRole("textbox", { name: "显示名" }), "每日审核员");
+    const password = within(form).getByLabelText(/^临时密码/);
     await user.type(password, "Temporary-Password-42");
     await user.click(within(form).getByLabelText("数据管理员"));
     await user.click(within(form).getByRole("button", { name: "创建账号" }));
@@ -311,8 +311,8 @@ describe("AdminConsole", () => {
     await screen.findByText("数据审核员");
     await user.click(screen.getByRole("button", { name: "编辑 operator" }));
     const form = screen.getByRole("form", { name: "编辑 operator" });
-    await user.clear(within(form).getByLabelText("显示名"));
-    await user.type(within(form).getByLabelText("显示名"), "审核负责人");
+    await user.clear(within(form).getByRole("textbox", { name: "显示名" }));
+    await user.type(within(form).getByRole("textbox", { name: "显示名" }), "审核负责人");
     await user.selectOptions(within(form).getByLabelText("账号状态"), "disabled");
     await user.type(within(form).getByLabelText("新密码（留空则不修改）"), "Another-Password-42");
     await user.click(within(form).getByRole("button", { name: "保存账号修改" }));
@@ -350,8 +350,8 @@ describe("AdminConsole", () => {
     render(<AdminConsole principal={administrator} />);
     await user.click(await screen.findByRole("button", { name: "编辑 operator" }));
     const form = screen.getByRole("form", { name: "编辑 operator" });
-    await user.clear(within(form).getByLabelText("显示名"));
-    await user.type(within(form).getByLabelText("显示名"), "审核负责人");
+    await user.clear(within(form).getByRole("textbox", { name: "显示名" }));
+    await user.type(within(form).getByRole("textbox", { name: "显示名" }), "审核负责人");
     await user.clear(within(form).getByLabelText("邮箱（可选）"));
     await user.click(within(form).getByLabelText("数据管理员"));
     await user.click(within(form).getByLabelText("查看人员"));
@@ -476,9 +476,9 @@ describe("AdminConsole", () => {
     expect(await screen.findByRole("heading", { name: "站点配置版本" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "新建配置版本" }));
     const form = screen.getByRole("form", { name: "创建站点配置版本" });
-    await user.clear(within(form).getByLabelText("统计时区"));
-    await user.type(within(form).getByLabelText("统计时区"), "Asia/Shanghai");
-    await user.type(within(form).getByLabelText("变更原因"), "调整事件日统计口径");
+    await user.clear(within(form).getByRole("textbox", { name: "统计时区" }));
+    await user.type(within(form).getByRole("textbox", { name: "统计时区" }), "Asia/Shanghai");
+    await user.type(within(form).getByRole("textbox", { name: "变更原因" }), "调整事件日统计口径");
     await user.click(within(form).getByRole("button", { name: "创建配置版本" }));
     expect(await screen.findByText("站点配置 v2 已创建并设为当前版本。" )).toBeVisible();
 
@@ -549,6 +549,34 @@ describe("AdminConsole", () => {
     expect(maintenanceCalls).toBe(3);
   });
 
+  it("retains recovery content and operation key after failure until the form changes", async () => {
+    const keys: (string | null)[] = [];
+    const bodies: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", baseAdminFetch((path, init) => {
+      if (path === "/api/admin/drafts/51/force-rebuild" && init?.method === "POST") {
+        const headers = new Headers(init.headers);
+        expect(headers.get("X-CSRF-Token")).toBeTruthy();
+        keys.push(headers.get("Idempotency-Key")); bodies.push(requestBody(init));
+        return Promise.resolve(jsonResponse({ error: { code: "synthetic_failure", message: "虚构提交结果未确认" } }, 503));
+      }
+      return undefined;
+    }));
+    const user = userEvent.setup();
+    render(<AdminConsole principal={administrator} forceRebuildContext={{ batchId: 11, expectedActiveDraft: { version_id: 51, data_revision: 2, review_revision: 3 }, expectedPublicationVersionId: 49, parseBaselineId: 31, reportDate: "2026-08-10", versionId: 51 }} />);
+    await user.click(await screen.findByRole("button", { name: "草稿恢复" }));
+    const form = await screen.findByRole("form", { name: "强制重建草稿" });
+    const submit = within(form).getByRole("button", { name: "强制重建草稿" });
+    expect(submit).toBeDisabled();
+    const reason = within(form).getByRole("textbox", { name: "重建原因" });
+    await user.type(reason, "人工核对来源"); await user.click(within(form).getByRole("checkbox"));
+    await user.click(submit); expect(await screen.findByText("虚构提交结果未确认")).toBeVisible();
+    expect(reason).toHaveValue("人工核对来源"); expect(within(form).getByRole("checkbox")).toBeChecked();
+    await user.click(submit); await screen.findByText("虚构提交结果未确认");
+    expect(keys).toHaveLength(2); expect(keys[0]).toBeTruthy(); expect(keys[1]).toBe(keys[0]); expect(bodies[1]).toEqual(bodies[0]);
+    await user.type(reason, "，更新原因"); await user.click(submit); await screen.findByText("虚构提交结果未确认");
+    expect(keys).toHaveLength(3); expect(keys[2]).not.toBe(keys[0]); expect(bodies[2]?.reason).toBe("人工核对来源，更新原因");
+  });
+
   it("only exposes force rebuild when the review route supplies immutable source context", async () => {
     const rebuilt = vi.fn();
     let rebuildBody: Record<string, unknown> | undefined;
@@ -589,7 +617,7 @@ describe("AdminConsole", () => {
     );
     await user.click(await screen.findByRole("button", { name: "草稿恢复" }));
     const form = screen.getByRole("form", { name: "强制重建草稿" });
-    await user.type(within(form).getByLabelText("重建原因"), "解析基线已由人工确认，需要重新构建草稿");
+    await user.type(within(form).getByRole("textbox", { name: "重建原因" }), "解析基线已由人工确认，需要重新构建草稿");
     await user.click(within(form).getByLabelText("我确认不会绕过校验，也不会覆盖已发布版本。"));
     await user.click(within(form).getByRole("button", { name: "强制重建草稿" }));
 

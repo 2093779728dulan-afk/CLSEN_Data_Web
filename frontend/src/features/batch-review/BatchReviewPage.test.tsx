@@ -64,6 +64,18 @@ describe("BatchReviewPage", () => {
     expect(screen.getByRole("checkbox", { name: "选择 business-2026-08-01.csv" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "选择 duplicate.csv" })).toBeDisabled();
     expect(screen.getByText("本任务中已有文件指向相同日期和报表类型。")).toBeInTheDocument();
+    expect(screen.getByText("任务内目标重复")).toBeInTheDocument();
+  });
+
+  it("does not label an already materialized source as an empty target", async () => {
+    mocks.getRun.mockResolvedValue(run({ items: [item({
+      reason_code: "already_materialized", reason_message: "该批次已经生成过数据版本。",
+      selected: false, status: "manual_review",
+    })] }));
+    renderPage();
+    expect(await screen.findByText("已生成数据版本")).toBeInTheDocument();
+    expect(screen.queryByText("目标为空")).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "选择 business-2026-08-01.csv" })).toBeDisabled();
   });
 
   it("requires the confirmation statement and submits only selected item IDs", async () => {
@@ -119,10 +131,12 @@ describe("BatchReviewPage", () => {
       expect(mocks.execute).toHaveBeenCalledTimes(1);
       const options = mocks.execute.mock.calls[0]![3] as {
         signal: AbortSignal; onSnapshot: (snapshot: BatchReviewRun) => void;
+        onItemResult: (result: { outcome: string; error: unknown }) => void;
       };
       expect(options.signal.aborted).toBe(true);
       await act(async () => {
         options.onSnapshot(failed);
+        options.onItemResult({ outcome: "failed", error: new Error("stopped pass failure") });
         finishPrevious(failed);
         await Promise.resolve();
       });
@@ -134,6 +148,7 @@ describe("BatchReviewPage", () => {
       items: [expect.objectContaining({ status: "queued", recovery_available: true })],
     });
     expect(screen.queryByRole("button", { name: "重试" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("drains active work before resuming and ignores the stopped pass snapshot", async () => {
@@ -162,6 +177,33 @@ describe("BatchReviewPage", () => {
     await waitFor(() => expect(mocks.execute).toHaveBeenCalledTimes(2));
     expect(mocks.execute.mock.calls[1]![0]).toMatchObject({ status: "running", revision: 6 });
     expect(screen.getByRole("button", { name: "暂停批量处理" })).toBeVisible();
+  });
+
+  it("shows executor failure while retaining the authoritative item state", async () => {
+    const runtimeLog = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const progress = run({ status: "running", items: [item({
+      status: "queued", recovery_available: true,
+    })] });
+    mocks.getRun.mockResolvedValue(progress);
+    mocks.execute.mockImplementation((
+      snapshot: BatchReviewRun, _advance: unknown, _reload: unknown,
+      options: { onItemResult: (result: { outcome: string; error: unknown }) => void; onEvent: (event: unknown) => void },
+    ) => {
+      options.onItemResult({ outcome: "failed", error: new Error("advance rejected") });
+      options.onEvent({ component: "batch_review_executor", run_id: snapshot.id,
+        stage: "pass", action: "complete_pass", execution_outcome: "completed_with_failure" });
+      return Promise.resolve(snapshot);
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("advance rejected");
+    expect(screen.getByText("business-2026-08-01.csv")).toBeVisible();
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+    expect(runtimeLog).toHaveBeenCalledWith("batch_review_runtime", expect.objectContaining({
+      execution_outcome: "completed_with_failure", run_id: progress.id,
+    }));
+    runtimeLog.mockRestore();
   });
 });
 

@@ -1,0 +1,25 @@
+.toolbar { --color-text: var(--color-workspace-ink); --color-text-muted: var(--color-workspace-muted); --color-border: var(--color-workspace-border); --color-border-subtle: var(--color-workspace-border); --color-page: var(--color-workspace-background); --color-surface-muted: var(--color-workspace-inset); min-width: 0; }
+.controls { display: flex; align-items: end; gap: var(--space-3); }
+.search { flex: 1; min-width: 0; }
+.controls > :not(.search) { flex-shrink: 0; }
+.controls > div:not(.search):not(.pending) { min-width: 140px; }
+.pending { display: flex; align-items: center; min-height: var(--control-height-large); padding-inline: var(--space-2); white-space: nowrap; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: var(--control-height-large); margin-top: var(--space-2); }
+.count { flex-shrink: 0; margin: 0; color: var(--color-text-muted); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; }
+.count strong { font-weight: 600; color: var(--color-text); }
+.count > span { margin-inline-end: var(--space-2); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-1); min-width: 0; }
+.chip { display: inline-flex; min-height: 28px; max-width: 240px; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-page); color: var(--color-text); font-size: var(--font-size-xs); cursor: pointer; }
+.chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--color-text-muted); }
+.chip:hover { background: var(--color-surface-muted); border-color: var(--color-border); }
+.chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.meta .reset { margin-inline-start: auto; padding-inline: var(--space-2); font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-muted); transform: none; }
+.meta .reset:hover:not(:disabled) { color: var(--color-text); border-color: transparent; transform: none; }
+@media (max-width: 700px) {
+  .controls { flex-wrap: wrap; gap: var(--space-2); }
+  .search { flex-basis: 100%; }
+  .controls > div:not(.search):not(.pending) { flex: 1; min-width: 0; }
+  .pending { padding-inline: 0; }
+  .chip { max-width: 190px; min-height: var(--control-height); }
+}

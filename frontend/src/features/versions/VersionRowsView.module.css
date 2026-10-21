@@ -1,0 +1,10 @@
+.rows { min-width: 0; display: grid; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.rows > button { justify-self: start; }
+.rows h3 { font-size: var(--font-size-base); margin: 0; }
+.rows p { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.scroll { max-width: 100%; max-height: 480px; overflow: auto; overscroll-behavior-inline: contain; border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+.scroll:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.scroll table { min-width: 100%; width: max-content; border-collapse: separate; border-spacing: 0; }
+.scroll td, .scroll th { white-space: nowrap; }
+.scroll caption { text-align: left; padding: var(--space-3); font-size: var(--font-size-sm); }
+.scroll thead th { position: sticky; top: 0; background: var(--color-surface-muted); }

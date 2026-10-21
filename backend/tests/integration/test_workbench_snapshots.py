@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, timedelta
 from typing import Literal, cast
 from uuid import uuid4
@@ -16,7 +17,10 @@ from app.datasets.types import MaterializeBaselineCommand
 from app.review.types import DraftHeadExpectation
 from app.workbench.commands import SetWorkbenchCellCommand, UndoWorkbenchCellCommand
 from app.workbench.queries import DateWorkbenchQueryService
-from app.workbench.repository import MySqlWorkbenchMutationRepository
+from app.workbench.repository import (
+    MySqlWorkbenchMutationRepository,
+    WorkbenchMutationHead,
+)
 from app.workbench.service import WorkbenchCellMutationService
 from sqlalchemy.orm import Session
 
@@ -154,6 +158,26 @@ def test_date_workbench_combines_standard_and_extension_cells_with_bounded_pages
     assert response.head is not None
     assert response.head.version_id == materialized.version_id
     assert response.permissions.can_edit is True
+    assert response.permissions.can_undo is False
+
+    def can_undo_for(actor_user_id: int) -> bool:
+        with Session(dataset_case.migration_engine) as session:
+            return (
+                DateWorkbenchQueryService(session)
+                .get(
+                    principal=replace(principal, user_id=actor_user_id),
+                    report_date=report_date,
+                    report_type="business_report",
+                    page=1,
+                    page_size=1,
+                    search=None,
+                    sort_column_id=None,
+                    direction="asc",
+                    changed_only=False,
+                )
+                .permissions.can_undo
+            )
+
     assert response.pagination.page_size == 1
     assert response.pagination.total_rows >= 1
     assert len(response.rows) == 1
@@ -211,6 +235,8 @@ def test_date_workbench_combines_standard_and_extension_cells_with_bounded_pages
     assert first_result.cell.base == "find this"
     assert first_result.cell.cell_revision == 1
     assert first_result.head.data_revision == response.head.data_revision + 1
+    assert can_undo_for(dataset_case.owner_user_id) is True
+    assert can_undo_for(dataset_case.other_manager_user_id) is False
     ledger = dataset_case.rows(
         """
         SELECT data_revision, cell_revision, operation, before_value,
@@ -285,6 +311,7 @@ def test_date_workbench_combines_standard_and_extension_cells_with_bounded_pages
     standard_undo_result = standard_mutations.undo_latest_cell(undo_standard)
     assert standard_undo_result.cell.column_id == title_column.column_id
     assert standard_undo_result.cell.current == title_cell.current
+    assert can_undo_for(dataset_case.owner_user_id) is True
 
     undo_extension = UndoWorkbenchCellCommand(
         head=DraftHeadExpectation(
@@ -303,6 +330,50 @@ def test_date_workbench_combines_standard_and_extension_cells_with_bounded_pages
     assert extension_undo_result.cell.column_id == operator_column.column_id
     assert extension_undo_result.cell.current == "find this"
     assert extension_undo_result.cell.cell_revision == 2
+    assert can_undo_for(dataset_case.owner_user_id) is False
+
+    def expectation(head: WorkbenchMutationHead) -> DraftHeadExpectation:
+        return DraftHeadExpectation(
+            dataset_id=head.dataset_id,
+            version_id=head.version_id,
+            status=head.status,
+            data_revision=head.data_revision,
+            review_revision=head.review_revision,
+            pointed_at=head.pointed_at,
+        )
+
+    owner_set = standard_mutations.set_cell(
+        replace(
+            standard_command,
+            head=expectation(extension_undo_result.head),
+            expected_cell_revision=standard_undo_result.cell.cell_revision,
+            operation_token=uuid4(),
+            value="Owner current title",
+        )
+    )
+    other_set = standard_mutations.set_cell(
+        replace(
+            standard_command,
+            head=expectation(owner_set.head),
+            expected_cell_revision=owner_set.cell.cell_revision,
+            operation_token=uuid4(),
+            actor_user_id=dataset_case.other_manager_user_id,
+            value="Other current title",
+        )
+    )
+    assert can_undo_for(dataset_case.owner_user_id) is False
+    assert can_undo_for(dataset_case.other_manager_user_id) is True
+    reverted = standard_mutations.undo_latest_cell(
+        replace(
+            undo_standard,
+            head=expectation(other_set.head),
+            actor_user_id=dataset_case.other_manager_user_id,
+            operation_token=uuid4(),
+        )
+    )
+    assert reverted.cell.current == "Owner current title"
+    assert can_undo_for(dataset_case.owner_user_id) is False
+    assert can_undo_for(dataset_case.other_manager_user_id) is False
 
 
 def test_first_edit_revision_is_idempotent_and_copies_extension_snapshot(

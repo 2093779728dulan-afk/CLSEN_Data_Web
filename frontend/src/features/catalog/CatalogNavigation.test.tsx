@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
@@ -22,19 +22,24 @@ it("retains query, sorting, page and view on return, then clears them at a new i
   const result = render(<Workspace boundary="site-1" />);
   await screen.findByRole("heading", { name: "当前批准主档" });
   await userEvent.type(screen.getByLabelText("查找商品"), "商品");
-  await userEvent.selectOptions(screen.getByLabelText("排序"), "name");
+  await userEvent.click(screen.getByRole("combobox", { name: "排序" }));
+  await userEvent.keyboard("{End}{Enter}");
+  await userEvent.click(screen.getByRole("combobox", { name: "商品状态" }));
+  await userEvent.keyboard("{Home}{ArrowDown}{Enter}");
   await userEvent.click(screen.getByRole("button", { name: "批量表格" }));
   await userEvent.click(screen.getByRole("button", { name: "下一页" }));
   await userEvent.click(screen.getAllByRole("link").find((link) => link.getAttribute("href")?.startsWith("/catalog/styles/"))!);
   await userEvent.click(screen.getByRole("link", { name: "返回商品主档" }));
-  expect(await screen.findByText("第 2 / 2 页")).toBeVisible();
+  await waitFor(() => expect(screen.getByLabelText("第 2 / 2 页")).toBeVisible());
   expect(screen.getByLabelText("查找商品")).toHaveValue("商品");
-  expect(screen.getByLabelText("排序")).toHaveValue("name");
+  expect(screen.getByRole("combobox", { name: "排序" })).toHaveTextContent("商品名称");
+  expect(screen.getByRole("combobox", { name: "商品状态" })).toHaveTextContent("已启用");
   expect(screen.getByRole("button", { name: "批量表格" })).toHaveAttribute("aria-pressed", "true");
   expect(screen.queryByRole("heading", { name: "目录工作簿" })).not.toBeInTheDocument();
   result.rerender(<Workspace boundary="site-2" />);
-  expect(await screen.findByText("第 1 / 2 页")).toBeVisible();
+  await waitFor(() => expect(screen.getByLabelText("第 1 / 2 页")).toBeVisible());
   expect(screen.getByLabelText("查找商品")).toHaveValue("");
+  expect(screen.getByRole("combobox", { name: "商品状态" })).toHaveTextContent("全部状态");
   expect(screen.getByRole("button", { name: "商品卡" })).toHaveAttribute("aria-pressed", "true");
 });
 

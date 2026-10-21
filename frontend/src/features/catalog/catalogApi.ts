@@ -358,12 +358,20 @@ export async function saveCatalogMutation(
   workflowRevision: number,
   mutation: Omit<Record<string, unknown>, "mutation_id">,
 ) {
+  return saveCatalogMutations(importId, workflowRevision, [mutation]);
+}
+
+export async function saveCatalogMutations(
+  importId: number,
+  workflowRevision: number,
+  mutations: Array<Omit<Record<string, unknown>, "mutation_id">>,
+) {
   const operationKey = createOperationKey();
   const response = await commandApi<unknown>(
     `/api/catalog/imports/${importId}/decisions`,
     {
       expected_workflow_revision: workflowRevision,
-      mutations: [{ mutation_id: createOperationKey(), ...mutation }],
+      mutations: mutations.map(mutation => ({ mutation_id: createOperationKey(), ...mutation })),
       operation_token: operationKey,
     },
     operationKey,

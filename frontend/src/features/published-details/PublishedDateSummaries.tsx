@@ -1,7 +1,7 @@
-import { Button, EmptyState, ErrorState, Pagination } from "../../design-system";
-import styles from "./PublishedDetailLedgerPage.module.css";
+import { Button, EmptyState, ErrorState, LinkButton, Pagination, Skeleton, StatusBadge } from "../../design-system";
+import styles from "./PublishedDateSummaries.module.css";
 import { Fragment, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import type { ReportType } from "../../api/generated";
 import type { PublishedRowsResponse, PublishedSummaryResponse } from "./publishedDetailsTypes";
@@ -145,8 +145,8 @@ export function PublishedDateSummaries({
   const pagination = response?.pagination;
 
   return <section aria-busy={loading} aria-label="已发布日期摘要" className={styles["published-summaries"]}>
-    <div className={styles["published-summaries__scroll"]}>
-      <table>
+    <div className={styles["published-summaries__scroll"]} role="region" tabIndex={0} aria-label="发布日期与全日指标">
+      <table aria-label="已发布日期摘要表">
         <thead><tr>
           <th>报告日</th>
           <th>当前发布</th>
@@ -156,7 +156,7 @@ export function PublishedDateSummaries({
         </tr></thead>
         <tbody>
           {loading && !response ? Array.from({ length: 5 }, (_, index) => <tr className={styles["published-summaries__skeleton"]} key={index}>
-            <td colSpan={5}><span aria-hidden="true" />{index === 0 && <span className={styles["sr-only"]} aria-label="正在读取日期摘要" role="status">正在读取日期摘要</span>}</td>
+            <td colSpan={5}><Skeleton lines={1} height={32} />{index === 0 && <span className={styles["sr-only"]} aria-label="正在读取日期摘要" role="status">正在读取日期摘要</span>}</td>
           </tr>) : error ? <tr><td colSpan={5}>
             <ErrorState title="日期摘要读取失败" description={error} action={<Button onClick={onRetry}>重新读取日期摘要</Button>} />
           </td></tr> : summaries.length === 0 ? <tr><td colSpan={5}>
@@ -166,9 +166,9 @@ export function PublishedDateSummaries({
             return <Fragment key={summary.report_date}>
               <tr className={expanded ? styles["published-summaries__row"] + " " + styles["is-expanded"] : styles["published-summaries__row"]}>
                 <th scope="row"><time dateTime={summary.report_date}>{summary.report_date}</time></th>
-                <td><strong>当前发布 v{summary.version_no}</strong><small>{publicationTime(summary.published_at, reportingTimezone)}</small></td>
-                <td><strong>{summary.matching_row_count.toLocaleString("zh-CN")} / {summary.total_row_count.toLocaleString("zh-CN")} 行</strong><small>搜索匹配 / 该日全部</small></td>
-                <td><SummaryMetrics reportType={reportType} summary={summary} /></td>
+                <td data-label="当前发布"><StatusBadge label={`当前发布 v${summary.version_no}`} tone="good" /><small>{publicationTime(summary.published_at, reportingTimezone)}</small></td>
+                <td data-label="匹配 / 总行数"><strong>{summary.matching_row_count.toLocaleString("zh-CN")} / {summary.total_row_count.toLocaleString("zh-CN")} 行</strong><small>搜索匹配 / 该日全部</small></td>
+                <td data-label="全日指标"><SummaryMetrics reportType={reportType} summary={summary} /></td>
                 <td><div className={styles["published-summaries__actions"]}>
                   <Button
                     aria-expanded={expanded}
@@ -176,9 +176,9 @@ export function PublishedDateSummaries({
                     onClick={() => onToggleExpanded(summary.report_date)}
                     type="button"
                   >{expanded ? `收起 ${summary.report_date} 明细` : `展开 ${summary.report_date} 明细`}</Button>
-                  <Link aria-label={`查看 ${summary.report_date} 单日摘要`} to={`/published-details/${summary.report_date}?return_to=${returnTo}`}>查看单日摘要</Link>
-                  <Link aria-label={`打开 ${summary.report_date} 日期工作台`} to={`/published/${summary.report_date}?report_type=${reportType}`}>打开日期工作台</Link>
-                  <Link aria-label={`查看 ${summary.report_date} 版本记录`} to={`/versions?report_date=${summary.report_date}&report_type=${reportType}`}>查看版本记录</Link>
+                  <LinkButton variant="quiet" aria-label={`查看 ${summary.report_date} 单日摘要`} to={`/published-details/${summary.report_date}?return_to=${returnTo}`}>查看单日摘要</LinkButton>
+                  <LinkButton variant="quiet" aria-label={`打开 ${summary.report_date} 日期工作台`} to={`/published/${summary.report_date}?report_type=${reportType}`}>打开日期工作台</LinkButton>
+                  <LinkButton variant="quiet" aria-label={`查看 ${summary.report_date} 版本记录`} to={`/versions?report_date=${summary.report_date}&report_type=${reportType}`}>查看版本记录</LinkButton>
                 </div></td>
               </tr>
               {expanded && <tr className={styles["published-summaries__expanded-row"]}>

@@ -4,9 +4,11 @@ import json
 import os
 import re
 import subprocess
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml  # type: ignore[import-untyped]
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -120,6 +122,188 @@ def test_compatibility_jobs_only_select_canonical_profiles() -> None:
     assert "tests/integration/test_" not in whole_source
 
 
+def test_public_frontend_keeps_full_coverage_budget_and_failure_artifacts() -> None:
+    frontend = _load_workflow(PUBLIC_PROFILES)["jobs"]["frontend"]
+    assert frontend["name"] == "Frontend full / Node 24 / pnpm 11"
+    assert frontend["runs-on"] == "ubuntu-24.04"
+    assert frontend["timeout-minutes"] == "60"
+    assert "--frozen-lockfile" in _job_source(frontend)
+    execution = next(
+        step
+        for step in frontend["steps"]
+        if step.get("name") == "Run complete frontend profile"
+    )
+    assert execution["run"] == "./scripts/run-ci-profile.ps1 -Profile frontend-full"
+    assert "-FrontendStage" not in _job_source(frontend)
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    commands = manifest["profiles"]["frontend-full"]["commands"]
+    assert commands == [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:tokens",
+        "pnpm test --run",
+        "pnpm exec playwright test",
+        "pnpm storybook:build",
+        "pnpm test:a11y",
+        "pnpm test:visual",
+        "VITE_PRODUCT_ANALYTICS_SOURCE=legacy_parser pnpm build",
+        "VITE_PRODUCT_ANALYTICS_SOURCE=p0_catalog pnpm build",
+    ]
+    artifact = next(
+        step
+        for step in frontend["steps"]
+        if step.get("uses") == "actions/upload-artifact@v4"
+    )
+    assert artifact["if"] == "failure()"
+    assert artifact["with"] == {
+        "name": "frontend-failure",
+        "path": "frontend/test-results/",
+        "retention-days": "7",
+        "if-no-files-found": "warn",
+    }
+
+
+def _frontend_commands(*arguments: str) -> list[str]:
+    completed = subprocess.run(
+        [
+            "pwsh",
+            "-NoProfile",
+            "-File",
+            str(PROFILE_RUNNER),
+            "-Profile",
+            "frontend-full",
+            *arguments,
+            "-ListOnly",
+        ],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    result: list[str] = json.loads(completed.stdout)
+    return result
+
+
+def test_frontend_split_preserves_the_canonical_command_coverage() -> None:
+    full = _frontend_commands()
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    assert full == manifest["profiles"]["frontend-full"]["commands"]
+    selected = []
+    for stage in ("checks", "browser", "build"):
+        selected.extend(_frontend_commands("-FrontendStage", stage))
+    for stage in ("a11y", "visual"):
+        for shard in range(1, 5):
+            commands = _frontend_commands(
+                "-FrontendStage", stage, "-StorybookShard", str(shard)
+            )
+            assert commands == [
+                f"pnpm test:{stage} --shard={shard}/4 "
+                "--fully-parallel --workers=1 --reporter=line"
+            ]
+        selected.append(f"pnpm test:{stage}")
+    assert Counter(selected) == Counter(full)
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["-Profile", "ubuntu-full", "-FrontendStage", "checks"],
+        ["-Profile", "frontend-full", "-FrontendStage", "a11y"],
+        [
+            "-Profile",
+            "frontend-full",
+            "-FrontendStage",
+            "checks",
+            "-StorybookShard",
+            "1",
+        ],
+        [
+            "-Profile",
+            "frontend-full",
+            "-FrontendStage",
+            "visual",
+            "-StorybookShard",
+            "5",
+        ],
+    ],
+)
+def test_frontend_split_rejects_invalid_stage_or_shard(arguments: list[str]) -> None:
+    completed = subprocess.run(
+        ["pwsh", "-NoProfile", "-File", str(PROFILE_RUNNER), *arguments, "-ListOnly"],
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert completed.returncode != 0
+
+
+@pytest.mark.parametrize(
+    "stage,expected",
+    [
+        ("checks", ["lint", "typecheck", "test:tokens", "test --run"]),
+        ("browser", ["exec playwright test"]),
+        ("build", ["storybook:build", "build", "build"]),
+        (
+            "a11y",
+            ["test:a11y --shard=2/4 --fully-parallel --workers=1 --reporter=line"],
+        ),
+        (
+            "visual",
+            ["test:visual --shard=2/4 --fully-parallel --workers=1 --reporter=line"],
+        ),
+    ],
+)
+def test_frontend_stage_executes_only_its_commands(
+    tmp_path: Path, stage: str, expected: list[str]
+) -> None:
+    log = tmp_path / "commands.txt"
+    executable = tmp_path / ("pnpm.cmd" if os.name == "nt" else "pnpm")
+    source = (
+        '@echo off\n@echo %*>> "%CI_FRONTEND_COMMAND_LOG%"\n'
+        '@if "%1"=="%CI_FRONTEND_FAIL_COMMAND%" exit /b 23\n@exit /b 0\n'
+        if os.name == "nt"
+        else '#!/bin/sh\nprintf "%s\\n" "$*" >> "$CI_FRONTEND_COMMAND_LOG"\n'
+        '[ "$1" != "$CI_FRONTEND_FAIL_COMMAND" ] || exit 23\nexit 0\n'
+    )
+    executable.write_text(source, encoding="utf-8")
+    executable.chmod(0o755)
+    environment = dict(os.environ)
+    environment["PATH"] = str(tmp_path) + os.pathsep + environment.get("PATH", "")
+    environment["CI_FRONTEND_COMMAND_LOG"] = str(log)
+    arguments = ["-Profile", "frontend-full", "-FrontendStage", stage]
+    if stage in ("a11y", "visual"):
+        arguments += ["-StorybookShard", "2"]
+    completed = subprocess.run(
+        ["pwsh", "-NoProfile", "-File", str(PROFILE_RUNNER), *arguments],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert [line.replace('"', "") for line in log.read_text().splitlines()] == expected
+    if stage == "checks":
+        log.write_text("")
+        environment["CI_FRONTEND_FAIL_COMMAND"] = "lint"
+        failed = subprocess.run(
+            ["pwsh", "-NoProfile", "-File", str(PROFILE_RUNNER), *arguments],
+            cwd=REPOSITORY_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+        assert failed.returncode != 0
+        assert log.read_text().splitlines() == ["lint"]
+
+
 def test_release_workflow_splits_trusted_provenance_from_private_gate() -> None:
     workflow = _load_workflow(RELEASE)
     dispatch = workflow["on"]["workflow_dispatch"]
@@ -170,10 +354,8 @@ def test_enabled_workflow_jobs_do_not_select_github_hosted_runners() -> None:
         jobs = _load_workflow(workflow_path)["jobs"]
         for job_name, job in jobs.items():
             runs_on = job["runs-on"]
-            if isinstance(runs_on, str):
-                assert not runs_on.endswith("-latest"), job_name
-            else:
-                assert "self-hosted" in runs_on, job_name
+            assert isinstance(runs_on, list), job_name
+            assert "self-hosted" in runs_on, job_name
 
 
 def test_release_secrets_are_step_scoped_and_profiles_are_release_only() -> None:
@@ -440,17 +622,17 @@ def test_windows_smoke_path_boundary_is_exact() -> None:
         for line in fixture.read_text(encoding="utf-8").splitlines()
         if line and not line.startswith("#")
     ]
-    original_nodes = [
+    non_stage0_nodes = [
         node
         for node in nodes
         if "/test_project_optimization_baseline_runner.py::" not in node
     ]
-    assert len(original_nodes) == 360
-    assert len(set(original_nodes)) == 360
-    assert len({node.casefold() for node in original_nodes}) == 359
-    assert len(nodes) == 373
-    assert len(set(nodes)) == 373
-    assert len({node.casefold() for node in nodes}) == 372
+    assert len(non_stage0_nodes) == 432
+    assert len(set(non_stage0_nodes)) == 432
+    assert len({node.casefold() for node in non_stage0_nodes}) == 431
+    assert len(nodes) == 446
+    assert len(set(nodes)) == 446
+    assert len({node.casefold() for node in nodes}) == 445
     runner = PROFILE_RUNNER.read_text(encoding="utf-8")
     assert "[StringComparer]::Ordinal" in runner
     assert "Sort-Object -Unique" not in runner

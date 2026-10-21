@@ -657,8 +657,8 @@ $script:dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
 if ($null -eq $nodeCommand -or $null -eq $pnpmCommand -or $null -eq $script:dockerCommand) {
     throw "Docker, Node.js, and pnpm are required by the live runner."
 }
-if ($Experience -and $Milestone -cne "Catalog") {
-    throw "Experience mode currently supports only the Catalog milestone."
+if ($Experience -and $Milestone -cne "Catalog" -and -not ($ExperienceOnly -and $Milestone -ceq "Products")) {
+    throw "Experience mode supports Catalog, or Products with -ExperienceOnly."
 }
 $dockerVersion = @(& $script:dockerCommand.Source version --format "{{.Server.Version}}" 2>&1)
 if ($LASTEXITCODE -ne 0) {

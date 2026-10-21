@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LedgerMetricHelp, type LedgerHelpKey } from "./LedgerMetricHelp";
+import css from "./LedgerMetricHelp.module.css";
 
 // Synthetic context only; no report files, API calls, or business fixtures.
 const meta = {
@@ -24,9 +25,9 @@ export const NarrowScreen: Story = { name: "窄屏（调整预览宽度后点击
 const labels: Array<[LedgerHelpKey, string]> = [["identity", "款式"], ["variants", "实际变体"], ["units", "销量"], ["sales", "销售额与占比"], ["returns", "本期退货量与同期退销比"], ["sessions", "会话"], ["conversion", "转化率"], ["average", "平均单价"]];
 export const AllMetrics: Story = {
   name: "全部八项指标",
-  render: (args) => <div style={{ maxWidth: 600, fontFamily: "var(--font-body)" }}>
+  render: (args) => <div className={css.gallery}>
     <h2>产品总表 · 指标说明</h2>
     <p>点击说明按钮。支持 Esc 关闭、焦点返回及减少动态效果设置。</p>
-    {labels.map(([metric, label]) => <div key={metric} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--color-border-subtle)" }}><span>{label}</span><LedgerMetricHelp {...args} metric={metric} /></div>)}
+    {labels.map(([metric, label]) => <div key={metric} className={css.galleryRow}><span>{label}</span><LedgerMetricHelp {...args} metric={metric} /></div>)}
   </div>,
 };

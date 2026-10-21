@@ -1,6 +1,6 @@
-import css from "./ReviewWorkspace.module.css";
-import decisionCss from "./ReviewDecision.module.css";
-import { Button, Dialog, Input, Select } from "../../design-system";
+import { DraftReviewView } from "./DraftReviewView";
+import { PublicationDialog } from "./DraftPublicationDialog";
+import { errorMessage, validationCounts } from "./draftReviewPresentation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -35,7 +35,6 @@ import type {
   ReviewNote,
   ReviewRow,
   ReviewWorkspace,
-  ReportType,
   TypedFieldValue,
   ValidationRun,
   VersionSummary,
@@ -47,7 +46,6 @@ import {
 import { NoteRevisionEditor } from "./NoteRevisionEditor";
 import { ReviewDataTable } from "./ReviewDataTable";
 import {
-  auditOperatorLabel,
   defaultAuditReason,
   reportTypeAuditLabel,
   type AuditOperator,
@@ -94,10 +92,6 @@ type DraftMoveTargetPreview =
       reportDate: string;
     };
 
-function reportTypeLabel(reportType: ReportType) {
-  return reportType === "business_report" ? "经营报告" : "退货报告";
-}
-
 function draftPayload(head: DraftHead) {
   return {
     dataset_id: head.dataset_id,
@@ -116,30 +110,6 @@ function versionExpectation(head: DraftHead) {
   };
 }
 
-function validationCounts(validation: ValidationRun, workspace?: ReviewWorkspace) {
-  const workspaceValidation = workspace?.latest_full_validation;
-  if (
-    workspaceValidation?.id === validation.validation_run_id
-    && workspaceValidation.issues.length > 0
-  ) {
-    return workspaceValidation.issues.reduce(
-      (counts, issue) => ({
-        blocking: counts.blocking + (issue.severity === "blocking" && issue.review.state !== "resolved" ? 1 : 0),
-        warning: counts.warning + (issue.severity === "warning" && issue.review.state === "open" ? 1 : 0),
-      }),
-      { blocking: 0, warning: 0 },
-    );
-  }
-  const stages = Object.values(validation.summary.stages);
-  return stages.reduce(
-    (counts, stage) => ({
-      blocking: counts.blocking + stage.blocking_count,
-      warning: counts.warning + stage.warning_count,
-    }),
-    { blocking: 0, warning: 0 },
-  );
-}
-
 function workspaceValidation(workspace: ReviewWorkspace): ValidationRun | undefined {
   const validation = workspace.latest_full_validation;
   if (!validation?.is_current) return undefined;
@@ -152,84 +122,6 @@ function workspaceValidation(workspace: ReviewWorkspace): ValidationRun | undefi
     data_digest: validation.data_digest,
     summary: validation.summary,
   };
-}
-
-function errorMessage(reason: unknown) {
-  if (reason instanceof ApiRequestError && reason.status === 409) {
-    return "草稿或发布指针已变化。请刷新当前日期后再继续，系统没有覆盖任何数据。";
-  }
-  return reason instanceof Error ? reason.message : "操作未完成。";
-}
-
-function PublicationDialog({
-  context,
-  head,
-  validation,
-  onCancel,
-  onPublish,
-  operator,
-  publicationProgress,
-}: {
-  context: DraftReviewContext;
-  head: DraftHead;
-  validation: ValidationRun;
-  onCancel: () => void;
-  onPublish: (reason: string) => Promise<void>;
-  operator?: AuditOperator;
-  publicationProgress?: "building" | "ready" | "failed" | "superseded";
-}) {
-  const [reason, setReason] = useState(() => defaultAuditReason(
-    operator,
-    context.publicationMode === "published_move" ? "确认跨日期版本生效" : "确认发布审核版本",
-    `${context.reportDate} ${reportTypeAuditLabel(context.reportType)} · 版本 v${head.version_no} · 校验 #${validation.validation_run_id}`,
-  ));
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
-  const counts = validationCounts(validation);
-  const isPublishedMove = context.publicationMode === "published_move";
-  const submit = async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      await onPublish(reason);
-    } catch (caught) {
-      setError(errorMessage(caught));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open && !busy) onCancel(); }} closeLabel="返回审核" eyebrow="最终发布闸门" title={isPublishedMove ? "跨日期生效确认" : "发布确认"} description={isPublishedMove ? "生效后，来源与目标日期的发布指针会在同一事务中切换。后续修正必须创建新修订。" : "发布后，查看人员将立即读取这个版本。后续修正必须创建新修订。"}>
-        <dl className={css["confirmation-ledger"]}>
-          <div><dt>报告日期</dt><dd>{context.reportDate}</dd></div>
-          <div><dt>报表类型</dt><dd>{reportTypeLabel(context.reportType)}</dd></div>
-          <div><dt>版本</dt><dd>v{head.version_no}</dd></div>
-          <div><dt>数据修订</dt><dd>r{head.data_revision}</dd></div>
-          <div><dt>行数</dt><dd>{validation.summary.row_count} 行</dd></div>
-          <div><dt>警告</dt><dd>{counts.warning}</dd></div>
-        </dl>
-        <div className={css["confirmation-totals"]}>
-          <span>校验合计</span>
-          {Object.entries(validation.summary.totals).map(([name, value]) => (
-            <code key={name}>{name} = {value}</code>
-          ))}
-        </div>
-        <label className="field-stack">
-          发布说明
-          <textarea disabled={busy} onChange={(event) => setReason(event.target.value)} required rows={3} value={reason} />
-        </label>
-          {operator && <p className="stage-placeholder">操作人来源：当前登录会话 · {auditOperatorLabel(operator)}。服务器将按该会话写入发布审计。</p>}
-          {publicationProgress === "building" && <p aria-live="polite">正在构建退货去重快照；完成前不会切换发布指针。</p>}
-          {publicationProgress === "failed" && <p aria-live="polite">首次准备失败，正在按同一发布集合安全重试。</p>}
-          {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="dialog-actions">
-          <Button variant="secondary" disabled={busy} onClick={onCancel} type="button">返回审核</Button>
-          <Button variant="primary" disabled={busy || !reason.trim()} onClick={() => { void submit(); }} type="button">
-            {busy ? (isPublishedMove ? "正在生效…" : "正在发布…") : (isPublishedMove ? "确认跨日期生效" : "确认发布")}
-          </Button>
-        </div>
-    </Dialog>
-  );
 }
 
 export function DraftReviewGate({ canFinalizePublishedMove = false, context: initialContext, onDiscarded, onPublished, onReparseSource, onReportDateChanged, operator }: Props) {
@@ -912,131 +804,52 @@ export function DraftReviewGate({ canFinalizePublishedMove = false, context: ini
     onPublished(result);
   };
 
-  if (published) {
-    return (
-      <section aria-live="polite" className={css["publication-receipt"]}>
-        <span className={css["publication-receipt__seal"]}>发</span>
-        <div><p className="section-kicker">发布回执</p><h2>{context.publicationMode === "published_move" ? `跨日期移动 v${head.version_no} 已生效` : `版本 v${head.version_no} 已发布`}</h2><p>{context.publicationMode === "published_move" && context.publishedMove ? `${context.publishedMove.source_report_date} → ${context.reportDate} 已原子切换发布指针。` : `${context.reportDate} · ${reportTypeLabel(context.reportType)} 已进入只读看板。`}</p></div>
-      </section>
-    );
-  }
-
-  return (
-    <section className={css["draft-workbench"]}>
-      <header className={css["workbench-heading"]}>
-        <div>
-          <p className="section-kicker">差异优先审核</p>
-          <h2>草稿审核 · v{head.version_no}</h2>
-          <p>{context.reportDate} · {reportTypeLabel(context.reportType)} · 数据修订 r{head.data_revision} / 审核修订 r{head.review_revision}</p>
-        </div>
-        <span className={`${css["state-stamp"]} ${css[`state-stamp--${head.status}`] ?? ""}`}>{head.status === "draft" ? "草稿" : "待发布"}</span>
-      </header>
-
-      {workspace ? (
-        <ReviewDataTable
-          busy={busyAction !== undefined}
-          onAddCellNote={addCellNote}
-          onAddRow={addRow}
-          onAddRowNote={addRowNote}
-          onChangeRowState={changeRowState}
-          onPageChange={(page) => { void refreshWorkspace(head.version_id, page); }}
-          onRestoreField={restoreField}
-          onReviewIssue={reviewIssue}
-          onReviseNote={reviseNote}
-          onSetField={setField}
-          operator={operator}
-          workspace={workspace}
-        />
-      ) : <p className="workspace-loading">正在读取草稿行、差异与校验问题…</p>}
-
-      <div className={css["review-grid"]}>
-        <section className={`${css["review-stage"]} ${css["review-stage--note"]}`}>
-          <div className={css["review-stage__heading"]}><span>01</span><div><h3>版本备注</h3><p>补充审核依据；备注只追加，不覆盖历史。</p></div></div>
-          {workspace?.version_notes.length ? <ul className="version-note-list">{workspace.version_notes.map((item) => <li key={item.note_key}><p>{item.body}</p><span>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</span><NoteRevisionEditor busy={busyAction !== undefined} note={item} onRevise={reviseNote} /></li>)}</ul> : null}
-          <label className="field-stack">备注内容<textarea onChange={(event) => setNote(event.target.value)} rows={3} value={note} /></label>
-          <label className="field-stack">可见范围<Select onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></label>
-          <Button variant="secondary" disabled={busyAction === "note" || !note.trim()} onClick={() => { void saveNote(); }} type="button">{busyAction === "note" ? "正在保存…" : "追加备注"}</Button>
-        </section>
-
-        <section className={css["review-stage"]}>
-          <div className={css["review-stage__heading"]}><span>02</span><div><h3>校验草稿</h3><p>检查行数、合计、字段格式和来源差异。</p></div></div>
-          {!validation ? (
-            <Button variant="primary" disabled={busyAction === "validation" || head.status !== "draft"} onClick={() => { void runValidation(); }} type="button">{busyAction === "validation" ? "正在校验…" : "运行草稿校验"}</Button>
-          ) : (
-            <div className={css["validation-receipt"]} aria-live="polite">
-              <div className={css["validation-receipt__counts"]}><strong className={counts?.blocking ? css["count--blocking"] : ""}>阻断项 {counts?.blocking}</strong><strong className={counts?.warning ? css["count--warning"] : ""}>警告 {counts?.warning}</strong><strong>行数 {validation.summary.row_count}</strong></div>
-              <dl>{Object.entries(validation.summary.totals).map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
-              <Button variant="quiet" disabled={busyAction === "validation" || head.status !== "draft"} onClick={() => { void runValidation(); }} type="button">重新校验</Button>
-            </div>
-          )}
-          {counts && counts.blocking > 0 && <p className={`${css["gate-message"]} ${css["gate-message--blocking"]}`}>先修正阻断项，再重新运行校验。</p>}
-          {counts && counts.blocking === 0 && counts.warning > 0 && <p className={`${css["gate-message"]} ${css["gate-message--warning"]}`}>需要逐项确认警告后再继续发布。</p>}
-        </section>
-
-        <section className={css["review-stage"]}>
-          <div className={css["review-stage__heading"]}><span>03</span><div><h3>确认校验结果</h3><p>核对报告日期、类型和校验合计后留痕确认。</p></div></div>
-          {validation && validation.result === "passed" && counts?.blocking === 0 && counts.warning === 0 && head.status === "draft" ? <>
-            <label className="field-stack">审核确认说明<textarea onChange={(event) => setReadyReason(event.target.value)} rows={3} value={readyReason} /></label>
-            {operator && <p className="stage-placeholder">操作人来源：当前登录会话 · {auditOperatorLabel(operator)}。</p>}
-            <Button variant="primary" disabled={busyAction === "ready" || !readyReason.trim()} onClick={() => { void markReady(); }} type="button">{busyAction === "ready" ? "正在确认…" : "确认结果并标记待发布"}</Button>
-          </> : head.status === "ready_for_publish" ? <p className={`${css["gate-message"]} ${css["gate-message--passed"]}`}>已锁定本次校验回执，可以进入最终发布确认。</p> : <p className="stage-placeholder">先完成草稿校验，通过后即可填写确认说明。</p>}
-        </section>
-      </div>
-
-      <details className={css["draft-maintenance"]} name="draft-maintenance">
-        <summary>调整草稿日期</summary>
-        <p>系统会先读取目标日期的活动草稿和发布版本；有冲突时由你明确选择，不会自动覆盖。</p>
-        <div className={css["draft-maintenance__form"]}>
-          <label className="field-stack">目标报告日<Input onChange={(event) => changeTargetDate(event.target.value)} type="date" value={targetDate} /></label>
-          <label className="field-stack field-stack--wide">移动原因<textarea onChange={(event) => changeMoveReason(event.target.value)} rows={3} value={moveReason} /></label>
-          {operator && <p className={`stage-placeholder ${css["draft-maintenance__operator"]}`}>默认说明已带入当前操作人和草稿来源；目标日期会随本次命令一并记录。</p>}
-          {(!draftMovePreview || draftMovePreview.kind === "empty") && <Button variant="secondary" disabled={busyAction === "move" || targetDate === context.reportDate || !moveReason.trim()} onClick={() => { void inspectDraftMoveTarget(); }} type="button">{busyAction === "move" ? "正在检查目标日…" : "检查目标日期"}</Button>}
-        </div>
-        {draftMovePreview && draftMovePreview.kind !== "empty" && (
-          <fieldset className={`${decisionCss["target-conflict"]} ${decisionCss["target-conflict--wide"]}`}>
-            <legend>目标日期已有数据，请选择处理方式</legend>
-            <div className={decisionCss["target-conflict__ledger"]}>
-              <span>{draftMovePreview.reportDate} · {reportTypeLabel(context.reportType)}</span>
-              {draftMovePreview.kind === "active_draft" && <strong>活动草稿 v{draftMovePreview.activeDraft.version_no}</strong>}
-              {draftMovePreview.kind === "active_draft" && draftMovePreview.publication && <strong>发布版本 v{draftMovePreview.publication.version_no}</strong>}
-              {draftMovePreview.kind === "published" && <strong>发布版本 v{draftMovePreview.publication.version_no}</strong>}
-            </div>
-            <label className={decisionCss["target-choice"]}><input aria-label={draftMovePreview.kind === "active_draft" ? "合并到目标活动草稿" : "合并目标发布版本"} checked={draftMoveDecision === "merge"} disabled={busyAction === "move"} name="draft-move-decision" onChange={() => changeDraftMoveDecision("merge")} type="radio" /><span><strong>{draftMovePreview.kind === "active_draft" ? "合并到目标活动草稿" : "合并目标发布版本"}</strong><small>保留目标数据并加入当前草稿。逐行冲突不会自动覆盖；当前没有逐行决定时，服务端会阻断并要求人工处理。</small></span></label>
-            {draftMovePreview.kind === "published" && <label className={decisionCss["target-choice"]}><input aria-label="替换目标发布版本" checked={draftMoveDecision === "replace"} disabled={busyAction === "move"} name="draft-move-decision" onChange={() => changeDraftMoveDecision("replace")} type="radio" /><span><strong>替换目标发布版本</strong><small>移动后的草稿仅采用当前草稿数据；目标发布版本仍保留在版本历史中。</small></span></label>}
-            <label className={decisionCss["target-choice"]}><input aria-label="取消，保留当前所属日期" checked={draftMoveDecision === "cancel"} disabled={busyAction === "move"} name="draft-move-decision" onChange={() => changeDraftMoveDecision("cancel")} type="radio" /><span><strong>取消，保留当前所属日期</strong><small>不移动草稿，不发送写请求。</small></span></label>
-            {draftMoveDecision === "merge" && <MergeDecisionMatrix disabled={busyAction === "move"} onStateChange={setDraftMoveMerge} operator={operator} sourceId={head.version_id} sourceKind="dataset_version" targetVersionId={draftMovePreview.kind === "active_draft" ? draftMovePreview.activeDraft.version_id : draftMovePreview.publication.version_id} />}
-            <Button variant={draftMoveDecision === "cancel" ? "secondary" : "primary"} disabled={busyAction === "move" || !draftMoveDecision || !moveReason.trim() || (draftMoveDecision === "merge" && !draftMoveMerge.ready)} onClick={() => { void confirmDraftMoveDecision(); }} type="button">{busyAction === "move" ? "正在处理…" : draftMoveDecision === "cancel" ? "确认取消" : "按所选方式更改日期"}</Button>
-          </fieldset>
-        )}
-      </details>
-
-      {(onDiscarded || onReparseSource) && (
-        <details className={`${css["draft-maintenance"]} ${css["draft-disposition"]}`} name="draft-maintenance">
-          <summary>重新解析或废弃草稿</summary>
-          <p>旧草稿、人工修改和备注会完整保留在审计历史中，但不会自动套用到新的解析结果。</p>
-          {onReparseSource && workspace && workspace.source_batches.length > 0 && <label className="field-stack">重新解析的来源批次<Select onChange={(event) => setReparseBatchId(Number(event.target.value))} value={reparseBatchId}>{workspace.source_batches.map((source) => <option key={source.batch_id} value={source.batch_id}>导入批次 #{source.batch_id}</option>)}</Select></label>}
-          <label className="field-stack">处置原因<textarea onChange={(event) => { setDiscardReason(event.target.value); operationKeys.reset("discard-draft"); }} rows={3} value={discardReason} /></label>
-          {operator && <p className="stage-placeholder">操作人来源：当前登录会话 · {auditOperatorLabel(operator)}。</p>}
-          <label className="check-field"><input checked={discardConfirmed} onChange={(event) => setDiscardConfirmed(event.target.checked)} type="checkbox" />我确认当前草稿将被废弃，历史记录不会删除。</label>
-          <div className={`dialog-actions ${css["draft-disposition__actions"]}`}>
-            {onDiscarded && <Button variant="secondary" disabled={busyAction === "discard" || !discardConfirmed || !discardReason.trim()} onClick={() => { void discardDraft(false); }} type="button">只废弃当前草稿</Button>}
-            {onReparseSource && reparseBatchId && <Button variant="primary" disabled={busyAction === "discard" || !discardConfirmed || !discardReason.trim()} onClick={() => { void discardDraft(true); }} type="button">废弃并重新解析来源文件</Button>}
-          </div>
-        </details>
-      )}
-
-      {notice && <p className="form-notice" aria-live="polite">{notice}</p>}
-      {error && <p className="form-error" role="alert">{error}</p>}
-      {head.status === "ready_for_publish" && validation && (
-        context.publicationMode === "published_move" && !canFinalizePublishedMove ? (
-          <div aria-live="polite" className={css["publish-gate"]} role="status"><div><p className="section-kicker">04 · 管理员生效</p><strong>审核已完成，需管理员最终生效</strong><span>这是已发布数据的跨日期移动。来源日期仍保持发布，当前账号不能使用普通发布完成切换。</span></div></div>
-        ) : context.publicationMode === "published_move" && !context.publishedMove ? (
-          <div className={css["publish-gate"]} role="alert"><div><p className="section-kicker">04 · 管理员生效</p><strong>无法恢复跨日期移动上下文</strong><span>请刷新当前日期；在服务端上下文恢复前不会开放普通发布。</span></div></div>
-        ) : (
-          <div className={css["publish-gate"]}><div><p className="section-kicker">04 · {context.publicationMode === "published_move" ? "跨日期生效" : "发布"}</p><strong>{context.publicationMode === "published_move" ? "跨日期移动已通过审核闸门" : "草稿已通过审核闸门"}</strong><span>{context.publicationMode === "published_move" ? "最终确认会同时切换来源和目标日期的发布指针。" : "最后一次确认不会修改数据，只切换该日期的发布指针。"}</span></div><Button variant="primary" onClick={() => setShowPublish(true)} type="button">{context.publicationMode === "published_move" ? "打开跨日期生效确认" : "打开发布确认"}</Button></div>
-        )
-      )}
-      {showPublish && validation && <PublicationDialog context={context} head={head} onCancel={() => setShowPublish(false)} onPublish={publish} operator={operator} publicationProgress={publicationProgress} validation={validation} />}
-    </section>
-  );
+  return <DraftReviewView
+    context={context}
+    head={head}
+    published={published}
+    workspace={workspace}
+    validation={validation}
+    counts={counts}
+    busyAction={busyAction}
+    error={error}
+    notice={notice}
+    operator={operator}
+    note={note}
+    noteVisibility={noteVisibility}
+    readyReason={readyReason}
+    targetDate={targetDate}
+    moveReason={moveReason}
+    draftMovePreview={draftMovePreview}
+    draftMoveDecision={draftMoveDecision}
+    draftMoveMerge={draftMoveMerge}
+    discardReason={discardReason}
+    discardConfirmed={discardConfirmed}
+    reparseBatchId={reparseBatchId}
+    canFinalizePublishedMove={canFinalizePublishedMove}
+    onDiscarded={onDiscarded}
+    onReparseSource={onReparseSource}
+    setNote={setNote}
+    setNoteVisibility={setNoteVisibility}
+    setReadyReason={setReadyReason}
+    changeTargetDate={changeTargetDate}
+    changeMoveReason={changeMoveReason}
+    changeDraftMoveDecision={changeDraftMoveDecision}
+    setDiscardReason={setDiscardReason}
+    setDiscardConfirmed={setDiscardConfirmed}
+    setReparseBatchId={setReparseBatchId}
+    saveNote={saveNote}
+    runValidation={runValidation}
+    markReady={markReady}
+    inspectDraftMoveTarget={inspectDraftMoveTarget}
+    confirmDraftMoveDecision={confirmDraftMoveDecision}
+    discardDraft={discardDraft}
+    setShowPublish={setShowPublish}
+    resetDiscardOperation={() => operationKeys.reset("discard-draft")}
+    onRefresh={() => { setError(undefined); void refreshWorkspace().catch((caught: unknown) => setError(errorMessage(caught))); }}
+    dataTable={workspace ? <ReviewDataTable busy={busyAction !== undefined} onAddCellNote={addCellNote} onAddRow={addRow} onAddRowNote={addRowNote} onChangeRowState={changeRowState} onPageChange={(page) => { void refreshWorkspace(head.version_id, page); }} onRestoreField={restoreField} onReviewIssue={reviewIssue} onReviseNote={reviseNote} onSetField={setField} operator={operator} workspace={workspace} /> : undefined}
+    versionNotes={workspace?.version_notes.length ? <ul className="version-note-list">{workspace.version_notes.map((item) => <li key={item.note_key}><p>{item.body}</p><span>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</span><NoteRevisionEditor busy={busyAction !== undefined} note={item} onRevise={reviseNote} /></li>)}</ul> : null}
+    mergeMatrix={draftMovePreview && draftMovePreview.kind !== "empty" ? <MergeDecisionMatrix disabled={busyAction === "move"} onStateChange={setDraftMoveMerge} operator={operator} sourceId={head.version_id} sourceKind="dataset_version" targetVersionId={draftMovePreview.kind === "active_draft" ? draftMovePreview.activeDraft.version_id : draftMovePreview.publication.version_id} /> : undefined}
+    publicationDialog={showPublish && validation ? <PublicationDialog context={context} head={head} onCancel={() => setShowPublish(false)} onPublish={publish} operator={operator} publicationProgress={publicationProgress} validation={validation} /> : undefined}
+  />;
 }

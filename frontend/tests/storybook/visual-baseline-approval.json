@@ -3,5 +3,831 @@
   "reason": "确认当前 Storybook 组件在 1280/768/390 三档视口作为初始视觉基线。",
   "generated_at": "2026-09-07T03:28:22.756Z",
   "font": "Noto Sans SC Variable 5.3.0",
-  "playwright": "1.62.1"
+  "playwright": "1.62.1",
+  "updates": [
+    {
+      "approved_by": "Codex（用户授权新增样板，代理视觉审阅）",
+      "reason": "仅新增导入审核六种状态三档视口，保留既有基线与审批历史，尚待用户体验确认",
+      "generated_at": "2026-10-05T09:42:12.022Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review"
+    },
+    {
+      "approved_by": "Codex（用户授权局部优化，代理视觉审阅）",
+      "reason": "用户截图反馈：优化返回导航层级与点击区域，原目标地址不变；仅导入审核样板",
+      "generated_at": "2026-10-05T09:57:07.150Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review"
+    },
+    {
+      "approved_by": "Codex visual review under user-authorized local UI redesign",
+      "reason": "2026-10-06 local review-workspace redesign and new PendingChanges sample; development baselines only, user_verified=false, unrelated originals preserved",
+      "generated_at": "2026-10-06T03:20:55.271Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review"
+    },
+    {
+      "approved_by": "Codex visual review under user-authorized motion implementation",
+      "reason": "Add shadcn-derived shared save feedback story after interaction and accessibility checks",
+      "generated_at": "2026-10-06T03:47:31.399Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "design-system-actions-and-status--save-feedback"
+    },
+    {
+      "approved_by": "Codex visual review under user-authorized motion implementation",
+      "reason": "Review intentional shared Skeleton loading layout on three viewports; original screenshots retained",
+      "generated_at": "2026-10-06T03:48:26.162Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review--loading"
+    },
+    {
+      "approved_by": "Codex (user-authorized small-component adaptation, agent visual review)",
+      "reason": "Reviewed shadcn-based small controls, native selection states and affected catalog layouts; preserve all originals and historical failures; not user acceptance",
+      "generated_at": "2026-10-06T04:10:15.844Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "(field-states|review-controls|selection-states|narrow-and-long-chinese|status-states|pagination-states|save-feedback|pages-catalog-import-review)"
+    },
+    {
+      "approved_by": "Codex (user-authorized refinement; agent visual review)",
+      "reason": "User rejected preceding style; reviewed neutral shared filter toolbar, search clear/focus and catalog workspace at desktop/mobile; preserve original evidence, not user acceptance",
+      "generated_at": "2026-10-06T04:32:45.794Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "(form-controls--review-controls|pages-catalog-import-review)"
+    },
+    {
+      "approved_by": "Codex visual review within user-authorized continuous editing scope; user_verified=false",
+      "reason": "导入审核连续编辑：快捷键说明、行撤销及真实问题定位样板，保留旧图与原失败，仅更新已授权范围",
+      "generated_at": "2026-10-06T04:59:40.699Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review"
+    },
+    {
+      "approved_by": "Codex within authorized issue-location sample; user_verified=false",
+      "reason": "问题定位入口复用已有公共Button，移除浏览器默认按钮，定向三档更新",
+      "generated_at": "2026-10-06T05:02:11.165Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review--validation-issues"
+    },
+    {
+      "approved_by": "Codex (user-authorized global-style cleanup; agent visual review)",
+      "reason": "New native/component default-state sample on three viewports; original screenshots and approval history preserved, user_verified=false",
+      "generated_at": "2026-10-06T05:19:29.976Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "design-system-form-controls--global-defaults"
+    },
+    {
+      "approved_by": "Codex (user-authorized global visual refinement; agent review, user_verified=false)",
+      "reason": "Promote previously introduced local neutral workspace tokens to shared defaults; update form label/button typography and GlobalDefaults layout across all affected Storybook samples. Originals and historical failures retained; this records intentional redesign, not a diagnosis of prior environment differences.",
+      "generated_at": "2026-10-06T05:29:35.648Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1"
+    },
+    {
+      "approved_by": "Codex（用户授权范围内的开发样板审阅，非用户验收）",
+      "reason": "为新增商品主档列表八状态生成三档开发基线，仅新增列表范围，保留旧图和审批历史。",
+      "generated_at": "2026-10-06T05:48:32.328Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list"
+    },
+    {
+      "approved_by": "Codex（本轮用户明确授权的 React Bits 组件适配，非用户体验验收）",
+      "reason": "将商品主档两个选择框替换为官方 GlideSelect；仅更新商品列表范围，并新增原页面菜单展开状态三档基线，保留原件。",
+      "generated_at": "2026-10-06T06:08:45.877Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list"
+    },
+    {
+      "approved_by": "Codex（本轮用户授权的组件适配审阅，非用户验收）",
+      "reason": "菜单回归采用控件和弹层局部截图，精确覆盖小组件变化；仅本轮商品列表重新生成开发基线，其他比较阈值保持。",
+      "generated_at": "2026-10-06T06:11:37.979Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list"
+    },
+    {
+      "approved_by": "Codex scoped visual review under user-requested theme change",
+      "reason": "Use existing global light/blue tokens for catalog GlideSelect, retain original dark-theme images in theme-refinement/before",
+      "generated_at": "2026-10-06T06:27:17.774Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list"
+    },
+    {
+      "approved_by": "Codex visual review under user-approved animated catalog navigation",
+      "reason": "Motion shared underline and token-based route navigation, preserve all prior catalog screenshots in catalog-navigation-20261006/before",
+      "generated_at": "2026-10-06T06:41:33.197Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list"
+    },
+    {
+      "approved_by": "Codex visual review within user-authorized ClickSpark and page optimization; not user acceptance",
+      "reason": "新增React Bits彩色点击反馈与三个真实页面的共享展示样板，保留已有基线和历史，限定新故事开发基线",
+      "generated_at": "2026-10-06T07:15:40.277Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "(pages-catalog-operations|interaction-feedback)"
+    },
+    {
+      "approved_by": "Codex local visual review under user-authorized loading and drawer scope; not user acceptance",
+      "reason": "Product-list quick view and retained refresh, shared Radix drawer and Motion reveal. Original baseline bytes saved before local update; mobile overflow corrected and screenshots reviewed. No production action.",
+      "generated_at": "2026-10-06T07:40:55.005Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list--(reference|batch-table|read-only|quick-view(-loading|-failure)?|refreshing|refresh-failure)"
+    },
+    {
+      "approved_by": "Codex local visual review; not user acceptance",
+      "reason": "Capture the three new quick-view modal states at actual viewport size. Preserve initial full-page composites, original baselines and previous approvals.",
+      "generated_at": "2026-10-06T07:43:37.086Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-product-list--quick-view"
+    },
+    {
+      "approved_by": "Codex local developer baseline under user-authorized detail scope; not user acceptance",
+      "reason": "Shared CatalogStyleView based on existing shadcn-derived primitives, stable identity and lazy source readers. Add ten fictional detail states at three viewports; review generated images before independent comparison. No production deployment.",
+      "generated_at": "2026-10-06T08:09:47.535Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-style-detail"
+    },
+    {
+      "approved_by": "Codex local developer baseline under user-authorized editor scope; not user acceptance",
+      "reason": "Reuse shadcn-derived controls and shared tokens in catalog change review and category editor; add thirteen fictional maintenance states across three viewports. Preserve original API, permissions, category identity and approval contract; inspect images before independent comparison.",
+      "generated_at": "2026-10-06T08:35:57.419Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-editors"
+    },
+    {
+      "approved_by": "Codex local developer baseline under user-authorized editor scope; not user acceptance",
+      "reason": "Screenshot review identified mobile before/after column outside viewport. Scope only three preview-bearing states across three viewports; wrap comparison cells within the panel. Initial images retained.",
+      "generated_at": "2026-10-06T08:37:18.736Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-editors--(preview|approval-failure|refresh-failure)"
+    },
+    {
+      "approved_by": "Codex local developer baseline under user-authorized catalog setup scope; not user acceptance",
+      "reason": "Shared CatalogSetupView reuses existing shadcn-derived controls and tokens. Add twelve fictional source/snapshot/readiness states at three viewports; original controller, operation keys, versions, digests and permissions preserved. Review images before independent comparison; no production changes.",
+      "generated_at": "2026-10-06T08:56:04.303Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-setup"
+    },
+    {
+      "approved_by": "Codex local developer baseline under user-authorized catalog setup scope; not user acceptance",
+      "reason": "CatalogSetup shared view twelve fictional states; local screenshot review fixed mobile error action shrink and aligned links to existing tokens; first developer baseline retained in evidence",
+      "generated_at": "2026-10-06T09:01:50.521Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-setup"
+    },
+    {
+      "approved_by": "Codex local developer review under user-authorized published daily UI scope; not user acceptance",
+      "reason": "Eight fictional published daily ledger states reuse current shared components and tokens; original monthly API/URL/role controller preserved; desktop and mobile actual synthetic flows passed",
+      "generated_at": "2026-10-07T00:22:38.985Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-daily-ledger"
+    },
+    {
+      "approved_by": "Codex developer screenshot review under authorized UI scope; not user acceptance",
+      "reason": "FilterEmpty uses existing blocked option with four fictional matching-universe records; avoids selecting an option absent from the actual control; prior24 developer images retained",
+      "generated_at": "2026-10-07T00:23:36.596Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-daily-ledger--filter-empty"
+    },
+    {
+      "approved_by": "Codex local developer screenshot review under authorized published detail UI scope; not user acceptance",
+      "reason": "Eight fictional published day states reuse shared UI and unchanged monthly chart; original standalone versus embedded scopes and date/return URL controller verified; desktop/mobile original App synthetic paths passed",
+      "generated_at": "2026-10-07T00:32:40.807Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-day-detail"
+    },
+    {
+      "approved_by": "Codex local developer review under authorized UI scope; not user acceptance",
+      "reason": "Mobile sales metric now spans both columns to avoid splitting the monetary value; preserve original chart and read semantics. Initial24 screenshots and baseline history retained.",
+      "generated_at": "2026-10-07T00:36:37.204Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-day-detail"
+    },
+    {
+      "approved_by": "Codex local developer review under authorized UI scope; not user acceptance",
+      "reason": "New shared published-detail ledger shell and responsive date summaries reuse existing tokens and Radix/shadcn controls; preserve read controller and snapshot/URL/export contracts. New fictional page states reviewed locally.",
+      "generated_at": "2026-10-07T00:52:25.555Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-detail-ledger"
+    },
+    {
+      "approved_by": "Codex local developer review under authorized UI scope; not user acceptance",
+      "reason": "Align fictional full-day summaries with expanded source values and make sample sorting reorder rows; first27 developer baselines preserved. Production controller unchanged.",
+      "generated_at": "2026-10-07T00:54:34.196Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-detail-ledger"
+    },
+    {
+      "approved_by": "Codex local developer review under authorized UI scope; not user acceptance",
+      "reason": "Tablet date-summary cards expose all reading actions without horizontal scrolling; raw data grid retains scrolling. Previous tablet screenshots and approval history preserved.",
+      "generated_at": "2026-10-07T00:57:05.981Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-detail-ledger.*tablet"
+    },
+    {
+      "approved_by": "User-authorized local UI implementation; Codex screenshot review",
+      "reason": "Date Workbench shared actual-page implementation and ten fictional states; existing UI authorization includes visual regression",
+      "generated_at": "2026-10-07T01:12:48.121Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-date-workbench--"
+    },
+    {
+      "approved_by": "User-authorized local UI implementation; Codex screenshot review",
+      "reason": "Fix mobile date-workbench action bar covering data rows and use explicit failed-save icon",
+      "generated_at": "2026-10-07T01:13:28.036Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-date-workbench--(reference|manager|draft|import-conflict) matches the approved mobile|pages-date-workbench--save-failure"
+    },
+    {
+      "approved_by": "User-authorized local UI implementation; Codex screenshot review",
+      "reason": "Version history shared view, fixed-version rows and batch task display reviewed at desktop/tablet/mobile; local fictional UI only",
+      "generated_at": "2026-10-07T01:31:59.282Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-version-history--"
+    },
+    {
+      "approved_by": "User-authorized local UI implementation; Codex screenshot review",
+      "reason": "Shared batch review preflight/progress/confirmation and recovery UI; desktop/tablet/mobile reviewed, visually hidden labels and mobile file order corrected; fictional local scope",
+      "generated_at": "2026-10-07T01:57:24.866Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-batch-review--"
+    },
+    {
+      "approved_by": "Codex development visual review within user-authorized UI scope",
+      "reason": "New fictional Import Intake reference and state stories, agent screenshot review; user_verified=false",
+      "generated_at": "2026-10-07T02:12:47.853Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-import-intake--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Draft review shared view and publication dialog checked at desktop tablet mobile; development baseline only, user_verified=false",
+      "generated_at": "2026-10-07T02:37:39.890Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-draft-review--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "13 fictional source preview and batch note states, three viewports; inspected development screenshots; user_verified=false, no production deployment",
+      "generated_at": "2026-10-07T02:56:01.176Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-import-evidence--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Admin accounts shared view; desktop tablet mobile and modal screenshots reviewed; development only user_verified=false",
+      "generated_at": "2026-10-07T03:20:38.223Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-admin-accounts--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Shared admin site configuration and version history; desktop tablet mobile and failed form screenshots reviewed; development only user_verified=false",
+      "generated_at": "2026-10-07T03:37:49.170Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-admin-site-configuration--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Add nine fictional admin audit states to existing development visual regression after screenshot review; not user acceptance",
+      "generated_at": "2026-10-07T03:50:53.523Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-admin-audit--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Add twelve fictional admin maintenance states to development visual regression after three viewport review; not user acceptance",
+      "generated_at": "2026-10-07T04:06:27.248Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-admin-maintenance--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Recovery entry, immutable source context and form states reuse existing design system; desktop and mobile reference/failure screenshots reviewed; development baselines only",
+      "generated_at": "2026-10-07T04:24:59.250Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-admin-recovery--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Shared login and initialization views using existing shadcn-derived controls and tokens; desktop mobile reference and failure screenshots reviewed; development only",
+      "generated_at": "2026-10-07T04:36:40.572Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-session-entry--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized UI scope",
+      "reason": "Product ledger shared actual view: ten synthetic states, global controls, responsive tables; desktop/tablet/mobile screenshots reviewed. Development baselines only; user confirmation pending.",
+      "generated_at": "2026-10-07T04:55:59.918Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-product-ledger--"
+    },
+    {
+      "approved_by": "agent development screenshot review within user-authorized local UI scope",
+      "reason": "Shared actual product detail with existing review-23 chart, global tokens and controls; desktop tablet mobile and missing-report screenshots reviewed. Development baselines only; user review pending.",
+      "generated_at": "2026-10-07T05:10:07.385Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-product-detail--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized local UI scope",
+      "reason": "Shared workspace shell, responsive Radix navigation drawer, collapse and role/session states; reviewed desktop tablet and mobile screenshots; development baselines only, not user acceptance",
+      "generated_at": "2026-10-07T05:28:56.283Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-workspace-shell--"
+    },
+    {
+      "approved_by": "agent development screenshot review in user-authorized local UI scope",
+      "reason": "Shared advanced review date rail, report/version context, calendar retry and source header; reviewed three widths including warning contrast and mobile retry; development baseline only",
+      "generated_at": "2026-10-07T05:50:07.742Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-advanced-review-workspace--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "版本命令弹窗授权优化新增13个本地状态开发基线，原审批历史保留，非正式验收",
+      "generated_at": "2026-10-07T06:12:12.820Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-version-commands--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "重复记录合并决定已授权本地UI开发；新增九状态三尺寸开发基线，不代表用户体验或正式验收",
+      "generated_at": "2026-10-07T06:32:17.865Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-merge-decision-matrix--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "截图发现手机错误按钮竖排，修正局部排布后仅更新读取失败三档开发基线，非用户或正式验收",
+      "generated_at": "2026-10-07T06:35:14.791Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-merge-decision-matrix--read-failure"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "已授权最终发布确认本地UI优化；新增十一状态三档开发基线并更新原草稿确认六图，原件已快照；不代表用户或正式验收",
+      "generated_at": "2026-10-07T06:52:47.746Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-publication-confirmation--|pages-draft-review--(publish-dialog|publication-failure)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Authorized local field drawer UI development; fictional states, not formal acceptance",
+      "generated_at": "2026-10-07T07:13:46.926Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-field-review--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Authorized local row drawer UI development; partial first baseline generation, not formal acceptance",
+      "generated_at": "2026-10-07T07:34:29.496438+00:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-row-review--",
+      "result": "partial_failed",
+      "passed": 41,
+      "failed": 1,
+      "failed_story": "patterns-row-review--no-source tablet",
+      "evidence": "D:\\CLSEN_DeploymentPrep_20260914\\evidence\\storybook-import-review-20261005-01\\row-review-20261007\\visual-baseline-01.log"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Authorized local development; only first failed no-source tablet baseline; prior failed run preserved",
+      "generated_at": "2026-10-07T07:36:47.043Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-row-review--no-source.*tablet"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Local issue-review UI development and fictional Storybook states; pending user review, not formal acceptance or deployment",
+      "generated_at": "2026-10-07T07:58:24.105Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-issue-review--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Local shared note revision UI development, new fictional states and directly affected editing baselines only; pending user review, not formal acceptance or deployment",
+      "generated_at": "2026-10-07T08:16:16.150Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-note-revision--|patterns-(row|field)-review--note-(editing|failure)|pages-import-evidence--revision-(editing|failure|saving)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Local note revision development: shorten pending visible label on small screens, preserve complete accessible name; originals and first images retained, not formal acceptance",
+      "generated_at": "2026-10-07T08:19:36.505Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-note-revision--|patterns-(row|field)-review--note-(editing|failure)|pages-import-evidence--revision-(editing|failure|saving)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-07 authorized draft data table local UI development, 7 new states plus actual table consumers; pending user review, not release acceptance",
+      "generated_at": "2026-10-07T08:45:26.689Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-(draft-data-table|row-review|field-review|issue-review)--|pages-draft-review--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-07 user authorized local workbench cell UI development; five new feedback states and affected draft/save-failure states; pending user review, not formal acceptance",
+      "generated_at": "2026-10-07T09:18:05.956Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-date-workbench--(draft|save-failure|cell-)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-07 user authorized local catalog approval preview/reason/rebase form development; eight new states and actual shared import-review consumers; pending user experience, not formal acceptance",
+      "generated_at": "2026-10-07T09:46:07.662Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "(patterns-catalog-workflow-forms--|pages-catalog-import-review--)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Local identity owner panel optimization authorized; development baselines pending user experience confirmation, not formal acceptance",
+      "generated_at": "2026-10-08T00:23:42.141Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-identity-owners--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "Local identity feedback action wrapping correction; development baseline pending user confirmation",
+      "generated_at": "2026-10-08T00:25:39.520Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-identity-owners--refresh-failure"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-feedback",
+      "reason": "User requested compact ownership rows; local development feedback, pending user verification",
+      "generated_at": "2026-10-08T00:34:51.191Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-identity-owners--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "User authorized next catalog evidence panel local UI batch; development baseline pending user experience",
+      "generated_at": "2026-10-08T00:58:53.627Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-source-evidence--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 user approved continuing local UI: issue location panel with ten states and existing validation issues consumer; pending user review, not release acceptance",
+      "generated_at": "2026-10-08T01:14:21.961Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-issue-summary--|pages-catalog-import-review--validation-issues"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 authorized local catalog workbook UI: eleven states and six existing maintenance consumers; pending user review, not release",
+      "generated_at": "2026-10-08T01:28:36.040Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-workbook--|pages-catalog-operations--(maintenance|uninitialized|building|generation-failed|stale-candidate|capacity-exceeded)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 authorized local import history UI: eight states and six maintenance consumers; pending user review, not release acceptance",
+      "generated_at": "2026-10-08T01:39:50.098Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-import-history--|pages-catalog-operations--(maintenance|uninitialized|building|generation-failed|stale-candidate|capacity-exceeded)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户授权下一批本地候选面板优化；21张基线有效结果复用，补齐空状态三张；开发待体验非发布，原图及失败保留。",
+      "generated_at": "2026-10-08T01:51:37.225Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-pending-candidates--empty"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户体验通过并授权下一批候选面板本地优化；首轮21张有效开发基线复用，3个空状态定位失败日志保留，空状态已单独补齐。仍待本批用户体验，非发布验收。",
+      "generated_at": "2026-10-08",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-pending-candidates--(reference|read-only|no-previews|zero-counts|long-previews|many-batches)|pages-catalog-style-detail--pending-candidates",
+      "successful_snapshots": 21,
+      "evidence": "D:\\CLSEN_DeploymentPrep_20260914\\evidence\\storybook-import-review-20261005-01\\catalog-pending-candidates-20261008\\baselines.log",
+      "independent_compare": "D:\\CLSEN_DeploymentPrep_20260914\\evidence\\storybook-import-review-20261005-01\\catalog-pending-candidates-20261008\\visual.log"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户确认候选面板并授权下一批本地分类编辑优化；12个新状态与8个审核页消费者开发基线，原图已备份；本批待体验，非发布验收。",
+      "generated_at": "2026-10-08T02:10:23.674Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-section-editors--|pages-catalog-import-review--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 user authorized next local UI batch; catalog read feedback only, development review pending",
+      "generated_at": "2026-10-08T02:31:47.814Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-read-feedback--|pages-catalog-operations--(versions-failure|pending-failure)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 user confirmed catalog read feedback and authorized next local approved version list optimization; fictional states, local user review pending",
+      "generated_at": "2026-10-08T02:46:11.457Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-versions--|pages-catalog-operations--versions( matches|-empty|-loading)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 authorized local UI batch; screenshot review widened risk column, no behavior change, user review pending",
+      "generated_at": "2026-10-08T02:48:03.483Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-versions--(reference|first-version|unknown-risk|missing-fields|long-values)|pages-catalog-operations--versions matches"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户授权继续待归属来源本地UI优化；30张新状态与15张直接消费者开发基线，待用户体验，非发布验收",
+      "generated_at": "2026-10-08T03:12:16.052Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-unmatched-sources--|pages-catalog-operations--(unmatched|unmatched-loading|no-publication-evidence|unmatched-empty|pending-failure) matches"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "仅更新影响概览定义列表语义修正后的30张本地开发图；首轮45张保留，未受影响15张复用，用户体验仍待确认",
+      "generated_at": "2026-10-08T03:14:36.164Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-unmatched-sources--(reference|multi-currency|long-preview|empty|empty-page|pending-loading|pending-failure) matches|pages-catalog-operations--(unmatched|unmatched-empty|pending-failure) matches"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户2026-10-08确认待归属来源并授权继续本地批量维护总览；12张新图及18张直接消费者开发基线，待体验，非发布验收",
+      "generated_at": "2026-10-08T03:26:24.049Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-maintenance-overview--|pages-catalog-operations--(maintenance|uninitialized|building|generation-failed|stale-candidate|capacity-exceeded) matches"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "截图审阅后让总览样板沿用实际页面catalog-stack间距，只更新12张样板图；原12图保留，18张消费者图不变，用户体验待确认",
+      "generated_at": "2026-10-08T03:27:51.313Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-catalog-maintenance-overview--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户授权共享列设置本地优化；虚构状态样板，待用户体验，非发布",
+      "generated_at": "2026-10-08T03:45:49.799Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-column-settings--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "共享列设置截图审阅后调整底部布局，并纳入两个实际页面样板；仅本地开发，待体验",
+      "generated_at": "2026-10-08T03:48:23.242Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-column-settings--|pages-date-workbench--column-settings|pages-published-detail-ledger--column-settings"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "共享列设置补足首次展开搜索焦点与可见区域；保留前版图片，待用户体验，非发布",
+      "generated_at": "2026-10-08T03:51:31.107Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-column-settings--|pages-date-workbench--column-settings|pages-published-detail-ledger--column-settings"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户授权共享分组表头本地优化；六种虚构样板和日期工作台/已发布明细直接消费者，前78图已保存，待体验非发布",
+      "generated_at": "2026-10-08T04:10:24.543Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-table-header--|pages-date-workbench--|pages-published-detail-ledger--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户确认共享表头并授权继续；共享安全来源引用本地开发基线，待用户体验，非发布",
+      "generated_at": "2026-10-08T04:24:46.956Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-safe-source-reference--|patterns-catalog-source-evidence--|pages-catalog-style-detail--(evidence|evidence-failure) |pages-product-detail--(reference|read-only)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "2026-10-08 用户确认共享来源引用并授权继续；共享经营指标读数本地开发基线，待体验，非发布",
+      "generated_at": "2026-10-08T04:42:51.603Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-metric-value--|pages-product-ledger--|pages-product-detail--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户确认经营指标读数并授权继续；每日明细矩阵本地开发基线，待体验，非发布",
+      "generated_at": "2026-10-08T05:08:43.439Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-trend-point-matrix--|patterns-product-trend-chart--|pages-product-detail--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "每日明细矩阵截图审阅后修正长金额单行与数字右对齐；仅受影响本地开发基线，待体验，非发布",
+      "generated_at": "2026-10-08T05:11:35.859Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-trend-point-matrix--(reference|missing-and-partial|conversion-ratio|wide|long-values)|patterns-product-trend-chart--|pages-product-detail--(reference|read-only|partial|no-reports|refreshing|color-failure)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户确认每日明细矩阵并批准继续覆盖收尾；覆盖对账与既有指标说明本地开发基线，待体验，非发布",
+      "generated_at": "2026-10-08T05:41:35.962Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "patterns-coverage-reconciliation--|patterns-product-ledger-metric-help--|pages-product-ledger--"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "截图审阅发现总表消费者旧容器CSS挤压新覆盖卡片；仅移除三条旧覆盖规则后的本地开发基线，待体验，非发布",
+      "generated_at": "2026-10-08T05:47:11.054Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-product-ledger--(reference|partial|empty|no-reports|zero-values|refreshing)"
+    },
+    {
+      "approved_by": "user-authorized-local-ui-development",
+      "reason": "用户批准继续覆盖核对；补齐已有共享PageHeader样板三档开发基线，非发布，原审批历史保留",
+      "generated_at": "2026-10-08T06:13:52.666Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "design-system-structure-and-navigation--header "
+    },
+    {
+      "approved_by": "项目负责人：2026-10-09明确选择使用Noto字体并重建基线",
+      "reason": "修复实际字体404与静默回退；1590旧PNG字节备份完整，原视觉阈值不变，初轮1588生成/2加载超时，诊断后定向2生成，全部独立比较另记",
+      "generated_at": "2026-10-09T02:48:40.262Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "platform": "win32",
+      "font_assets": "locked package via Storybook staticDirs; real font load required",
+      "scope": 1590,
+      "generation": {
+        "initial_passed": 1588,
+        "initial_failed": 2,
+        "targeted_after_diagnosis_passed": 2,
+        "original_failed_logs_retained": true,
+        "independent_full_comparison": "pending"
+      }
+    },
+    {
+      "approved_by": "项目负责人2026-10-09批准Noto基线重建；Codex按既有CI平台校准",
+      "reason": "同SHA Ubuntu CI真实截图经审阅；Windows原生月份控件和字体排版与Linux不同。仅67失败基线对齐Ubuntu，原图和失败证据保留，阈值不变。",
+      "generated_at": "2026-10-09T11:41:07.090625+08:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "platform": "linux",
+      "os": "Ubuntu 24.04",
+      "source_sha": "28921578f9691ef48bde6a4fd3d9b994a8999017",
+      "source_ci_run": 37877230073,
+      "story_filter": "67 failed same-SHA snapshots",
+      "independent_comparison": {
+        "passed": 67,
+        "unexpected": 0,
+        "skipped": 0,
+        "retries": 0,
+        "exit": 0,
+        "runtime": "existing mcr.microsoft.com/playwright:v1.62.1-noble; existing dependency packages mounted read-only"
+      }
+    },
+    {
+      "approved_by": "user-20261009",
+      "reason": "User verified ascending dates and approved final integration preparation on 2026-10-09",
+      "generated_at": "2026-10-09T05:48:03.312Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-published-daily-ledger--(reference|manager)"
+    },
+    {
+      "approved_by": "user-20261009",
+      "reason": "User verified the catalog mapping/SKU review layout and approved integration; update only its six changed screenshots after reviewing original diffs",
+      "generated_at": "2026-10-09T17:40:10.454671+08:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "platform": "linux",
+      "story_filter": "patterns-catalog-section-editors--(skus|mappings)",
+      "runtime": "existing Playwright v1.62.1-noble; existing preview service and locked dependencies; real Noto font required"
+    },
+    {
+      "approved_by": "Codex under existing user-approved Noto baselines, accepted UI and 2026-10-10 CI repair authorization",
+      "reason": "Rebuild six approved ascending daily-ledger views on CI Linux (native month control differs on Windows) and three read-only editor views with current Chinese status/source labels; originals preserved; thresholds unchanged",
+      "generated_at": "2026-10-10T00:31:23.209132+00:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "platform": "linux",
+      "source_sha": "23462b610faacf3d44a64d7bd8e4258a1b0e3de7",
+      "story_filter": "pages-published-daily-ledger--(reference|manager)|patterns-catalog-section-editors--read-only",
+      "user_verified_new_scope": false
+    },
+    {
+      "approved_by": "Codex visual review of user-confirmed local layout",
+      "reason": "2026-10-10 user confirmed text/layout and pending-filter fixes, then approved commit and CI follow-up. Refresh only 29 direct-consumer references for status width and container-based grouping; stable actual images retained from first comparison. Original images and failed comparisons preserved. No threshold changes. Five representative desktop/tablet/mobile/long-text/readonly images reviewed; existing functional state evidence reused.",
+      "generated_at": "2026-10-10T04:37:28.163625+00:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "pages-catalog-import-review--|patterns-catalog-section-editors--",
+      "baselines": [
+        "pages-catalog-import-review--reference-desktop.png",
+        "pages-catalog-import-review--validation-issues-desktop.png",
+        "pages-catalog-import-review--refresh-failure-desktop.png",
+        "patterns-catalog-section-editors--reference-tablet.png",
+        "patterns-catalog-section-editors--read-only-tablet.png",
+        "patterns-catalog-section-editors--field-issues-tablet.png",
+        "patterns-catalog-section-editors--busy-tablet.png",
+        "patterns-catalog-section-editors--save-failure-tablet.png",
+        "patterns-catalog-section-editors--refresh-failure-tablet.png",
+        "patterns-catalog-section-editors--long-values-tablet.png",
+        "pages-catalog-import-review--reference-tablet.png",
+        "pages-catalog-import-review--validation-issues-tablet.png",
+        "pages-catalog-import-review--pending-changes-tablet.png",
+        "pages-catalog-import-review--read-only-tablet.png",
+        "pages-catalog-import-review--save-failure-tablet.png",
+        "pages-catalog-import-review--refresh-failure-tablet.png",
+        "patterns-catalog-section-editors--reference-mobile.png",
+        "patterns-catalog-section-editors--read-only-mobile.png",
+        "patterns-catalog-section-editors--field-issues-mobile.png",
+        "patterns-catalog-section-editors--busy-mobile.png",
+        "patterns-catalog-section-editors--save-failure-mobile.png",
+        "patterns-catalog-section-editors--refresh-failure-mobile.png",
+        "patterns-catalog-section-editors--long-values-mobile.png",
+        "pages-catalog-import-review--reference-mobile.png",
+        "pages-catalog-import-review--validation-issues-mobile.png",
+        "pages-catalog-import-review--pending-changes-mobile.png",
+        "pages-catalog-import-review--read-only-mobile.png",
+        "pages-catalog-import-review--save-failure-mobile.png",
+        "pages-catalog-import-review--refresh-failure-mobile.png"
+      ]
+    }
+  ]
 }

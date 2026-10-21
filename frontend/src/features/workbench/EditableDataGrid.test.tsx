@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ColumnLayout } from "../../components/data-table/useColumnLayout";
 import type { DataTableSort } from "../../components/data-table/DataTableHeader";
-import type { WorkbenchColumn, WorkbenchPage } from "./workbenchTypes";
+import type { CellEditorState, WorkbenchColumn, WorkbenchPage } from "./workbenchTypes";
 import { cellKey } from "./workbenchTypes";
 import { EditableDataGrid } from "./EditableDataGrid";
 
@@ -46,7 +46,7 @@ const layout: Pick<ColumnLayout, "visibleColumns" | "widths" | "frozenLeft" | "g
   resize: vi.fn(),
 };
 
-function renderGrid(options: { editors?: Record<string, { input: string; state: "failed" | "conflict"; message?: string }>; sort?: DataTableSort } = {}) {
+function renderGrid(options: { editors?: Record<string, CellEditorState>; sort?: DataTableSort } = {}) {
   const workbench = page();
   const onDiscardCell = vi.fn();
   const onEditCell = vi.fn();
@@ -57,6 +57,16 @@ function renderGrid(options: { editors?: Record<string, { input: string; state: 
 }
 
 describe("EditableDataGrid", () => {
+  it("keeps a saving cell editable and describes its pending status", () => {
+    const key = cellKey(12, 7, "sku");
+    renderGrid({ editors: { [key]: { input: "Draft 1", state: "saving" } } });
+    const input = screen.getByRole("textbox", { name: "SKU，第 1 行" });
+    expect(input).toBeEnabled(); expect(input).not.toHaveAttribute("readonly");
+    expect(input).toHaveAttribute("aria-busy", "true");
+    expect(input).toHaveAccessibleDescription("正在保存…");
+    fireEvent.change(input, { target: { value: "Draft 2" } });
+    expect(input).toHaveValue("Draft 2");
+  });
   it("renders a labelled table with sticky row identity and contained long read-only text", () => {
     renderGrid();
 

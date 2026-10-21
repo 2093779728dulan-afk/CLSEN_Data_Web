@@ -1,15 +1,21 @@
 :root {
-  --color-page: #F5F8FB;
+  --color-page: var(--color-workspace-background);
+  /* Neutral workspace chrome; brand blue remains reserved for focus and actions. */
+  --color-workspace-ink: #242A31;
+  --color-workspace-muted: #59636E;
+  --color-workspace-border: #DFE3E8;
+  --color-workspace-inset: #F3F5F7;
+  --color-workspace-background: #FAFBFC;
   --color-surface: #FFFFFF;
-  --color-surface-muted: #EDF4FA;
+  --color-surface-muted: var(--color-workspace-inset);
   --color-surface-raised: #FFFFFF;
   --color-primary: #1769AA;
   --color-primary-strong: #0D4F86;
   --color-on-primary: #FFFFFF;
-  --color-text: #17324D;
-  --color-text-muted: #4F687E;
-  --color-border: #C7D6E2;
-  --color-border-subtle: #DFE8EF;
+  --color-text: var(--color-workspace-ink);
+  --color-text-muted: var(--color-workspace-muted);
+  --color-border: var(--color-workspace-border);
+  --color-border-subtle: var(--color-workspace-border);
   --color-success: #287A55;
   --color-success-border: #A8D8BD;
   --color-warning: #946B16;
@@ -30,8 +36,8 @@
   --radius-control: 5px;
   --radius-card: 8px;
   --radius-pill: 999px;
-  --shadow-control: 0 1px 2px rgb(23 50 77 / 8%);
-  --shadow-raised: 0 8px 24px rgb(23 50 77 / 12%);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 5%);
+  --shadow-raised: 0 8px 24px rgb(0 0 0 / 8%);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -46,7 +52,7 @@
   --font-size-lg: 18px;
   --font-size-xl: 24px;
   --font-body: "Segoe UI Variable", "Microsoft YaHei UI", "微软雅黑", sans-serif;
-  --font-display: Bahnschrift, "Arial Narrow", sans-serif;
+  --font-display: var(--font-body);
   --font-mono: "Cascadia Mono", Consolas, monospace;
   --control-height: 36px;
   --control-height-large: 40px;
@@ -55,10 +61,23 @@
   --motion-duration-slow: 520ms;
   --motion-duration-loop: 1.4s;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Semantic motion follows Carbon/Fluent intent; retain existing base tokens. */
+  --motion-interaction: var(--motion-duration-fast);
+  --motion-content-enter: var(--motion-duration-enter);
+  --motion-overlay-enter: 200ms;
+  --motion-overlay-exit: var(--motion-duration-fast);
+  --motion-duration-spin: 800ms;
+  --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --chart-series-1: #1769AA;
   --chart-series-2: #287A55;
   --chart-series-3: #946B16;
   --chart-series-4: #7452A5;
+  /* Decorative action feedback; these colors do not encode result or permission. */
+  --spark-color-1: var(--chart-series-1);
+  --spark-color-2: var(--chart-series-2);
+  --spark-color-3: var(--chart-series-3);
+  --spark-color-4: var(--chart-series-4);
   --chart-grid: #DFE8EF;
   --z-sticky: 10;
   --z-fixed-action: 20;

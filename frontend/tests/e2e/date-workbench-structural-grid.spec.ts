@@ -153,7 +153,7 @@ test("keeps resize, settings, sort, edit, focus, and 200% zoom usable from the k
   const editor = page.getByLabel("商品标题，第 2 行");
   await tabTo(page, editor);
   await expect(editor).toBeFocused();
-  expect(await editor.evaluate((element) => {
+  await expect.poll(() => editor.evaluate((element) => {
     const probe = document.createElement("span");
     probe.style.color = getComputedStyle(element).getPropertyValue("--color-focus");
     document.body.append(probe);

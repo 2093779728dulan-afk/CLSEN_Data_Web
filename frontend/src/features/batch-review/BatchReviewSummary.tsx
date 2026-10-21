@@ -1,5 +1,6 @@
 import css from "./BatchReviewPage.module.css";
 import type { BatchReviewRun } from "./batchReviewTypes";
+import { PageHeader, StatusBadge } from "../../design-system";
 
 const RUN_LABELS: Record<string, string> = {
   completed: "已完成",
@@ -19,17 +20,10 @@ export function BatchReviewSummary({ run }: { run: BatchReviewRun }) {
     ["人工处理", run.summary.manual_review],
     ["失败", run.summary.failed],
   ] as const;
-  return <section aria-labelledby="batch-review-summary-title" className={css["batch-review-summary"]}>
-    <div className={css["batch-review-heading-row"]}>
-      <div>
-        <p className={"eyebrow"}>批量任务 #{run.id}</p>
-        <h1 id="batch-review-summary-title">批量审核</h1>
-      </div>
-      <span className={css["batch-review-run-state"] + " " + (css[`batch-review-run-state--${run.status}`] ?? "")}>
-        {RUN_LABELS[run.status] ?? run.status}
-      </span>
-    </div>
-    <p className={css["batch-review-safety-note"]}>安全项目只推进到待发布，不会自动发布或覆盖现有版本。</p>
+  return <section aria-label="批量任务摘要" className={css["batch-review-summary"]}>
+    <PageHeader eyebrow={`批量任务 #${run.id}`} title="批量审核" description="安全项目只推进到待发布，不会自动发布或覆盖现有版本。"
+      meta={<StatusBadge label={RUN_LABELS[run.status] ?? run.status} tone={run.status === "completed" ? "good" : run.status === "paused" || run.status === "completed_with_exceptions" ? "warn" : "quiet"} />}
+      actions={<span className={css["batch-review-muted"]}>任务修订 {run.revision}</span>} />
     <dl className={css["batch-review-counts"]}>
       {counts.map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}
     </dl>
