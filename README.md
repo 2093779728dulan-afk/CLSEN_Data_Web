@@ -24,3 +24,7 @@ backup fixtures and test key are explicitly synthetic public test material,
 as documented in their fixture README. CI has no production credentials or
 network connection to the private runners. No release/deployment workflow
 is enabled here. Passing public CI is not production acceptance or release.
+
+The tracked `.env.example` contains only documented local placeholders and is
+included as input to deployment contract tests. It is not copied to `.env`
+or used as a connection configuration by public CI.

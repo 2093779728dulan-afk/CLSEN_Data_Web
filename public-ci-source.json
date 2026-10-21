@@ -13,6 +13,11 @@
       "sha256": "6588aba653e94e9a58a769945634371ef3c85040e99f2f04ddf71a8ccba97365"
     },
     {
+      "path": ".env.example",
+      "git_blob": "c545860e9917d3ef64b46515b2f9c348217d115b",
+      "sha256": "b6d4e1b0148f07bb6a112782d33f252829365747a92befc2531a1eac16255b39"
+    },
+    {
       "path": ".gitattributes",
       "git_blob": "00ef8596724fe18ca6003609591b9d0ddf0bac0c",
       "sha256": "a6716c4af66424b7fc35226ef77746cfa6919456d44f62727a1827bb02f3584e"
