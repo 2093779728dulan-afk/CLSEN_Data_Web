@@ -38,10 +38,10 @@ SOURCE_ROOTS = (
 )
 # Reviewed public-only adapters, not trusted merely because a manifest lists them.
 ADAPTER_BLOBS = {
-    ".github/workflows/public-ci.yml": "448ab35aedf71e5318eeeae7b1349a9796775899",
+    ".github/workflows/public-ci.yml": "0d12c6400bd32b8fb3b1da0e8232302bc67fdc9c",
     "scripts/prepare-public-ci.ps1": "af5eafbe62cd333eaa3cec498eb2733599a319d3",
     "backend/tests/contracts/test_public_ci_workflow.py": (
-        "9b699444756794bcd5aaea24275eb7521a4898f9"
+        "a1c57084277cc97cf06f7456e74577d8cdbf618f"
     ),
     "README.md": "97f10f2636661c8c73a45cd085acf733ec42f503",
 }
@@ -61,7 +61,7 @@ REQUIRED_JOBS = {
     ),
     "Frontend full / Node 24 / pnpm 11": (
         "ubuntu-24.04",
-        (*_COMMON, "Run complete frontend profile"),
+        ("Set up job", "Require every frontend stage and shard", "Complete job"),
     ),
     "MySQL 8.4 compatibility / Python 3.14": (
         "ubuntu-24.04",
@@ -76,6 +76,17 @@ REQUIRED_JOBS = {
         ("Set up job", "Require every public profile", "Complete job"),
     ),
 }
+for _stage in ("checks", "browser", "build"):
+    REQUIRED_JOBS[f"Frontend {_stage} / Node 24 / pnpm 11"] = (
+        "ubuntu-24.04",
+        (*_COMMON, "Run complete frontend stage"),
+    )
+for _gate in ("a11y", "visual"):
+    for _shard in range(1, 5):
+        REQUIRED_JOBS[f"Frontend {_gate} shard {_shard}/4 / Node 24 / pnpm 11"] = (
+            "ubuntu-24.04",
+            (*_COMMON, "Run complete Storybook shard"),
+        )
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 
 
@@ -308,11 +319,39 @@ class PublicApi:
             request = urllib.request.Request(
                 f"https://api.github.com/{endpoint}", headers=headers
             )
-            try:
-                with urllib.request.urlopen(request, timeout=30) as response:
-                    data = response.read()
-            except (OSError, urllib.error.URLError) as error:
-                raise ValueError("Public GitHub API request failed") from error
+            for attempt in range(1, 4):
+                try:
+                    with urllib.request.urlopen(request, timeout=30) as response:
+                        data = response.read()
+                    break
+                except urllib.error.HTTPError as error:
+                    reason = f"HTTP {error.code}"
+                    rate_limited = error.code == 403 and (
+                        error.headers.get("X-RateLimit-Remaining") == "0"
+                        or error.headers.get("Retry-After") is not None
+                    )
+                    transient = error.code in {408, 429, 500, 502, 503, 504}
+                    if not (transient or rate_limited):
+                        raise ValueError(
+                            f"Public GitHub API GET failed: {reason}; not retried"
+                        ) from None
+                except (OSError, urllib.error.URLError) as error:
+                    cause = (
+                        error.reason
+                        if isinstance(error, urllib.error.URLError)
+                        else error
+                    )
+                    reason = f"transport {type(cause).__name__}"
+                if attempt == 3:
+                    raise ValueError(
+                        f"Public GitHub API GET failed: {reason}; 3 attempts exhausted"
+                    ) from None
+                print(
+                    f"Public GitHub API GET temporary failure: {reason}; "
+                    f"retry {attempt}/2",
+                    flush=True,
+                )
+                time.sleep(5 * attempt)
         payload = json.loads(data, object_pairs_hook=strict_object)
         if immutable:
             self.cache[path] = payload
@@ -402,7 +441,7 @@ def main() -> int:
         help="Use the existing logged-in gh for local verification",
     )
     args = parser.parse_args()
-    require(0 <= args.wait_seconds <= 2400, "Invalid evidence wait budget")
+    require(0 <= args.wait_seconds <= 8400, "Invalid evidence wait budget")
     root = Path(__file__).resolve().parents[1]
     require(
         git(root, "rev-parse", "HEAD") == args.source_sha,

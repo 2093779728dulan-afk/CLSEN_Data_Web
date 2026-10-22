@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import io
 import json
 import subprocess
+import urllib.error
+from email.message import Message
+from itertools import product
 from pathlib import Path
 from typing import Any
 
@@ -133,6 +137,12 @@ def test_all_full_profiles_and_cleanup_are_required() -> None:
     module = bridge()
     run, jobs = run_payload(module)
     module.validate_run(run, jobs)
+    assert len(jobs) == 16
+    assert {
+        f"Frontend {gate} shard {shard}/4 / Node 24 / pnpm 11"
+        for gate in ("a11y", "visual")
+        for shard in range(1, 5)
+    } <= {job["name"] for job in jobs}
 
 
 def test_profile_contracts_describe_the_exact_pinned_executable_public_workflow() -> (
@@ -143,6 +153,24 @@ def test_profile_contracts_describe_the_exact_pinned_executable_public_workflow(
         ["git", "hash-object", "scripts/public-ci-workflow.yml"], cwd=ROOT, text=True
     ).strip()
     assert blob == module.ADAPTER_BLOBS[".github/workflows/public-ci.yml"]
+    workflow = yaml.load(
+        (ROOT / "scripts/public-ci-workflow.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    expanded = {}
+    for job in workflow["jobs"].values():
+        matrix = job.get("strategy", {}).get("matrix", {})
+        for values in product(*matrix.values()):
+            name = job["name"]
+            for key, value in zip(matrix, values, strict=True):
+                name = name.replace("${{ matrix." + key + " }}", value)
+            expanded[name] = job
+    assert set(expanded) == set(module.REQUIRED_JOBS)
+    for name, (label, steps) in module.REQUIRED_JOBS.items():
+        job = expanded[name]
+        assert job["runs-on"] == label
+        names = {step.get("name") for step in job["steps"]}
+        assert set(steps) - {"Set up job", "Complete job"} <= names
 
 
 @pytest.mark.parametrize(
@@ -211,11 +239,13 @@ def test_private_workflow_only_checks_public_evidence_and_keeps_stable_gates() -
     assert workflow["permissions"] == {"actions": "read", "contents": "read"}
     execution = workflow["jobs"]["public-evidence"]
     assert execution["runs-on"] == ["self-hosted", "Linux", "X64", "clsen-rag-ov"]
+    assert execution["timeout-minutes"] == "145"
     source = json.dumps(execution)
     assert "verify_public_ci.py" in source
     assert "github.event.pull_request.head.sha || github.sha" in source
     assert "pip install" not in source and "run-ci-profile.ps1" not in source
     assert "secrets.GITHUB_TOKEN" in source
+    assert "--wait-seconds 8400" in source
     for name in ("pr-required", "master-required"):
         assert workflow["jobs"][name]["needs"] == ["public-evidence"]
 
@@ -348,7 +378,7 @@ def test_read_only_api_flow_never_dispatches_or_mixes_results(
                 return {"workflow_runs": [run]}
             assert path == "actions/runs/42/attempts/1/jobs?per_page=100"
             return {
-                "total_count": 6 if change == "incomplete-jobs" else 5,
+                "total_count": len(jobs) + (change == "incomplete-jobs"),
                 "jobs": jobs,
             }
 
@@ -368,3 +398,83 @@ def test_read_only_api_flow_never_dispatches_or_mixes_results(
         else:
             assert evidence["public_run_id"] == 42
             assert evidence["verified_files"] == 2
+
+
+@pytest.mark.parametrize("failure", ["http503", "timeout", "rate-limit"])
+def test_api_retries_only_temporary_get_failures(
+    failure: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = bridge()
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    calls: list[object] = []
+    sleeps: list[int] = []
+    headers = Message()
+    headers["X-RateLimit-Remaining"] = "0"
+
+    def open_request(request: object, *, timeout: int) -> io.BytesIO:
+        calls.append(request)
+        assert timeout == 30
+        if len(calls) == 1:
+            if failure == "timeout":
+                raise urllib.error.URLError(TimeoutError("private transport detail"))
+            raise urllib.error.HTTPError(
+                "https://example.invalid",
+                403 if failure == "rate-limit" else 503,
+                "private response detail",
+                headers,
+                None,
+            )
+        return io.BytesIO(b'{"ok":true}')
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", open_request)
+    monkeypatch.setattr(module.time, "sleep", sleeps.append)
+    assert module.PublicApi(False).get("actions/runs") == {"ok": True}
+    assert len(calls) == 2
+    assert sleeps == [5]
+
+
+@pytest.mark.parametrize("status", [401, 403, 404, 503])
+def test_api_failure_is_bounded_diagnostic_and_does_not_expose_response(
+    status: int,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = bridge()
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    calls: list[object] = []
+    sleeps: list[int] = []
+
+    def open_request(request: object, *, timeout: int) -> io.BytesIO:
+        calls.append(request)
+        raise urllib.error.HTTPError(
+            "https://example.invalid/private",
+            status,
+            "private response detail",
+            Message(),
+            None,
+        )
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", open_request)
+    monkeypatch.setattr(module.time, "sleep", sleeps.append)
+    with pytest.raises(ValueError, match=f"HTTP {status}") as error:
+        module.PublicApi(False).get("actions/runs")
+    assert len(calls) == (3 if status == 503 else 1)
+    assert sleeps == ([5, 10] if status == 503 else [])
+    output = str(error.value) + capsys.readouterr().out
+    assert "private" not in output and "synthetic-token" not in output
+
+
+def test_api_does_not_retry_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = bridge()
+    monkeypatch.setenv("GITHUB_TOKEN", "synthetic-token")
+    calls: list[object] = []
+
+    def open_request(request: object, *, timeout: int) -> io.BytesIO:
+        calls.append(request)
+        return io.BytesIO(b'{"ok":true,"ok":false}')
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", open_request)
+    with pytest.raises(ValueError, match="Duplicate JSON object key"):
+        module.PublicApi(False).get("actions/runs")
+    assert len(calls) == 1

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "e402240822be6bf17808e9dfdc15a19a80f68b9a",
-  "source_tree": "66ab45cb602de2aca0e5f46b293cd7715f96628a",
+  "source_sha": "8d7d93e71c9b08f2bc47b223c9ab5f81a0931528",
+  "source_tree": "47545affaa475945970f85af5a8b5c05e38b3b2e",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -24,8 +24,8 @@
     },
     {
       "path": ".github/workflows/compatibility.yml",
-      "git_blob": "c61de5f53c61dfa2c3106cd12253fdc3238920a2",
-      "sha256": "388bb1dfd0673380ac4feaa5b54626b73a0c24a6ef67f6c3f27905323da5208e"
+      "git_blob": "972863c69b3bc8ae8334b8e3b4505f0f6dc9b2c4",
+      "sha256": "cb50e41f567f5cc37c199acd940ca41429752cb786b6e6e921826c171385030c"
     },
     {
       "path": ".github/workflows/release-gates.yml",
@@ -1179,8 +1179,8 @@
     },
     {
       "path": "backend/tests/contracts/test_ci_suite_manifest.py",
-      "git_blob": "b1ad12fd0d33201af4def4de721dd34a3f90b366",
-      "sha256": "1b8291651cbfd573466c281f73d6ac776b61a8b6c7f444ffa65e08b4ad897517"
+      "git_blob": "eb3cfd4849f460956f439a149833f80de06059a1",
+      "sha256": "3df0c2fe7876a6821544dbaf213e9c6966c776e76df1cc5f0c31afcb0d059a0c"
     },
     {
       "path": "backend/tests/contracts/test_database_bootstrap_script.py",
@@ -1214,8 +1214,8 @@
     },
     {
       "path": "backend/tests/contracts/test_public_ci_bridge.py",
-      "git_blob": "01c4199b43998b5ce879c80ef5da9045cfd31743",
-      "sha256": "e45d39662aaebaeb361d58c8b6c4b47050183d0b9e3e3528856350995c8d8fed"
+      "git_blob": "f0a03283430d73358a98c64295465db275a1463e",
+      "sha256": "64e914be98aba877d551ce71a59b3c60da8fdbea16a9648c0e3b4e64579eb07a"
     },
     {
       "path": "backend/tests/contracts/test_release_evidence_contract.py",
@@ -1294,13 +1294,13 @@
     },
     {
       "path": "backend/tests/fixtures/ci/offline-backend-nodeids.txt",
-      "git_blob": "5d17d83e45461f89889a930e3ceff960190c3ac1",
-      "sha256": "ceb6407119ee855ad1395c31edc65d52c057be68aab1b24a7596d2f9712b0a7c"
+      "git_blob": "730f42846e2258ecbb63bbbc6612e0dd31ece566",
+      "sha256": "e4baacea0aae67c069a636a5ac8535c58a768e65596352860cc1e9a0fdf37798"
     },
     {
       "path": "backend/tests/fixtures/ci/windows-smoke-nodeids.txt",
-      "git_blob": "ff6afef4f1ab8331bd2768190adfb57f5f2143fc",
-      "sha256": "7c84aab7c91522a1d7f3763197273230bded82ad36227de2350933a37fb8fc60"
+      "git_blob": "f5b9a57164d53acc42d6fda74c4ea9f6b96376a8",
+      "sha256": "ae751cfbddeed5b77c2cc070bedb3b571f2e38b8a052e96a2b3272761a370986"
     },
     {
       "path": "backend/tests/fixtures/synthetic/business-report.csv",
@@ -2384,8 +2384,8 @@
     },
     {
       "path": "docs/operations/product-catalog-rollout.md",
-      "git_blob": "07a012a481504430cb5bcad73f89d9bb7116d2ec",
-      "sha256": "156e3f47e246687edce06c4364b43c0b6635ac7ee5ad353b79913eef4e1a53dd"
+      "git_blob": "fd4812d62fa102e579ebada09f0cf6bd9262f32d",
+      "sha256": "1da67bb2c69c891371f4f2e20ae318b8d759c42fcb7681dbecbb50d7ec594e85"
     },
     {
       "path": "docs/operations/project-optimization-baseline-approval-v1.json",
@@ -13749,8 +13749,8 @@
     },
     {
       "path": "scripts/public-ci-workflow.yml",
-      "git_blob": "448ab35aedf71e5318eeeae7b1349a9796775899",
-      "sha256": "d49d03a5e7b12e0e1d94b092fdc79f8a28b92a80cca388e743f61d3597f7fa0b"
+      "git_blob": "0d12c6400bd32b8fb3b1da0e8232302bc67fdc9c",
+      "sha256": "7ba984036b394da810575530f45e3e8b27db747978d41f0e374dd32cd24db982"
     },
     {
       "path": "scripts/reset-admin-password.ps1",
@@ -13859,8 +13859,8 @@
     },
     {
       "path": "scripts/verify_public_ci.py",
-      "git_blob": "a370e469fec7e5d2d5a9aac1ee83aadf84c7d6cf",
-      "sha256": "fa8819bae3a88549a775a401ab20af610190889751b5e7f1e6f301514005aef9"
+      "git_blob": "74285ba3964fee0407871c7e29846ca79c740dce",
+      "sha256": "bdd98f64072e1d3264fdec1a9bab777b6888b3d7828e36449be82b8ca3c19b5a"
     },
     {
       "path": "tools/README.md",

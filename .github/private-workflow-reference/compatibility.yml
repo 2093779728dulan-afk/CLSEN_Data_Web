@@ -18,7 +18,8 @@ jobs:
   public-evidence:
     name: Verify public CI source and complete jobs
     runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
-    timeout-minutes: 45
+    # Allow the public MySQL job's 120-minute budget plus queue/API overhead.
+    timeout-minutes: 145
     steps:
       - name: Check out exact private source
         uses: actions/checkout@v4
@@ -36,7 +37,7 @@ jobs:
           python3 scripts/verify_public_ci.py
           --source-sha "$SOURCE_SHA"
           --event "$SOURCE_EVENT"
-          --wait-seconds 2400
+          --wait-seconds 8400
 
   pr-required:
     name: pr-required

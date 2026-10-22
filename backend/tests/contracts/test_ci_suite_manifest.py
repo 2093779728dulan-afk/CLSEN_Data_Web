@@ -110,7 +110,8 @@ def test_compatibility_jobs_only_select_canonical_profiles() -> None:
     expected_profiles = {
         "backend-ubuntu": "ubuntu-full",
         "backend-windows": "windows-smoke",
-        "frontend": "frontend-full",
+        "frontend-stage": "frontend-full",
+        "frontend-storybook": "frontend-full",
         "mysql-84": "mysql-compatibility",
     }
     for job_name, profile in expected_profiles.items():
@@ -123,18 +124,39 @@ def test_compatibility_jobs_only_select_canonical_profiles() -> None:
 
 
 def test_public_frontend_keeps_full_coverage_budget_and_failure_artifacts() -> None:
-    frontend = _load_workflow(PUBLIC_PROFILES)["jobs"]["frontend"]
+    jobs = _load_workflow(PUBLIC_PROFILES)["jobs"]
+    frontend = jobs["frontend"]
     assert frontend["name"] == "Frontend full / Node 24 / pnpm 11"
     assert frontend["runs-on"] == "ubuntu-24.04"
-    assert frontend["timeout-minutes"] == "60"
-    assert "--frozen-lockfile" in _job_source(frontend)
-    execution = next(
-        step
-        for step in frontend["steps"]
-        if step.get("name") == "Run complete frontend profile"
+    assert frontend["if"] == "always()"
+    assert set(frontend["needs"]) == {"frontend-stage", "frontend-storybook"}
+    stages, storybook = jobs["frontend-stage"], jobs["frontend-storybook"]
+    assert stages["strategy"] == {
+        "fail-fast": "false",
+        "matrix": {"stage": ["checks", "browser", "build"]},
+    }
+    assert storybook["strategy"] == {
+        "fail-fast": "false",
+        "matrix": {"gate": ["a11y", "visual"], "shard": ["1", "2", "3", "4"]},
+    }
+    assert stages["timeout-minutes"] == "20"
+    assert storybook["timeout-minutes"] == "60"
+    assert next(
+        step["run"]
+        for step in stages["steps"]
+        if step.get("name") == "Run complete frontend stage"
+    ) == (
+        "./scripts/run-ci-profile.ps1 -Profile frontend-full "
+        "-FrontendStage '${{ matrix.stage }}'"
     )
-    assert execution["run"] == "./scripts/run-ci-profile.ps1 -Profile frontend-full"
-    assert "-FrontendStage" not in _job_source(frontend)
+    assert next(
+        step["run"]
+        for step in storybook["steps"]
+        if step.get("name") == "Run complete Storybook shard"
+    ) == (
+        "./scripts/run-ci-profile.ps1 -Profile frontend-full "
+        "-FrontendStage '${{ matrix.gate }}' -StorybookShard ${{ matrix.shard }}"
+    )
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     commands = manifest["profiles"]["frontend-full"]["commands"]
     assert commands == [
@@ -149,18 +171,23 @@ def test_public_frontend_keeps_full_coverage_budget_and_failure_artifacts() -> N
         "VITE_PRODUCT_ANALYTICS_SOURCE=legacy_parser pnpm build",
         "VITE_PRODUCT_ANALYTICS_SOURCE=p0_catalog pnpm build",
     ]
-    artifact = next(
-        step
-        for step in frontend["steps"]
-        if step.get("uses") == "actions/upload-artifact@v4"
-    )
-    assert artifact["if"] == "failure()"
-    assert artifact["with"] == {
-        "name": "frontend-failure",
-        "path": "frontend/test-results/",
-        "retention-days": "7",
-        "if-no-files-found": "warn",
-    }
+    for job, artifact_name in (
+        (stages, "frontend-${{ matrix.stage }}-failure"),
+        (storybook, "frontend-${{ matrix.gate }}-${{ matrix.shard }}-failure"),
+    ):
+        assert "--frozen-lockfile" in _job_source(job)
+        artifact = next(
+            step
+            for step in job["steps"]
+            if step.get("uses") == "actions/upload-artifact@v4"
+        )
+        assert artifact["if"] == "failure()"
+        assert artifact["with"] == {
+            "name": artifact_name,
+            "path": "frontend/test-results/",
+            "retention-days": "7",
+            "if-no-files-found": "warn",
+        }
 
 
 def _frontend_commands(*arguments: str) -> list[str]:
@@ -627,12 +654,12 @@ def test_windows_smoke_path_boundary_is_exact() -> None:
         for node in nodes
         if "/test_project_optimization_baseline_runner.py::" not in node
     ]
-    assert len(non_stage0_nodes) == 432
-    assert len(set(non_stage0_nodes)) == 432
-    assert len({node.casefold() for node in non_stage0_nodes}) == 431
-    assert len(nodes) == 446
-    assert len(set(nodes)) == 446
-    assert len({node.casefold() for node in nodes}) == 445
+    assert len(non_stage0_nodes) == 440
+    assert len(set(non_stage0_nodes)) == 440
+    assert len({node.casefold() for node in non_stage0_nodes}) == 439
+    assert len(nodes) == 454
+    assert len(set(nodes)) == 454
+    assert len({node.casefold() for node in nodes}) == 453
     runner = PROFILE_RUNNER.read_text(encoding="utf-8")
     assert "[StringComparer]::Ordinal" in runner
     assert "Sort-Object -Unique" not in runner

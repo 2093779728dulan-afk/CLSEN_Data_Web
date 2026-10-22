@@ -10,7 +10,7 @@
 
 ### 公开兼容 CI 与私有来源桥接（2026-10-21用户批准）
 
-公开仓固定为 `2093779728dulan-afk/CLSEN_Data_Web`，仅 `.github/workflows/public-ci.yml` 执行四项完整 profile 和 `public-required`。受审阅的确切工作流另保存为 `scripts/public-ci-workflow.yml`，用于套件、预算、顺序与权限契约测试；私有桥接固定其 canonical Git blob，并核对线上实际工作流，不把参考文件当成已执行证据。只用标准 GitHub 托管 Linux/Windows，MySQL 仅 8.4，原 110 分钟步骤/120 分钟作业和独立 always 清理不减。
+公开仓固定为 `2093779728dulan-afk/CLSEN_Data_Web`，仅 `.github/workflows/public-ci.yml` 执行四项完整 profile 和 `public-required`。A 的 Frontend full 由 checks/browser/build 三阶段，以及 a11y/visual 各四个分片组成；前端汇总和私有核验均要求所有阶段、分片及实际步骤成功，不能以矩阵汇总替代缺失分片。受审阅的确切工作流另保存为 `scripts/public-ci-workflow.yml`，用于套件、预算、顺序与权限契约测试；私有桥接固定其 canonical Git blob，并核对线上实际工作流，不把参考文件当成已执行证据。只用标准 GitHub 托管 Linux/Windows，MySQL 仅 8.4，原 110 分钟步骤/120 分钟作业和独立 always 清理不减。私有等待最多 140 分钟（作业 145 分钟），覆盖公开最长作业及排队；只读 API GET 对临时故障最多三次尝试，输出安全的 HTTP 状态或传输错误类别，不输出响应正文、令牌或连接细节。身份、权限及证据不符立即拒绝；临时故障耗尽同样失败，不放宽来源门禁。
 
 每个新私有来源须显式单向发布新快照（沿用任务的 `Sync-PublicCi.ps1 -Revision <完整SHA> -NewSnapshotDirectory <新D盘目录>`），审阅后推送公开 main；本机制不自动导出、push、回写或处理业务数据/凭据。没有对应快照时私有门禁等待最多 40 分钟后拒绝，不自动派发、取消或重跑公开 CI。已有失败直接拒绝，不循环重试。只读校验无需第二账号 PAT 或跨仓写权限；本地可用既有 gh：`python scripts/verify_public_ci.py --source-sha <当前HEAD完整SHA> --event pull_request --gh`。
 

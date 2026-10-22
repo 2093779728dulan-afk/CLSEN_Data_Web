@@ -11,8 +11,22 @@ def test_public_ci_uses_only_standard_hosted_runners_and_mysql84() -> None:
     )
     jobs = workflow["jobs"]
     profiles = {"backend-ubuntu", "backend-windows", "frontend", "mysql-84"}
-    assert set(jobs) == profiles | {"public-required"}
+    assert set(jobs) == profiles | {
+        "frontend-stage",
+        "frontend-storybook",
+        "public-required",
+    }
     assert set(jobs["public-required"]["needs"]) == profiles
+    assert set(jobs["frontend"]["needs"]) == {"frontend-stage", "frontend-storybook"}
+    assert jobs["frontend-stage"]["strategy"]["matrix"] == {
+        "stage": ["checks", "browser", "build"],
+    }
+    assert jobs["frontend-storybook"]["strategy"]["matrix"] == {
+        "gate": ["a11y", "visual"],
+        "shard": ["1", "2", "3", "4"],
+    }
+    assert jobs["frontend-stage"]["strategy"]["fail-fast"] == "false"
+    assert jobs["frontend-storybook"]["strategy"]["fail-fast"] == "false"
     assert workflow["permissions"] == {"contents": "read"}
     assert "pull_request_target" not in workflow["on"]
     for name, job in jobs.items():

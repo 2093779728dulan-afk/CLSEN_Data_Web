@@ -61,10 +61,14 @@ jobs:
         shell: pwsh
         run: ./scripts/run-ci-profile.ps1 -Profile windows-smoke -PythonExecutable '${{ steps.python.outputs.python-path }}'
 
-  frontend:
-    name: Frontend full / Node 24 / pnpm 11
+  frontend-stage:
+    name: Frontend ${{ matrix.stage }} / Node 24 / pnpm 11
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [checks, browser, build]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,17 +87,73 @@ jobs:
       - run: pnpm --dir frontend install --frozen-lockfile
       - name: Provision Chromium on the ephemeral hosted VM
         run: pnpm --dir frontend exec playwright install --with-deps chromium
-      - name: Run complete frontend profile
+      - name: Run complete frontend stage
         shell: pwsh
-        run: ./scripts/run-ci-profile.ps1 -Profile frontend-full
+        run: ./scripts/run-ci-profile.ps1 -Profile frontend-full -FrontendStage '${{ matrix.stage }}'
       - name: Preserve failed frontend screenshots and traces
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-failure
+          name: frontend-${{ matrix.stage }}-failure
           path: frontend/test-results/
           retention-days: 7
           if-no-files-found: warn
+
+  frontend-storybook:
+    name: Frontend ${{ matrix.gate }} shard ${{ matrix.shard }}/4 / Node 24 / pnpm 11
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [a11y, visual]
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and prepare reference contracts
+        shell: pwsh
+        run: ./scripts/prepare-public-ci.ps1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm --dir frontend install --frozen-lockfile
+      - name: Provision Chromium on the ephemeral hosted VM
+        run: pnpm --dir frontend exec playwright install --with-deps chromium
+      - name: Run complete Storybook shard
+        shell: pwsh
+        run: ./scripts/run-ci-profile.ps1 -Profile frontend-full -FrontendStage '${{ matrix.gate }}' -StorybookShard ${{ matrix.shard }}
+      - name: Preserve failed frontend screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ matrix.gate }}-${{ matrix.shard }}-failure
+          path: frontend/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  frontend:
+    name: Frontend full / Node 24 / pnpm 11
+    if: always()
+    needs: [frontend-stage, frontend-storybook]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every frontend stage and shard
+        shell: pwsh
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: |
+          $needs = $env:NEEDS_JSON | ConvertFrom-Json -AsHashtable
+          if ($needs.Count -ne 2 -or @($needs.Values | Where-Object { $_.result -cne 'success' }).Count -ne 0) {
+            Write-Error 'Every frontend stage and Storybook shard must succeed.' -ErrorAction Continue
+            exit 1
+          }
 
   mysql-84:
     name: MySQL 8.4 compatibility / Python 3.14

@@ -447,3 +447,12 @@ backend/tests/unit/deployment/test_entrypoint.py::test_reset_modes_reject_busine
 backend/tests/unit/deployment/test_entrypoint.py::test_reset_modes_reject_business_database_before_connecting[True]
 backend/tests/unit/deployment/test_entrypoint.py::test_reset_test_database_keeps_empty_replay_separate_from_current_head[False]
 backend/tests/unit/deployment/test_entrypoint.py::test_reset_test_database_keeps_empty_replay_separate_from_current_head[True]
+# A API transient-failure regression nodes, 2026-10-22.
+backend/tests/contracts/test_public_ci_bridge.py::test_api_does_not_retry_invalid_json
+backend/tests/contracts/test_public_ci_bridge.py::test_api_failure_is_bounded_diagnostic_and_does_not_expose_response[401]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_failure_is_bounded_diagnostic_and_does_not_expose_response[403]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_failure_is_bounded_diagnostic_and_does_not_expose_response[404]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_failure_is_bounded_diagnostic_and_does_not_expose_response[503]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_retries_only_temporary_get_failures[http503]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_retries_only_temporary_get_failures[rate-limit]
+backend/tests/contracts/test_public_ci_bridge.py::test_api_retries_only_temporary_get_failures[timeout]
