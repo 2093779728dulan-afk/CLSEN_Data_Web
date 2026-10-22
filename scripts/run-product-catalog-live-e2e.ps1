@@ -498,6 +498,7 @@ function Stop-LiveJob {
         Assert-OwnedProcessIdentity -Record $record
     }
     [CatalogLiveJob]::Close()
+    $processRecords.Clear()
     $script:jobCreated = $false
 }
 
@@ -510,7 +511,8 @@ function Invoke-SchemaPreflight {
     try {
         & $pythonExecutable -m app.schema_preflight `
             --database-environment $DatabaseEnvironment `
-            --component $Component
+            --component $Component |
+            ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) {
             throw "$Component schema preflight failed before live process launch."
         }
@@ -624,7 +626,10 @@ function Invoke-CutoverPhase {
             api_port = $apiPort
             frontend_port = $frontendPort
         }
-        $manifest.details.processes = @($processRecords)
+        if (-not $manifest.details.ContainsKey("processes")) {
+            $manifest.details.processes = @()
+        }
+        $manifest.details.processes += @($processRecords)
         $manifest.details.container_id = $containerId
         [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
 
@@ -1436,11 +1441,7 @@ finally {
     $cleanupErrors = [Collections.Generic.List[string]]::new()
     if ($jobCreated) {
         try {
-            foreach ($record in $processRecords) {
-                Assert-OwnedProcessIdentity -Record $record
-            }
-            [CatalogLiveJob]::Close()
-            $jobCreated = $false
+            Stop-LiveJob
         }
         catch {
             $cleanupErrors.Add("process job cleanup failed")

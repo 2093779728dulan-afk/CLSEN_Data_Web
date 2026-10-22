@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "0ea41180f92f375d6a772918e5382536bdb66cf6",
-  "source_tree": "be671005fd0f1f6a25957706ef715187e8f0266e",
+  "source_sha": "ff393127e2e2d1de72284fa963929a78aa4e12f4",
+  "source_tree": "7d91dbab0bd1c406da6124d9d1bf4ffb13767e4a",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -1189,8 +1189,8 @@
     },
     {
       "path": "backend/tests/contracts/test_maintenance_scripts.py",
-      "git_blob": "54bd93e1c07d7893421372e4817cd15bd7449e07",
-      "sha256": "cf8580d55c26015442e529df4bda3e30b242211312f5e1a95c8b0954e1ca3cf8"
+      "git_blob": "cfe87ddf2ef63defa9eab69f0b481ed4cd4522dc",
+      "sha256": "360c0c03386aa3d7fb14b7fe21e31e5d2d488e62b774edb291ef8a4c321c466f"
     },
     {
       "path": "backend/tests/contracts/test_migration_contract.py",
@@ -1294,13 +1294,13 @@
     },
     {
       "path": "backend/tests/fixtures/ci/offline-backend-nodeids.txt",
-      "git_blob": "730f42846e2258ecbb63bbbc6612e0dd31ece566",
-      "sha256": "e4baacea0aae67c069a636a5ac8535c58a768e65596352860cc1e9a0fdf37798"
+      "git_blob": "f95719f381bff12c88739b4758eecc419e338cbe",
+      "sha256": "420f835ae0559d67eaae5d20350fa69ea3627aa8b3a4f1133ad4db3f399ae6d9"
     },
     {
       "path": "backend/tests/fixtures/ci/windows-smoke-nodeids.txt",
-      "git_blob": "f5b9a57164d53acc42d6fda74c4ea9f6b96376a8",
-      "sha256": "ae751cfbddeed5b77c2cc070bedb3b571f2e38b8a052e96a2b3272761a370986"
+      "git_blob": "979274bd9b4aeda0250e2c0bb137856062fbb272",
+      "sha256": "d15c4597bed9ab249432ccc78995685156da42ed663db04b9c17d98d63c4013f"
     },
     {
       "path": "backend/tests/fixtures/synthetic/business-report.csv",
@@ -5239,8 +5239,8 @@
     },
     {
       "path": "frontend/tests/e2e/live/catalog-milestone-a.live.spec.ts",
-      "git_blob": "5efaa2e7f19395cea5b598ec631e5998269dbd59",
-      "sha256": "864b596ae3a03e158b63ca1352188d840cc745d2ac0a57941c8d7735bbbce35b"
+      "git_blob": "5e118b506e5aed4a2a39c650760334b54b7af034",
+      "sha256": "f0b64a3f317539ec2438aec99e264dc70b3f6833221634fa95715a7f2af87b5d"
     },
     {
       "path": "frontend/tests/e2e/live/catalogLiveFixtures.ts",
@@ -5259,8 +5259,8 @@
     },
     {
       "path": "frontend/tests/e2e/live/product-analytics-cutover.live.spec.ts",
-      "git_blob": "88e310554c96fd132c05ab484938c2280773586b",
-      "sha256": "6e4da1cfa327eb627ce5a59700a1e16bf2683dee6a38aab7785c4536374e3df9"
+      "git_blob": "393deca497a381d66bf2a096b41536d501c6a46d",
+      "sha256": "8d4d4a1eb97337dcf4a943199bbcfbd0b2f28804cde9e67702d528295b56836a"
     },
     {
       "path": "frontend/tests/e2e/live/product-analytics-milestone-b.live.spec.ts",
@@ -5269,8 +5269,8 @@
     },
     {
       "path": "frontend/tests/e2e/live/product-catalog-release.live.spec.ts",
-      "git_blob": "7ec42f387ba530d7296aa6059c4a87c28a98cdda",
-      "sha256": "10e0534c51a76905ad20a5060c3317750306219588f5f70700f3a4556edc5fa5"
+      "git_blob": "0a9d18066f076c86838852fbad1267d8a8b4ac56",
+      "sha256": "0d2a6a535f53362d052664534ab23904cc06e4d27670550748127f6e4329be48"
     },
     {
       "path": "frontend/tests/e2e/merge-decisions-ui.spec.ts",
@@ -13784,8 +13784,8 @@
     },
     {
       "path": "scripts/run-product-catalog-live-e2e.ps1",
-      "git_blob": "d596a7144c2e6aff83a3c1374691641610f3e8b4",
-      "sha256": "ee5161a7a8242475b1f90cc36d6af8e84e88e6cbeec72417de8ca58af5b97d8a"
+      "git_blob": "b3da7ee2890c22fa3efcd3fa9a37d474f8cef06b",
+      "sha256": "d2831921bbcf22be051cd8769c78b4106a23c85f79234ad4cc2393fd5c6d7919"
     },
     {
       "path": "scripts/run-product-catalog-mysql-tests.ps1",

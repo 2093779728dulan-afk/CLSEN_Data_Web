@@ -25,6 +25,127 @@ CATALOG_RESTORE_RUNNER = (
 CI_SUITE_MANIFEST = REPOSITORY_ROOT / "scripts" / "ci-suite-manifest.json"
 
 
+@pytest.mark.parametrize(
+    ("scenario", "closed", "records", "job_created"),
+    [
+        ("phase-rollover", 2, 0, False),
+        ("start-changed", 0, 1, True),
+        ("command-changed", 0, 1, True),
+        ("close-failed", 0, 1, True),
+        ("idle", 0, 1, False),
+    ],
+)
+def test_catalog_live_job_cleanup_keeps_only_active_phase_identities(
+    tmp_path: Path,
+    scenario: str,
+    closed: int,
+    records: int,
+    job_created: bool,
+) -> None:
+    probe = tmp_path / "probe-live-cleanup.ps1"
+    probe.write_text(
+        r"""
+param([string]$LiveScriptPath, [string]$Scenario)
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+$tokens = $null
+$parseErrors = $null
+$ast = [Management.Automation.Language.Parser]::ParseFile(
+    $LiveScriptPath, [ref]$tokens, [ref]$parseErrors
+)
+if ($parseErrors.Count) { throw 'Live script parsing failed' }
+foreach ($name in @('Get-TextSha256', 'Register-ProcessIdentity',
+                    'Assert-OwnedProcessIdentity', 'Stop-LiveJob')) {
+    $definitions = @($ast.FindAll({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -eq $name
+    }, $true))
+    if ($definitions.Count -ne 1) { throw "Missing function $name" }
+    . ([scriptblock]::Create($definitions[0].Extent.Text))
+}
+# All OS process lookups and Job closure are fakes: never inspect or kill a host PID.
+class CatalogLiveJob {
+    static [int]$Closed = 0
+    static [bool]$FailClose = $false
+    static [void] Close() {
+        if ([CatalogLiveJob]::FailClose) { throw 'simulated close failure' }
+        [CatalogLiveJob]::Closed++
+    }
+}
+$processRecords = [Collections.Generic.List[object]]::new()
+$script:jobCreated = $true
+$script:started = [DateTime]::Parse('2026-10-22T00:00:00Z').ToUniversalTime()
+$script:command = 'legacy-before-fixture'
+function Get-Process {
+    param([int]$Id, [string]$ErrorAction)
+    return [pscustomobject]@{ StartTime = $script:started }
+}
+function Get-ProcessCommandLine {
+    param([int]$ProcessId)
+    return $script:command
+}
+Register-ProcessIdentity -ProcessId 101 -Role 'legacy-before' `
+    -RequiredCommandFragment 'fixture'
+if ($Scenario -eq 'phase-rollover') {
+    Stop-LiveJob
+    # The OS may reuse a closed phase's PID for the next phase or an unrelated process.
+    $script:started = $script:started.AddSeconds(10)
+    $script:command = 'p0-fixture'
+    $script:jobCreated = $true
+    Register-ProcessIdentity -ProcessId 101 -Role 'p0' `
+        -RequiredCommandFragment 'fixture'
+    if ($processRecords.Count -ne 1 -or $processRecords[0].role -cne 'p0') {
+        throw 'Closed phase process identity leaked into the next phase'
+    }
+    Stop-LiveJob
+} elseif ($Scenario -eq 'idle') {
+    $script:jobCreated = $false
+    Stop-LiveJob
+} else {
+    if ($Scenario -eq 'start-changed') {
+        $script:started = $script:started.AddSeconds(1)
+    }
+    if ($Scenario -eq 'command-changed') { $script:command = 'different-fixture' }
+    if ($Scenario -eq 'close-failed') { [CatalogLiveJob]::FailClose = $true }
+    $rejected = $false
+    try { Stop-LiveJob } catch {
+        $expected = if ($Scenario -eq 'close-failed') { 'simulated close failure' }
+                    else { 'Refusing ambiguous cleanup' }
+        if (-not $_.ToString().Contains($expected)) { throw }
+        $rejected = $true
+    }
+    if (-not $rejected) { throw 'Unsafe or unsuccessful closure was accepted' }
+}
+@{ closed = [CatalogLiveJob]::Closed; records = $processRecords.Count
+   job_created = $script:jobCreated } | ConvertTo-Json -Compress
+""",
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            "pwsh",
+            "-NoProfile",
+            "-File",
+            str(probe),
+            "-LiveScriptPath",
+            str(CATALOG_LIVE_SCRIPT),
+            "-Scenario",
+            scenario,
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout) == {
+        "closed": closed,
+        "records": records,
+        "job_created": job_created,
+    }
+
+
 @pytest.fixture
 def performance_runner(tmp_path: Path) -> Path:
     scripts = tmp_path / "scripts"
@@ -282,7 +403,9 @@ def test_supported_local_launchers_preflight_before_ready_or_uvicorn() -> None:
     assert demo.index("app.schema_preflight") < demo.index("-m uvicorn")
 
 
-def test_live_runner_preflights_each_api_and_worker_process_launch() -> None:
+def test_live_runner_preflights_each_api_and_worker_process_launch(
+    tmp_path: Path,
+) -> None:
     source = CATALOG_LIVE_SCRIPT.read_text(encoding="utf-8")
     assert (
         '$databaseName = "clsen_data_test_$($runIdentifier.Substring(0, 16))"' in source
@@ -346,6 +469,58 @@ def test_live_runner_preflights_each_api_and_worker_process_launch() -> None:
         guard < launch
         for guard, launch in zip(worker_preflights, worker_launches, strict=True)
     )
+    probe = tmp_path / "probe-schema-preflight.ps1"
+    probe.write_text(
+        r"""
+param([string]$LiveScriptPath)
+$ErrorActionPreference = 'Stop'
+$tokens = $null
+$parseErrors = $null
+$ast = [Management.Automation.Language.Parser]::ParseFile(
+    $LiveScriptPath, [ref]$tokens, [ref]$parseErrors
+)
+$definition = $ast.FindAll({ param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+    $node.Name -eq 'Invoke-SchemaPreflight'
+}, $true) | Select-Object -First 1
+. ([scriptblock]::Create($definition.Extent.Text))
+$backendDirectory = $PSScriptRoot
+$pythonExecutable = 'Invoke-FakePreflight'
+$script:preflightExit = 0
+function Invoke-FakePreflight {
+    '{"event":"schema_compatibility","status":"fixture"}'
+    $global:LASTEXITCODE = $script:preflightExit
+}
+$output = @(Invoke-SchemaPreflight -DatabaseEnvironment fixture -Component api)
+if ($output.Count -ne 0) { throw 'Schema logs contaminated the phase return value' }
+$script:preflightExit = 1
+$rejected = $false
+try { Invoke-SchemaPreflight -DatabaseEnvironment fixture -Component api } catch {
+    if ($_.ToString() -notlike '*schema preflight failed*') { throw }
+    $rejected = $true
+}
+if (-not $rejected) { throw 'Failed schema preflight was accepted' }
+Write-Output 'SCHEMA_PREFLIGHT_OUTPUT_PASS'
+""",
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            "pwsh",
+            "-NoProfile",
+            "-File",
+            str(probe),
+            "-LiveScriptPath",
+            str(CATALOG_LIVE_SCRIPT),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "SCHEMA_PREFLIGHT_OUTPUT_PASS" in completed.stdout
 
 
 def test_catalog_experience_stop_script_only_signals_an_owned_run() -> None:

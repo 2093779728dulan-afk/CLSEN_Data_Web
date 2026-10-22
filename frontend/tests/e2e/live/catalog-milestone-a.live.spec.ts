@@ -30,6 +30,10 @@ const SECTION_LABELS: Record<CatalogSection, string> = {
   styles: "款式命名",
 };
 
+function reviewRows(page: Page) {
+  return page.getByRole("region", { name: "当前分类审核表格", exact: true }).locator("tbody tr");
+}
+
 async function saveRow(page: Page, row: Locator) {
   const responsePromise = page.waitForResponse((response) => (
     response.request().method() === "POST"
@@ -69,11 +73,16 @@ async function selectSection(page: Page, section: CatalogSection) {
   if (section === "evidence") {
     await expect(page.getByRole("region", { name: "安全来源证据" })).toBeVisible();
   } else {
-    await expect(page.locator(".catalog-table-scroll tbody tr").first()).toBeVisible();
+    await expect(reviewRows(page).first()).toBeVisible();
   }
 }
 
 async function setReviewField(row: Locator, field: string, value: string) {
+  const radios = row.locator(`[data-review-field="${field}"] input[type="radio"]`);
+  if (await radios.count()) {
+    await row.locator(`[data-review-field="${field}"] input[type="radio"][value="${value}"]`).check();
+    return;
+  }
   const selector = `[aria-label$=" ${field}"]`;
   const editor = row.locator(selector);
   await expect(editor).toHaveCount(1);
@@ -189,12 +198,12 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
     JSON.stringify({ importStatus: importDetail.status, styleRowCount: styleRowsPayload.rows.length }),
   ).toBeGreaterThan(0);
 
-  const styleRows = page.locator(".catalog-table-scroll tbody tr");
+  const styleRows = reviewRows(page);
   await expect(styleRows.first()).toBeVisible({ timeout: 15_000 });
   const onlyPending = page.getByRole("checkbox", { name: "仅看待处理" });
   await expect(onlyPending).toBeChecked();
   await onlyPending.uncheck();
-  expect(await styleRows.count()).toBe(2);
+  await expect(styleRows).toHaveCount(2);
   for (let index = 0; index < await styleRows.count(); index += 1) {
     const row = styleRows.nth(index);
     await setReviewField(
@@ -206,8 +215,8 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   }
 
   await selectSection(page, "skus");
-  const skuRows = page.locator(".catalog-table-scroll tbody tr");
-  expect(await skuRows.count()).toBe(11);
+  const skuRows = reviewRows(page);
+  await expect(skuRows).toHaveCount(11);
   for (let index = 0; index < await skuRows.count(); index += 1) {
     const row = skuRows.nth(index);
     await setReviewField(row, "internal_display_sku", `LIVE-DISPLAY-${index + 1}`);
@@ -217,7 +226,7 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   }
 
   await selectSection(page, "mappings");
-  const mappingRows = page.locator(".catalog-table-scroll tbody tr");
+  const mappingRows = reviewRows(page);
   expect(await mappingRows.count()).toBeGreaterThanOrEqual(2);
   let sharedTarget = "";
   for (let index = 0; index < await mappingRows.count() && sharedTarget === ""; index += 1) {
@@ -253,7 +262,7 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   expect(excludedCandidate).toBeTruthy();
 
   await selectSection(page, "exceptions");
-  const exceptionRows = page.locator(".catalog-table-scroll tbody tr");
+  const exceptionRows = reviewRows(page);
   expect(await exceptionRows.count()).toBeGreaterThanOrEqual(2);
   const corrected = exceptionRows.first();
   await setReviewField(corrected, "action", "correct_parse");

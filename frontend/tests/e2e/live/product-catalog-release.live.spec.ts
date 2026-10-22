@@ -25,7 +25,7 @@ test("release build serves approved catalog and P0 analytics without dev runtime
   await viewerPage.goto("/products?from=2025-07-17&to=2025-07-17");
   await expect(viewerPage.locator(".app-shell")).toHaveAttribute(
     "data-product-analytics-source",
-    "product-analytics-source:p0_catalog",
+    "p0_catalog",
   );
   await expect(viewerPage.getByRole("heading", { level: 1, name: "产品总表" })).toBeVisible();
   const ledger = await viewerRequest.get("/api/dashboard/style-ledger", {

@@ -15,7 +15,7 @@ test("cutover phase bundle, navigation, and endpoint provenance agree", async ({
   await viewerPage.goto("/products");
   await expect(viewerPage.locator(".app-shell")).toHaveAttribute(
     "data-product-analytics-source",
-    `product-analytics-source:${expectedSource}`,
+    expectedSource,
   );
   await expect(viewerPage.getByRole("link", { name: "商品主档" })).toBeVisible();
 
