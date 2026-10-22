@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "8d7d93e71c9b08f2bc47b223c9ab5f81a0931528",
-  "source_tree": "47545affaa475945970f85af5a8b5c05e38b3b2e",
+  "source_sha": "0ea41180f92f375d6a772918e5382536bdb66cf6",
+  "source_tree": "be671005fd0f1f6a25957706ef715187e8f0266e",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -1219,8 +1219,8 @@
     },
     {
       "path": "backend/tests/contracts/test_release_evidence_contract.py",
-      "git_blob": "dc713551491777503a8a6c57f5807dd39d3937d6",
-      "sha256": "48f535f95b6d2f8e6b4291ec36fb0bb0c5e8b23bef58d5c145a21fd51a2f9ff4"
+      "git_blob": "ba4f6da9fd59416224bcbc7470d6af4a5d376f1e",
+      "sha256": "cc22648d6e9dae7e3cf6afaaf1ccb89d943bc2d5a561498cf29c20dd276c2151"
     },
     {
       "path": "backend/tests/contracts/test_schema_compatibility_contract.py",
@@ -1689,8 +1689,8 @@
     },
     {
       "path": "backend/tests/performance/product_catalog_scale_fixture.py",
-      "git_blob": "faa5940a1ca1facdfccafb7f638fde9eafa5ebe5",
-      "sha256": "2ce315887e962d5f9be81159069af366db6fb5b65b779f85a5af665b8db09ddc"
+      "git_blob": "3db2e77ef0b8836791cc0bc5f3c473be5793f23a",
+      "sha256": "a03f3c4dc8f764c07e64853f8a649438319de36e3833559a33075502ea9b0d86"
     },
     {
       "path": "backend/tests/performance/project_optimization_baseline.py",
@@ -13764,8 +13764,8 @@
     },
     {
       "path": "scripts/run-ci-profile.ps1",
-      "git_blob": "fefdef90700f372fd1c5c7e5fe92eeabac1a85f6",
-      "sha256": "b54dcca462de06ff0ed34a4334887ffb385c88776d98b28edc96620b0f4e7918"
+      "git_blob": "cddf05fad39e0eb31a08e233769563710d33fcf8",
+      "sha256": "b9c8e37523d20b5c34bb47e5f9084aff94a9b1cf8644b9e373536716eb9135aa"
     },
     {
       "path": "scripts/run-dev-check.ps1",

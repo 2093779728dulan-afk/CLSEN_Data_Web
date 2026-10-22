@@ -1518,17 +1518,15 @@ def release_source_identity(source_sha: str | None = None) -> dict[str, str]:
     head = str(_git_output("rev-parse", "HEAD")).strip()
     if head != source:
         raise ValueError("source_sha does not match checkout HEAD")
-    dirty = str(_git_output("status", "--porcelain")).strip()
+    dirty = str(_git_output("status", "--short", "--untracked-files=no")).strip()
     if dirty:
         raise ValueError("release source checkout has tracked changes")
 
     git_tree = str(_git_output("rev-parse", f"{source}^{{tree}}")).strip()
-    tree_listing = _git_binary_output("ls-tree", "-r", "--full-tree", source).replace(
-        b"\r\n", b"\n"
-    )
-    if tree_listing and not tree_listing.endswith(b"\n"):
-        tree_listing += b"\n"
-    artifact_digest = hashlib.sha256(tree_listing).hexdigest()
+    # Root entries bind every child tree/blob by object ID, without enumerating
+    # protected subtrees or reading their files. Hash the binary object as-is.
+    root_tree = _git_binary_output("cat-file", "tree", git_tree)
+    artifact_digest = hashlib.sha256(root_tree).hexdigest()
 
     manifest = json.loads(
         (REPOSITORY_ROOT / "scripts" / "ci-suite-manifest.json").read_text(

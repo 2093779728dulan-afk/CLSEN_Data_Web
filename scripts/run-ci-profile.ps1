@@ -679,7 +679,7 @@ if ($ValidateOnly) {
                 if ((git rev-parse HEAD) -cne $SourceSha) {
                     throw "Workspace HEAD differs from the release source."
                 }
-                if (git status --porcelain) {
+                if (git status --short --untracked-files=no) {
                     throw "Release workspace is not clean."
                 }
             }
