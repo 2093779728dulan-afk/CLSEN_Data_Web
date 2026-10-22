@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "ff393127e2e2d1de72284fa963929a78aa4e12f4",
-  "source_tree": "7d91dbab0bd1c406da6124d9d1bf4ffb13767e4a",
+  "source_sha": "b4a32913c8ea380f3d1c89ba02e64d68ee59c665",
+  "source_tree": "9118aaf1e8d9ba59875adfcaadad76c557b29101",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -1179,8 +1179,8 @@
     },
     {
       "path": "backend/tests/contracts/test_ci_suite_manifest.py",
-      "git_blob": "eb3cfd4849f460956f439a149833f80de06059a1",
-      "sha256": "3df0c2fe7876a6821544dbaf213e9c6966c776e76df1cc5f0c31afcb0d059a0c"
+      "git_blob": "e2dc3cb562833df678002c569a677ae463aed74d",
+      "sha256": "fcb1602dc5b603f39e66812e8b06affcdcff22a3bd778b50b51627a7640efe27"
     },
     {
       "path": "backend/tests/contracts/test_database_bootstrap_script.py",

@@ -654,12 +654,12 @@ def test_windows_smoke_path_boundary_is_exact() -> None:
         for node in nodes
         if "/test_project_optimization_baseline_runner.py::" not in node
     ]
-    assert len(non_stage0_nodes) == 440
-    assert len(set(non_stage0_nodes)) == 440
-    assert len({node.casefold() for node in non_stage0_nodes}) == 439
-    assert len(nodes) == 454
-    assert len(set(nodes)) == 454
-    assert len({node.casefold() for node in nodes}) == 453
+    assert len(non_stage0_nodes) == 445
+    assert len(set(non_stage0_nodes)) == 445
+    assert len({node.casefold() for node in non_stage0_nodes}) == 444
+    assert len(nodes) == 459
+    assert len(set(nodes)) == 459
+    assert len({node.casefold() for node in nodes}) == 458
     runner = PROFILE_RUNNER.read_text(encoding="utf-8")
     assert "[StringComparer]::Ordinal" in runner
     assert "Sort-Object -Unique" not in runner
