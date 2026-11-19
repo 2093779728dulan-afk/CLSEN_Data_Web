@@ -34,6 +34,7 @@ function ledgerParameters(query: StyleLedgerQuery): URLSearchParams {
 
 function cardParameters(query: StyleCardQuery): URLSearchParams {
   const parameters = new URLSearchParams();
+  parameters.set("contract_version", "2");
   append(parameters, "from", query.from);
   append(parameters, "to", query.to);
   append(parameters, "metric", query.metric);

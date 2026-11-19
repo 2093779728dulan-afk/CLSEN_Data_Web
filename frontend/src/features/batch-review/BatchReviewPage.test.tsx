@@ -179,6 +179,24 @@ describe("BatchReviewPage", () => {
     expect(screen.getByRole("button", { name: "暂停批量处理" })).toBeVisible();
   });
 
+  it("does not schedule an unmounted pass and rereads the task on return", async () => {
+    const running = run({ allowed_actions: ["pause"], status: "running", revision: 4 });
+    const paused = { ...running, allowed_actions: ["resume"], status: "paused", revision: 5 };
+    let finishReload!: (snapshot: BatchReviewRun) => void;
+    mocks.getRun.mockResolvedValueOnce(running).mockImplementationOnce(() =>
+      new Promise<BatchReviewRun>((resolve) => { finishReload = resolve; }));
+    const view = renderPage();
+    await waitFor(() => expect(mocks.getRun).toHaveBeenCalledTimes(2));
+    view.unmount();
+    mocks.getRun.mockResolvedValue(paused);
+    renderPage();
+    expect(await screen.findByRole("button", { name: "恢复批量处理" })).toBeVisible();
+    await act(async () => { finishReload(running); await Promise.resolve(); });
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "恢复批量处理" })).toBeVisible();
+    expect(mocks.getRun).toHaveBeenCalledTimes(3);
+  });
+
   it("shows executor failure while retaining the authoritative item state", async () => {
     const runtimeLog = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const progress = run({ status: "running", items: [item({

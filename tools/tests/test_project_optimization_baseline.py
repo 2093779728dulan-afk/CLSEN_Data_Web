@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from tests.performance import (  # type: ignore[import-not-found]
+from tests.performance import (
     project_optimization_baseline as producer,
 )
 
@@ -679,6 +679,8 @@ def test_repository_manifest_is_valid_and_complete() -> None:
         "live-worker",
     }
     assert {route["path"] for route in payload["routes"]} == {
+        "/production/*",
+        "/catalog/production-sources",
         "/",
         "/ledger/published-details",
         "/products",
@@ -688,6 +690,7 @@ def test_repository_manifest_is_valid_and_complete() -> None:
         "/catalog/styles/:style_id",
         "/catalog/imports/:import_id",
         "/catalog/unmatched",
+        "/catalog/maintenance",
         "/catalog/versions",
         "/review/batch/:runId",
         "/review/:reportDate",

@@ -1,13 +1,15 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 
 import styles from "./Dialog.module.css";
 
 export type DialogProps = {
   children: ReactNode;
+  portalContainer?: HTMLElement | null;
   accessibleLabel?: string;
   dismissDisabled?: boolean;
+  closeOnOutsideClick?: boolean;
   contentClassName?: string;
   closeLabel?: string;
   description?: ReactNode;
@@ -17,12 +19,16 @@ export type DialogProps = {
   size?: "medium" | "large";
   presentation?: "dialog" | "drawer";
   title: ReactNode;
+  /** Explicit trigger for dialogs opened after an asynchronous check. */
+  returnFocusTarget?: RefObject<HTMLElement | null>;
 };
 
 export function Dialog({
   children,
+  portalContainer,
   accessibleLabel,
   dismissDisabled = false,
+  closeOnOutsideClick = true,
   contentClassName = "",
   closeLabel = "关闭对话框",
   description,
@@ -32,6 +38,7 @@ export function Dialog({
   size = "medium",
   presentation = "dialog",
   title,
+  returnFocusTarget,
 }: DialogProps) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -43,17 +50,18 @@ export function Dialog({
 
   return (
     <DialogPrimitive.Root onOpenChange={open => { if (!dismissDisabled || open) onOpenChange(open); }} open={open}>
-      <DialogPrimitive.Portal>
+      <DialogPrimitive.Portal container={portalContainer}>
         <DialogPrimitive.Overlay className={styles.overlay} />
         <DialogPrimitive.Content
           {...(accessibleLabel ? { "aria-labelledby": undefined, "aria-label": accessibleLabel } : {})}
           onEscapeKeyDown={event => { if (dismissDisabled) event.preventDefault(); }}
-          onPointerDownOutside={event => { if (dismissDisabled) event.preventDefault(); }}
+          onPointerDownOutside={event => { if (dismissDisabled || !closeOnOutsideClick) event.preventDefault(); }}
           className={`${styles.content} ${styles[size]} ${presentation === "drawer" ? styles.drawer : ""} ${contentClassName}`}
           onCloseAutoFocus={(event) => {
-            if (!returnFocusRef.current) return;
+            const target = returnFocusTarget?.current ?? returnFocusRef.current;
+            if (!target) return;
             event.preventDefault();
-            returnFocusRef.current.focus();
+            target.focus();
           }}
         >
           <header className={styles.header}>

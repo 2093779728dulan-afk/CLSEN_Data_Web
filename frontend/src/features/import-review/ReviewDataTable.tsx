@@ -1,3 +1,4 @@
+import type { DialogProps } from "../../design-system/Dialog";
 import css from "./ReviewDataTable.module.css";
 import cellCss from "./CellReviewDrawer.module.css";
 import rowCss from "./RowReviewDrawer.module.css";
@@ -32,6 +33,7 @@ type RestoreSource =
   | { source_kind: "source"; source_batch_id: number; parsed_source_row_id: number };
 
 type Props = {
+  inline?:boolean;
   busy: boolean;
   onAddRow: (
     sourceBatchId: number,
@@ -106,7 +108,7 @@ function editValue(contract: ReviewFieldContract, raw: string, useNull: boolean)
 }
 
 function CellDrawer({
-  busy,
+  inline, busy,
   cell,
   contract,
   onAddCellNote,
@@ -118,6 +120,7 @@ function CellDrawer({
   row,
   source,
 }: {
+  inline?:boolean;
   busy: boolean;
   cell: ReviewCell;
   contract: ReviewFieldContract;
@@ -185,7 +188,7 @@ function CellDrawer({
 
   const latestChange = cell.history[0];
   return (
-    <Dialog open accessibleLabel="字段对照" presentation="drawer" closeLabel="关闭字段对照" dismissDisabled={busy}
+    <ReviewSurface inline={inline} open accessibleLabel="字段对照" presentation="drawer" closeLabel="关闭字段对照" dismissDisabled={busy}
       title={<>{cell.field_name}<span className={cellCss.rowLabel}>第 {row.row_ordinal} 行</span></>}
       description="核对源文件、版本基础与当前草稿。修改、恢复及备注分别保留记录。" eyebrow="字段核对"
       onOpenChange={open => { if (!open && !busy) onClose(); }}>
@@ -225,12 +228,12 @@ function CellDrawer({
           {cell.history.length ? <ol className={cellCss.history}>{cell.history.map((item) => <li key={item.id}><header><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></header><dl><div><dt>修改前</dt><dd>{displayValue(item.before)}</dd></div><div><dt>修改后</dt><dd>{displayValue(item.after)}</dd></div></dl><p>{item.reason}</p></li>)}</ol> : <p className={cellCss.hint}>这个字段还没有人工修改。</p>}
         </section>
       </div>
-    </Dialog>
+    </ReviewSurface>
   );
 }
 
 function AddRowDrawer({
-  busy,
+  inline, busy,
   fields,
   onAddRow,
   onClose,
@@ -238,6 +241,7 @@ function AddRowDrawer({
   sourceBatchIds,
   source,
 }: {
+  inline?:boolean;
   busy: boolean;
   fields: ReviewFieldContract[];
   onAddRow: Props["onAddRow"];
@@ -282,7 +286,7 @@ function AddRowDrawer({
   };
 
   return (
-    <Dialog open accessibleLabel="新增纠错行" presentation="drawer" closeLabel="关闭新增纠错行" dismissDisabled={busy}
+    <ReviewSurface inline={inline} open accessibleLabel="新增纠错行" presentation="drawer" closeLabel="关闭新增纠错行" dismissDisabled={busy}
       title="新增纠错行" eyebrow="人工纠错" description="补录遗漏的有效行，并关联当前草稿的来源批次。原始文件保持不变。"
       onOpenChange={open => { if (!open && !busy) onClose(); }}>
       <div className={cellCss.content} role="region" aria-label="新增纠错行内容" tabIndex={busy ? 0 : undefined}>
@@ -303,12 +307,12 @@ function AddRowDrawer({
           <div className={rowCss.actions}><Button variant="quiet" disabled={busy} onClick={onClose} type="button">取消新增</Button><Button variant="primary" loading={busy} loadingLabel="正在保存…" disabled={busy || !sourceBatchId || !reason.trim()} type="submit">保存新增行</Button></div>
         </form>
       </div>
-    </Dialog>
+    </ReviewSurface>
   );
 }
 
 function RowStateDrawer({
-  busy,
+  inline, busy,
   onAddRowNote,
   onChangeRowState,
   onClose,
@@ -317,6 +321,7 @@ function RowStateDrawer({
   row,
   source,
 }: {
+  inline?:boolean;
   busy: boolean;
   onAddRowNote: Props["onAddRowNote"];
   onChangeRowState: Props["onChangeRowState"];
@@ -367,7 +372,7 @@ function RowStateDrawer({
   };
 
   return (
-    <Dialog open accessibleLabel="行状态操作" presentation="drawer" closeLabel="关闭行状态操作" dismissDisabled={busy}
+    <ReviewSurface inline={inline} open accessibleLabel="行状态操作" presentation="drawer" closeLabel="关闭行状态操作" dismissDisabled={busy}
       title={operation === "exclude" ? "排除处理行" : "恢复处理行"} eyebrow={`第 ${row.row_ordinal} 行`}
       description="调整当前草稿的行状态，来源与操作历史继续保留。"
       onOpenChange={open => { if (!open && !busy) onClose(); }}>
@@ -381,7 +386,7 @@ function RowStateDrawer({
         <section className={cellCss.section} aria-label="行备注"><h3>行备注</h3>{row.notes.length > 0 ? <ul className={cellCss.notes}>{row.notes.map((item) => <li key={item.note_key}><p>{item.body}</p><small>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</small><NoteRevisionEditor busy={busy} note={item} onRevise={onReviseNote} /></li>)}</ul> : <p className={cellCss.hint}>尚无行备注。</p>}<FormField label="行备注内容"><textarea className={controlCss.control} disabled={busy} onChange={(event) => setNote(event.target.value)} rows={3} value={note} /></FormField><FormField label="行备注可见范围"><Select disabled={busy} onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} value={noteVisibility}><option value="internal">仅审核人员</option><option value="viewer_visible">查看人员可见</option></Select></FormField><Button variant="secondary" disabled={busy || !note.trim()} onClick={() => { void addNote(); }} type="button">追加行备注</Button></section>
         <section className={cellCss.section} aria-label="状态历史"><h3>状态历史</h3>{row.history.length ? <ol className={cellCss.history}>{row.history.map((item) => <li key={item.id}><header><strong>{item.operation}</strong><span>r{item.data_revision} · {item.actor_username}</span></header><p>{item.reason}</p></li>)}</ol> : <p className={cellCss.hint}>这行还没有状态修改记录。</p>}</section>
       </div>
-    </Dialog>
+    </ReviewSurface>
   );
 }
 
@@ -407,7 +412,7 @@ function cellKey(rowId: number, fieldName: string) {
   return `${rowId}:${fieldName}`;
 }
 
-export function ReviewDataTable({ busy, onAddCellNote, onAddRow, onAddRowNote, onChangeRowState, onPageChange, onRestoreField, onReviewIssue, onReviseNote, onSetField, operator, workspace }: Props) {
+export function ReviewDataTable({ inline, busy, onAddCellNote, onAddRow, onAddRowNote, onChangeRowState, onPageChange, onRestoreField, onReviewIssue, onReviseNote, onSetField, operator, workspace }: Props) {
   const [query, setQuery] = useState("");
   const [changedOnly, setChangedOnly] = useState(true);
   const [rowState, setRowState] = useState<"all" | ReviewRow["row_state"]>("all");
@@ -592,8 +597,12 @@ export function ReviewDataTable({ busy, onAddCellNote, onAddRow, onAddRowNote, o
       <footer className={css.footer}><Pagination page={workspace.pagination.page} totalPages={workspace.pagination.total_pages} totalItems={workspace.pagination.total_rows} itemLabel="数据行" loading={busy} onPageChange={onPageChange} /><p>方向键移动单元格 · Enter 打开对照 · SKU / ASIN 列在宽屏固定</p></footer>
     </section>
     <IssueReviewPanel busy={busy} issues={workspace.latest_full_validation?.issues ?? []} onReviewIssue={onReviewIssue} />
-    {addingRow && <AddRowDrawer busy={busy} fields={workspace.fields} onAddRow={onAddRow} onClose={() => setAddingRow(false)} operator={operator} source={auditSource} sourceBatchIds={sourceBatchIds} />}
-    {rowAction && <RowStateDrawer busy={busy} onAddRowNote={onAddRowNote} onChangeRowState={onChangeRowState} onClose={() => setRowActionId(undefined)} onReviseNote={onReviseNote} operator={operator} row={rowAction} source={auditSource} />}
-    {selectedRow && selectedCell && selectedContract && <CellDrawer busy={busy} cell={selectedCell} contract={selectedContract} onAddCellNote={onAddCellNote} onClose={() => setSelected(undefined)} onRestoreField={onRestoreField} onReviseNote={onReviseNote} onSetField={onSetField} operator={operator} row={selectedRow} source={auditSource} />}
+    {addingRow && <AddRowDrawer inline={inline} busy={busy} fields={workspace.fields} onAddRow={onAddRow} onClose={() => setAddingRow(false)} operator={operator} source={auditSource} sourceBatchIds={sourceBatchIds} />}
+    {rowAction && <RowStateDrawer inline={inline} busy={busy} onAddRowNote={onAddRowNote} onChangeRowState={onChangeRowState} onClose={() => setRowActionId(undefined)} onReviseNote={onReviseNote} operator={operator} row={rowAction} source={auditSource} />}
+    {selectedRow && selectedCell && selectedContract && <CellDrawer inline={inline} busy={busy} cell={selectedCell} contract={selectedContract} onAddCellNote={onAddCellNote} onClose={() => setSelected(undefined)} onRestoreField={onRestoreField} onReviseNote={onReviseNote} onSetField={onSetField} operator={operator} row={selectedRow} source={auditSource} />}
   </>;
+}
+
+function ReviewSurface({inline,...props}:DialogProps&{inline?:boolean}) {
+ return inline?<section aria-label={props.accessibleLabel}><h3>{props.title||props.accessibleLabel}</h3><Button disabled={props.dismissDisabled} onClick={()=>props.onOpenChange(false)}>{props.closeLabel||'关闭'}</Button>{props.children}</section>:<Dialog {...props}/>;
 }

@@ -2,6 +2,7 @@
 """Repeated exports must resolve immutable evidence retained by an earlier export."""
 
 import hashlib
+import json
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import cast
@@ -87,6 +88,11 @@ def test_new_export_ref_resolves_deduplicated_evidence_with_site_boundary(
     with engine.begin() as connection:
         connection.execute(
             sa.text(
+                "CREATE TABLE catalog_export_payloads (export_id INTEGER, site_id INTEGER, evidence_payload_json TEXT)"
+            )
+        )
+        connection.execute(
+            sa.text(
                 "CREATE TABLE catalog_exports (id INTEGER, site_id INTEGER, fact_snapshot_tuple_id INTEGER)"
             )
         )
@@ -160,4 +166,53 @@ def test_new_export_ref_resolves_deduplicated_evidence_with_site_boundary(
                 export_id=30,
                 raw_sha256_ref="sha256:" + raw_digest.hex(),
             )
+    engine.dispose()
+
+
+@pytest.mark.parametrize("resolve", [draft_key, approval_key])
+def test_listing_scope_ref_disambiguates_the_same_raw_digest(resolve: Resolver) -> None:
+    engine = sa.create_engine("sqlite://")
+    raw = "00-Exact-SKU-M"
+    digest = hashlib.sha256(raw.encode()).digest()
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text(
+                "CREATE TABLE catalog_export_payloads (export_id INTEGER, site_id INTEGER, evidence_payload_json TEXT)"
+            )
+        )
+        payload = {
+            "production_source": {
+                "source_schema": "amazon_listing_v1",
+                "selections": [
+                    {
+                        "record_type": "variant",
+                        "platform_mapping": True,
+                        "scope_id": scope,
+                        "seller_sku": raw,
+                    }
+                    for scope in (3, 9)
+                ],
+            }
+        }
+        connection.execute(
+            sa.text("INSERT INTO catalog_export_payloads VALUES (20,1,:value)"),
+            {"value": json.dumps(payload)},
+        )
+        for scope in (3, 9):
+            assert resolve(
+                connection,
+                site_id=1,
+                export_id=20,
+                raw_sha256_ref="sha256:" + digest.hex(),
+                scope_ref=str(scope),
+            ) == (scope, digest, raw.encode())
+        for invalid_scope in (None, "4"):
+            with pytest.raises(ValueError):
+                resolve(
+                    connection,
+                    site_id=1,
+                    export_id=20,
+                    raw_sha256_ref="sha256:" + digest.hex(),
+                    scope_ref=invalid_scope,
+                )
     engine.dispose()

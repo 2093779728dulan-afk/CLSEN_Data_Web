@@ -1,0 +1,4 @@
+.panel { grid-template-columns: minmax(0, 1fr); }
+.panel > details { min-width: 0; max-width: 100%; }
+.panel input { min-width: 0; max-width: 100%; width: 100%; }
+.panel th, .panel td { overflow-wrap: anywhere; white-space: normal; }

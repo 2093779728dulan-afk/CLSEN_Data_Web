@@ -82,6 +82,19 @@ def lock_return_publication_guard(
     )
     if len(datasets) != len(dataset_ids):
         raise ReturnDedupIntegrityError()
+    from app.catalog.platform_evidence import lock_platform_scopes
+
+    for platform_site in sorted({int(row["site_id"]) for row in datasets}):
+        lock_platform_scopes(
+            connection,
+            platform_site,
+            [
+                int(row["report_source_scope_id"])
+                for row in datasets
+                if row["site_id"] == platform_site
+                and row["report_source_scope_id"] is not None
+            ],
+        )
     if all(row["report_type"] != "return_report" for row in datasets):
         return None
     if any(row["report_type"] != "return_report" for row in datasets):

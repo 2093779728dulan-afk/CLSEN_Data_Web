@@ -48,13 +48,20 @@ def test_runtime_lifespan_guards_and_shares_one_engine(
     )
     monkeypatch.setattr("app.main.create_database_engine", lambda _settings: engine)
     monkeypatch.setattr(engine, "dispose", dispose)
+
+    def guard(
+        candidate: sa.Engine,
+        *,
+        database_identity: str,
+        allow_manual_tables_absent: bool,
+    ) -> None:
+        assert candidate is engine
+        assert allow_manual_tables_absent is True
+        identities.append(database_identity)
+
     monkeypatch.setattr(
         "app.main.assert_schema_compatible",
-        lambda candidate, *, database_identity: (
-            identities.append(database_identity)
-            if candidate is engine
-            else pytest.fail("lifespan guarded a different engine")
-        ),
+        guard,
     )
     application = create_runtime_app(_settings())
 
@@ -127,7 +134,7 @@ def test_runtime_readiness_uses_guarded_engine_and_reports_later_outage(
     monkeypatch.setattr("app.main.create_database_engine", lambda _settings: engine)
     monkeypatch.setattr(
         "app.main.assert_schema_compatible",
-        lambda _engine, *, database_identity: None,
+        lambda _engine, *, database_identity, allow_manual_tables_absent: None,
     )
     monkeypatch.setattr(
         "app.main.probe_maintenance_lock",

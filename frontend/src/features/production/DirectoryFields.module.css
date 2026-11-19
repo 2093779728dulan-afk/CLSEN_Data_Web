@@ -1,0 +1,10 @@
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.heading p { margin: 0; }
+.heading a { margin-left: auto; flex-shrink: 0; }
+.compact { display:grid; gap:6px; min-width:0; }
+.compact .heading { font-size:13px; }
+.compact .selectedDestination { display:none; }
+.searchDetails { min-width:0; }
+.searchDetails > summary { width:fit-content; padding:4px 0; cursor:pointer; color:var(--color-primary); font-size:12px; }
+.searchDetails[open] { display:grid; gap:8px; }
+.searchDetails a { justify-self:start; min-height:32px; font-size:12px; }

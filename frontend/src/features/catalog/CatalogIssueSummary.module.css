@@ -13,3 +13,5 @@
 .metadata code, .failure code { font-family: var(--font-mono); overflow-wrap: anywhere; }
 .issue > button { white-space: nowrap; }
 @media (max-width: 600px) { .issue { grid-template-columns: 24px minmax(0, 1fr); align-items: start; } .issue > button { grid-column: 2; justify-self: start; } }
+
+.groups {display:flex;flex-wrap:wrap;gap:8px;}

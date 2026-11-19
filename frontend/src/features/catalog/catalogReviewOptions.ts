@@ -65,7 +65,7 @@ export function buildCatalogReviewOptions(rowsBySection: Record<CatalogSection, 
     const styleCode = stylesByKey.get(text(row.payload.style_row_key) ?? "") ?? "未命名款式";
     const color = text(row.payload.standard_color) ?? list(row.payload.source_color_preview)[0] ?? "未识别颜色";
     const size = text(row.payload.standard_size) ?? list(row.payload.source_size_preview)[0] ?? "未识别尺码";
-    return { label: `${styleCode} · ${color} · ${size}`, source: "当前审核候选", value: row.row_key };
+    return { label: `${styleCode} · ${color} · ${size}`, source: text(row.payload.standard_color)&&text(row.payload.standard_size)?"已明确规格":"当前审核候选", value: row.row_key };
   });
   for (const row of rowsBySection.mappings) set(row, "target_sku_row_key", targetSkus);
   for (const row of rowsBySection.exceptions) {

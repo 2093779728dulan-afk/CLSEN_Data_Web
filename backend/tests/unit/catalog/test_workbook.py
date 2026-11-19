@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 from app.catalog.ooxml import CatalogWorkbookUnsafeError
@@ -13,6 +14,38 @@ from app.catalog.workbook import (
     render_catalog_workbook,
     workbook_from_export_payload,
 )
+
+
+@pytest.mark.parametrize(
+    ("sheet", "cell", "value", "position", "message"),
+    [
+        ("款式主档", "C1", "款号 ", "第1行C列", "表头"),
+        ("款式主档", "C2", 100, "第2行C列", "文本"),
+        ("款式主档", "C2", " 100", "第2行C列", "空格"),
+        ("款式主档", "C2", "=100", "C2", "公式"),
+    ],
+)
+def test_bad_cells_report_safe_template_location(
+    sheet: str, cell: str, value: str | int, position: str, message: str
+) -> None:
+    import io
+
+    from app.api.catalog_common import catalog_error
+    from openpyxl import load_workbook  # type: ignore[import-untyped]
+
+    book = load_workbook(io.BytesIO(render_catalog_workbook(_workbook())))
+    book[sheet][cell] = value
+    out = io.BytesIO()
+    book.save(out)
+    book.close()
+    with pytest.raises(CatalogWorkbookUnsafeError) as caught:
+        parse_catalog_workbook(out.getvalue())
+    error = catalog_error(caught.value)
+    assert error.status_code == 422
+    assert all(
+        text in cast(dict[str, str], error.detail)["message"]
+        for text in [sheet, position, message]
+    )
 
 
 def _workbook() -> CatalogWorkbookData:
@@ -104,7 +137,58 @@ def test_sheets_and_metadata_are_exact() -> None:
         render_catalog_workbook(CatalogWorkbookData(rows=rows))
 
 
-def test_task6_payload_projects_to_complete_round_trip_rows() -> None:
+def test_report_projection_preserves_formal_products_without_report_observations() -> (
+    None
+):
+    from app.catalog.import_service import project_catalog_workbook
+
+    workbook = workbook_from_export_payload(
+        export_id=41,
+        site_code="QA",
+        seller_account_display_name="QA",
+        base_catalog_version_id=1,
+        snapshot_digest=b"s" * 32,
+        normalization_manifest_id="manifest-v1",
+        generated_at=datetime(2026, 8, 21, tzinfo=UTC),
+        candidates={
+            "styles": [],
+            "variants": [],
+            "mappings": [],
+            "exclusions": [],
+            "exceptions": [],
+        },
+        evidence={"summaries": []},
+        existing_styles=(
+            {
+                "style_id": 7,
+                "style_code": "QA-FACTORY",
+                "standard_name": "QA product",
+                "status": "enabled",
+            },
+        ),
+        existing_skus=(
+            {
+                "sku_id": 9,
+                "style_code": "QA-FACTORY",
+                "internal_display_sku": "QA-OLIVE-M",
+                "standard_color": "Olive",
+                "standard_size": "M",
+                "status": "enabled",
+            },
+        ),
+    )
+    projection = project_catalog_workbook(
+        parse_catalog_workbook(render_catalog_workbook(workbook))
+    )
+    assert {(row.section, row.projection_state) for row in projection.rows} == {
+        ("styles", "included"),
+        ("skus", "included"),
+    }
+    assert not projection.issues
+
+
+@pytest.mark.parametrize("standard_name", ["Existing style", ""])
+def test_task6_payload_projects_to_complete_round_trip_rows(standard_name: str) -> None:
     seller = {
         "source_ref_id": "src_1",
         "preview": "100-Red-S",
@@ -175,7 +259,7 @@ def test_task6_payload_projects_to_complete_round_trip_rows() -> None:
             {
                 "style_id": 7,
                 "style_code": "\uff11\uff10\uff10",
-                "standard_name": "Existing style",
+                "standard_name": standard_name,
                 "status": "enabled",
             },
         ),
@@ -193,13 +277,14 @@ def test_task6_payload_projects_to_complete_round_trip_rows() -> None:
 
     parsed = parse_catalog_workbook(render_catalog_workbook(workbook))
     assert parsed.rows == workbook.rows
+    assert parsed.rows["款式主档"][0][3] == (standard_name or None)
     assert parsed.rows["款式主档"][0][9:11] == (
         "2026-01-01",
         "2026-01-02",
     )
     assert parsed.rows["生成信息"][0][1] == "product_catalog_workbook_v2"
     assert parsed.rows["款式主档"][0][4:6] == ("保持原值", None)
-    assert parsed.rows["款式主档"][0][1:4] == ("7", "100", "Existing style")
+    assert parsed.rows["款式主档"][0][1:4] == ("7", "100", standard_name or None)
     assert parsed.rows["SKU变体"][0][1:7] == (
         "9",
         "style_1",

@@ -431,6 +431,7 @@ class _WorkflowConnection:
                         "site_id": 2,
                         "report_date": date(2026, 8, 8),
                         "report_type": "business_report",
+                        "report_source_scope_id": None,
                     },
                 )
             )
@@ -656,6 +657,7 @@ class _MoveWorkflowConnection:
             "site_id": 2,
             "report_date": date(2026, 8, 8 if dataset_id == 5 else 9),
             "report_type": "business_report",
+            "report_source_scope_id": None,
         }
 
     @staticmethod

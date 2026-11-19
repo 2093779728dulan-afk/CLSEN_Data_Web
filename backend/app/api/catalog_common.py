@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001 -- Chinese user-facing punctuation.
 """Shared strict catalog HTTP models, dependencies, and safe error mapping."""
 
 from __future__ import annotations
@@ -93,6 +94,8 @@ def catalog_json(value: object, *, status_code: int = 200) -> JSONResponse:
 
 
 def raise_catalog_error(error: Exception) -> Never:
+    if isinstance(error, ApiError):
+        raise error
     raise catalog_error(error) from error
 
 
@@ -132,6 +135,40 @@ _INVALID_CODES = frozenset(
 
 
 def catalog_error(error: Exception) -> ApiError:
+    code = getattr(error, "code", None)
+    if code in {"production_source_invalid", "catalog_workbook_format_invalid"}:
+        return ApiError(422, code, error.public_message)  # type: ignore[attr-defined]
+    if code == "catalog_workbook_unsafe":
+        reason = str(getattr(error, "reason", ""))
+        message = {
+            "ooxml_hidden_content": (
+                "工作簿含隐藏行或列，请取消隐藏并核对全部内容后上传。"
+            ),
+            "ooxml_worksheet_unsafe_content": (
+                "工作簿含公式、合并单元格、链接或嵌入内容，"
+                "请使用原六表模板并粘贴明确的值。"
+            ),
+            "ooxml_external_relationship": (
+                "工作簿含外部链接，请移除链接，保留明确文本后上传。"
+            ),
+            "catalog_sheet_contract_mismatch": (
+                "工作簿结构或生成信息与模板不一致，"
+                "请重新下载六表模板，保留表头和身份列。"
+            ),
+        }.get(
+            reason,
+            "工作簿格式未通过检查，请使用未加密的原六表XLSX模板，保留工作表名称、表头和生成信息。",
+        )
+        return ApiError(422, code, message)
+    if code in {
+        "catalog_upload_metadata_invalid",
+        "catalog_workbook_capacity_exceeded",
+    }:
+        return ApiError(
+            422,
+            code,
+            "文件类型、名称或容量不符合要求，请使用当前导出的XLSX模板；大批量资料请改用在线审核。",
+        )
     if getattr(error, "reason", None) == "catalog_text_cell_numeric":
         return ApiError(
             422,
@@ -144,17 +181,17 @@ def catalog_error(error: Exception) -> ApiError:
         return ApiError(
             500,
             "catalog_internal_error",
-            "The catalog request could not be completed.",
+            "暂时无法完成商品主档操作，请保留输入并稍后重试。",
         )
     if code in _CONFLICT_CODES:
-        return ApiError(409, code, "The catalog resource changed; reload and retry.")
+        return ApiError(409, code, "商品目录或批次已变化，请刷新核对后重试。")
     if code in _FORBIDDEN_CODES:
-        return ApiError(403, code, "Permission to perform this action was denied.")
+        return ApiError(403, code, "当前账号没有此操作权限，请联系管理员。")
     if code in _INVALID_CODES:
-        return ApiError(422, code, "The catalog request data is invalid.")
+        return ApiError(422, code, "资料校验未通过，请核对页面标记的字段后重新提交。")
     if code.endswith("not_found"):
-        return ApiError(404, code, "The requested catalog resource was not found.")
-    return ApiError(409, code, "The catalog operation could not be completed.")
+        return ApiError(404, code, "未找到该商品或批次，请返回列表重新选择。")
+    return ApiError(409, code, "操作未完成，请保留资料，刷新核对批次状态后重试。")
 
 
 __all__ = (

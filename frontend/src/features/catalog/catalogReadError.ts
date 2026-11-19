@@ -2,6 +2,7 @@ import { ApiRequestError } from "../../api/client";
 
 export function catalogReadError(error: unknown, fallback: string) {
   if (!(error instanceof ApiRequestError)) return { message: fallback, retry: true, setup: false };
+  if (error.code === "catalog_scope_not_found") return { message: "店铺不存在或无权访问。", retry: false, setup: false };
   if (error.status === 403) return { message: "当前账号没有查看此商品主档页面的权限，请联系管理员。", retry: false, setup: false };
   if (error.code === "catalog_snapshot_unavailable") return {
     message: "当前来源或退货快照尚不可用，暂时无法核对待归属商品。请先查看准备状态并完成缺失步骤；反复重新读取不能补齐前置条件。",

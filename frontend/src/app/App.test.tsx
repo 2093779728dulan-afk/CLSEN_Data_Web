@@ -1,7 +1,7 @@
 import workspaceCss from "./AdvancedReviewWorkspaceView.module.css";
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../features/import-review/ImportReviewFlow", () => ({
@@ -12,6 +12,7 @@ vi.mock("../features/import-review/ImportReviewFlow", () => ({
     initialReportType,
     initialBatchId,
     onBatchReviewCreated,
+    onPublished,
     onReportDateChanged,
     reportDate,
   }: {
@@ -21,6 +22,7 @@ vi.mock("../features/import-review/ImportReviewFlow", () => ({
     initialVersionId?: number;
     initialBatchId?: number;
     onBatchReviewCreated?: (runId: number) => void;
+    onPublished?: () => void;
     onReportDateChanged?: (handoff: {
       reportDate: string;
       reportType: "business_report" | "return_report";
@@ -35,6 +37,7 @@ vi.mock("../features/import-review/ImportReviewFlow", () => ({
       <button onClick={() => onReportDateChanged?.({ reportDate: "2026-08-13", reportType: "return_report" })} type="button">测试批次改日</button>
       <button onClick={() => onReportDateChanged?.({ reportDate: "2026-08-14", reportType: "return_report", versionId: 303 })} type="button">测试草稿改日</button>
       <button onClick={() => onBatchReviewCreated?.(77)} type="button">测试进入批量审核</button>
+      <button onClick={() => onPublished?.()} type="button">测试发布</button>
     </div>
   ),
 }));
@@ -74,15 +77,17 @@ vi.mock("../features/batch-review/BatchReviewPage", () => ({
 vi.mock("../features/workbench/DateWorkbenchPage", () => ({
   DateWorkbenchPage: ({
     canWrite,
+    refreshRevision,
     reportDate,
     siteId,
     userId,
   }: {
     canWrite: boolean;
+    refreshRevision?: number;
     reportDate: string;
     siteId: number;
     userId: number;
-  }) => <div data-can-write={String(canWrite)} data-report-date={reportDate} data-site-id={siteId} data-testid="date-workbench-route" data-user-id={userId} />,
+  }) => <div data-can-write={String(canWrite)} data-refresh-revision={refreshRevision} data-report-date={reportDate} data-site-id={siteId} data-testid="date-workbench-route" data-user-id={userId} />,
 }));
 
 vi.mock("../features/published-details/PublishedDetailLedgerPage", () => ({
@@ -148,10 +153,30 @@ function RouteProbe() {
 }
 
 function renderApp(initialEntry = "/") {
-  return render(<MemoryRouter initialEntries={[initialEntry]}><App /><RouteProbe /></MemoryRouter>);
+  return render(<RouterProvider router={createMemoryRouter([{path:"*",element:<><App /><RouteProbe /></>}],{initialEntries:[initialEntry]})} />);
 }
 
 describe("App", () => {
+  it("refreshes the returned workbench after publishing through the dedicated review route", async () => {
+    currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
+    renderApp("/review-advanced/2026-08-12");
+    const localState = await screen.findByLabelText("测试流程本地状态");
+    fireEvent.change(localState, { target: { value: "保留本地状态" } });
+    fireEvent.click(screen.getByRole("button", { name: "测试发布" }));
+    expect(screen.getByLabelText("测试流程本地状态")).toBe(localState);
+    expect(localState).toHaveValue("保留本地状态");
+    fireEvent.click(screen.getByRole("link", { name: "返回日期表格" }));
+    expect(await screen.findByTestId("date-workbench-route")).toHaveAttribute("data-refresh-revision", "1");
+    expect(screen.queryByTestId("import-review-flow")).not.toBeInTheDocument();
+  });
+  it("keeps the ordinary published workbench free of the advanced upload flow", async () => {
+    currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
+    renderApp("/review/2026-10-30?report_type=business_report");
+    expect(await screen.findByTestId("date-workbench-route")).toBeVisible();
+    expect(screen.queryByTestId("import-review-flow")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("高级审核与发布控制")).not.toBeInTheDocument();
+  });
+
   it("opens an explicit source batch without selecting the old active draft", async () => {
     currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
     calendarEntries = [{ dataset_id: 11, report_date: "2025-07-18", report_type: "business_report", status: "draft", version_id: 101, version_no: 2 }];
@@ -189,10 +214,12 @@ describe("App", () => {
   it("catalog data manager can open the real maintenance controls", async () => {
     currentUser = { id: 2, username: "manager", display_name: "数据管理员", roles: ["data_manager"] };
     renderApp("/catalog/maintenance");
-    expect(await screen.findByRole("heading", { name: "目录工作簿" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "批量维护" })).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("heading", { name: "建档与维护" })).toBeVisible();
+    expect(screen.getByRole("link", { name: import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" ? "建档与维护" : "批量维护" })).toHaveAttribute("aria-current", "page");
   });
   beforeEach(() => {
+    const NativeRequest = globalThis.Request;
+    vi.stubGlobal("Request", class extends NativeRequest { constructor(input: RequestInfo | URL, init?: RequestInit) { const { signal, ...options } = init ?? {}; super(input, options); if (signal) Object.defineProperty(this, "signal", { value: signal }); } });
     setSessionCsrfToken("test-session-csrf");
     currentUser = { id: 1, username: "viewer", display_name: "查看人员", roles: ["viewer"] };
     calendarDays = [];
@@ -210,7 +237,7 @@ describe("App", () => {
       const path = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (path.includes("/api/auth/me")) return Promise.resolve(response(currentUser));
       if (path.startsWith("/api/catalog/imports?")) return Promise.resolve(response({ items: [], has_next: false }));
-      if (path === "/api/catalog/styles") return Promise.resolve(response({ catalog: null }));
+      if (path === "/api/catalog/styles?contract_version=2") return Promise.resolve(response({ catalog: null }));
       if (path === "/api/catalog/exports/latest") return Promise.resolve(response({ export: null }));
       if (path.includes("/api/data-calendar/site-context")) return Promise.resolve(response(siteContext));
       if (path.includes("/api/data-calendar/days")) return Promise.resolve(response(calendarDays));
@@ -323,7 +350,7 @@ describe("App", () => {
     };
 
     currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
-    renderApp("/review/2026-08-10");
+    renderApp("/review-advanced/2026-08-10");
 
     expect(await screen.findAllByText("中国测试站点")).toHaveLength(2);
     expect(screen.getByText("报告时区").closest(".topbar__timezone")).toHaveTextContent("Asia/Shanghai");
@@ -332,7 +359,7 @@ describe("App", () => {
 
   it("renders a 31-day evidence rail and keeps each day independently selectable", async () => {
     currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
-    renderApp("/review/2026-08-10");
+    renderApp("/review-advanced/2026-08-10");
     const rail = await screen.findByRole("complementary", { name: /每日证据轨/ });
     expect(within(rail).getAllByRole("listitem").length).toBeGreaterThanOrEqual(28);
     const day = within(rail).getAllByRole("button")[0];
@@ -358,7 +385,7 @@ describe("App", () => {
     }];
 
     currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
-    renderApp(`/review/${year}-${month}-01`);
+    renderApp(`/review-advanced/${year}-${month}-01`);
 
     const redDay = await screen.findByRole("button", {
       name: /需处理：阻断、导入失败或原文件异常/,
@@ -382,7 +409,7 @@ describe("App", () => {
       { dataset_id: 12, report_date: reportDate, report_type: "return_report", status: "ready_for_publish", version_id: 202, version_no: 3 },
     ];
 
-    renderApp(`/review/${reportDate}`);
+    renderApp(`/review-advanced/${reportDate}`);
 
     const switcher = await screen.findByRole("group", { name: "选择待审核报表" });
     const business = within(switcher).getByRole("button", { name: /经营报告/ });
@@ -415,7 +442,7 @@ describe("App", () => {
       { dataset_id: 11, report_date: reportDate, report_type: "business_report", status: "draft", version_id: 101, version_no: 2 },
     ];
 
-    renderApp(`/review/${reportDate}`);
+    renderApp(`/review-advanced/${reportDate}`);
 
     expect(await screen.findByTestId("import-review-flow")).toHaveAttribute("data-can-finalize-published-move", "true");
     expect(screen.getByTestId("import-review-flow")).toHaveAttribute("data-can-force-rebuild", "true");
@@ -569,7 +596,7 @@ describe("App", () => {
   it("preserves the return-report route without selecting another report's draft", async () => {
     currentUser = { id: 3, username: "manager", display_name: "录入审核", roles: ["data_manager"] };
     calendarEntries = [{ dataset_id: 11, report_date: "2026-08-10", report_type: "business_report", status: "draft", version_id: 101, version_no: 2 }];
-    renderApp("/review/2026-08-10?report_type=return_report&page=1");
+    renderApp("/review-advanced/2026-08-10?report_type=return_report&page=1");
     await waitFor(() => expect(screen.getByTestId("import-review-flow")).toHaveAttribute("data-report-type", "return_report"));
     expect(screen.getByTestId("import-review-flow")).toHaveTextContent("版本 new");
     expect(screen.getByTestId("route-query").textContent).toContain("report_type=return_report");

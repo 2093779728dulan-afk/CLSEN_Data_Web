@@ -2,13 +2,19 @@
 
 This repository is a one-way, history-free source snapshot of the private
 development repository. `public-ci-source.json` records the exact original
-commit, tree, canonical Git blob and export SHA-256 of each file. The public Git commit is a
+commit, tree and canonical Git blob of each file. The public Git commit is a
 different identity and its CI must not be reported as a private PR check.
 
 The only executable workflow is `public-ci.yml`. It uses standard ephemeral
 GitHub-hosted Ubuntu/Windows runners, complete canonical backend/frontend
 profiles and **MySQL 8.4 only**, with the original 110-minute test and
 120-minute job budgets and independent always-run container cleanup.
+
+B also runs every Java production test on JDK 21 and verifies its Linux image
+against disposable MySQL with CA and hostname checks. A separate always-run
+step cleans only that job's labelled containers and network. Uploaded results
+exclude all private keys and generated passwords. Source updates append to the
+existing public main history; no private Git history is imported.
 
 Private runner/release workflow definitions are archived under
 `.github/private-workflow-reference/`. Preparation verifies the source hashes

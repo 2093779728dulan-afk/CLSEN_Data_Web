@@ -153,6 +153,7 @@ def assert_schema_compatible(
     engine: Engine,
     *,
     database_identity: str,
+    allow_manual_tables_absent: bool = False,
 ) -> None:
     """Require exactly one current Alembic head using one read-only query."""
 
@@ -190,6 +191,14 @@ def assert_schema_compatible(
         ) from error
     actual_revision = raw_revision if isinstance(raw_revision, str) else None
     if actual_revision == CURRENT_SCHEMA_REVISION:
+        return
+    if (
+        allow_manual_tables_absent
+        and CURRENT_SCHEMA_REVISION == "0035"
+        and actual_revision == "0034"
+    ):
+        # 0035 adds only optional manual-preparation tables. Core-only servers
+        # can keep their existing database; enabled manual routes require 0035.
         return
     code = (
         classify_revision(

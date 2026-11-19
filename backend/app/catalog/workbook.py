@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001 -- Chinese user-facing punctuation.
 """Pure six-sheet catalog workbook codec built on the hardened envelope."""
 
 from __future__ import annotations
@@ -258,6 +259,16 @@ class CatalogWorkbookRowLimitError(CatalogWorkbookCapacityError):
     """The exact candidate payload exceeds a sheet or workbook row limit."""
 
 
+class CatalogWorkbookFormatError(CatalogWorkbookUnsafeError):
+    code = "catalog_workbook_format_invalid"
+
+    def __init__(self, name: str, row: int, column: int, message: str) -> None:
+        self.public_message = (
+            f"工作表“{name}”，第{row}行{chr(64 + column)}列：{message}"
+        )
+        super().__init__("catalog_sheet_contract_mismatch")
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogWorkbookData:
     rows: Mapping[str, Sequence[Sequence[CellValue]]]
@@ -478,11 +489,21 @@ def _read_sheet_rows(
         actual_headers != sheet_headers
         or values[0][len(sheet_headers)].value is not None
     ):
-        _unsafe()
+        for column, expected in enumerate(sheet_headers, 1):
+            if actual_headers[column - 1] != expected:
+                raise CatalogWorkbookFormatError(
+                    name,
+                    1,
+                    column,
+                    f"表头必须为“{expected}”，请从原模板恢复，不加空格或改动顺序。",
+                )
+        raise CatalogWorkbookFormatError(
+            name, 1, len(sheet_headers) + 1, "存在多余列，请按原模板恢复。"
+        )
     result: list[tuple[CellValue, ...]] = []
     ended = False
     specs = specs_by_sheet[name]
-    for cells in values[1:]:
+    for row_number, cells in enumerate(values[1:], 2):
         if any(cell.data_type == "f" for cell in cells):
             _unsafe()
         raw = tuple(cell.value for cell in cells)
@@ -490,9 +511,13 @@ def _read_sheet_rows(
             ended = True
             continue
         if ended or raw[len(sheet_headers)] is not None:
-            _unsafe()
+            raise CatalogWorkbookFormatError(
+                name, row_number, 1, "数据中间有空行或多余列，请按原模板连续填写。"
+            )
         row: list[CellValue] = []
-        for cell, (kind, limit) in zip(cells[: len(sheet_headers)], specs, strict=True):
+        for column, (cell, (kind, limit)) in enumerate(
+            zip(cells[: len(sheet_headers)], specs, strict=True), 1
+        ):
             value = cell.value
             if value is None:
                 row.append(None)
@@ -501,16 +526,59 @@ def _read_sheet_rows(
                     cell.data_type != "n"
                     or isinstance(value, bool)
                     or not isinstance(value, int)
+                    or value < 0
                 ):
-                    _unsafe()
+                    raise CatalogWorkbookFormatError(
+                        name, row_number, column, "应为非负整数，请核对原始数量。"
+                    )
                 row.append(_normalize_cell(value, kind=kind, limit=limit))
             else:
                 if cell.data_type == "n" and isinstance(value, (int, float)):
-                    raise CatalogWorkbookUnsafeError("catalog_text_cell_numeric")
+                    raise CatalogWorkbookFormatError(
+                        name,
+                        row_number,
+                        column,
+                        "必须为文本，不能保存为数字；请核对前导零，设为文本后重新输入。不要修改系统身份。",
+                    )
                 if cell.data_type not in {"s", "inlineStr"} or not isinstance(
                     value, str
                 ):
-                    _unsafe()
+                    raise CatalogWorkbookFormatError(
+                        name, row_number, column, "必须为文本，请移除错误值或日期格式。"
+                    )
+                if not _valid_xml_text(value) or len(value) > limit:
+                    raise CatalogWorkbookFormatError(
+                        name,
+                        row_number,
+                        column,
+                        f"含不可见字符、换行或超过{limit}个字符，请核对并修正。",
+                    )
+                if (
+                    sheet_headers[column - 1]
+                    in {
+                        "款号",
+                        "款式编号",
+                        "内部展示SKU",
+                        "标准颜色",
+                        "标准尺码",
+                        "修正款号",
+                        "修正标准颜色",
+                        "修正标准尺码",
+                    }
+                    and value
+                    and (
+                        value != value.strip()
+                        or "  " in value
+                        or any(c.isspace() and c != " " for c in value)
+                        or any(0xFF01 <= ord(c) <= 0xFF5E for c in value)
+                    )
+                ):
+                    raise CatalogWorkbookFormatError(
+                        name,
+                        row_number,
+                        column,
+                        "含多余空格、特殊空白或全角字符，请核对标准写法后修改；系统不会自动替换。",
+                    )
                 row.append(_normalize_cell(value, kind=kind, limit=limit))
         result.append(tuple(row))
     return tuple(result)
@@ -593,7 +661,9 @@ def _cells(*values: object) -> tuple[CellValue, ...]:
         value is None or isinstance(value, (str, int, datetime)) for value in values
     ) or any(isinstance(value, bool) for value in values):
         raise CatalogWorkbookUnsafeError("catalog_export_payload_invalid")
-    return tuple(cast(CellValue, value) for value in values)
+    # XLSX stores empty text cells as blanks. Canonicalize source projections
+    # the same way so approved products with names still pending round-trip.
+    return tuple(None if value == "" else cast(CellValue, value) for value in values)
 
 
 def workbook_from_export_payload(
@@ -660,24 +730,29 @@ def workbook_from_export_payload(
         existing_sku = existing_skus_by_id.get(target_value)
         if existing_sku is None:
             raise CatalogWorkbookUnsafeError("catalog_export_payload_invalid")
-        style_code = str(existing_sku["style_code"])
-        style_identity = catalog_identity_key_v1(style_code).utf8
-        style_row_key = style_keys_by_code.get(style_identity)
-        if style_row_key is None:
-            existing_style = styles_by_code.get(style_identity)
-            if existing_style is None:
-                raise CatalogWorkbookUnsafeError("catalog_export_payload_invalid")
-            style_row_key = f"catalog-style-{existing_style['style_id']}"
+    # A report is an observation source, not the full product inventory. Keep
+    # formal identities even when they have no sales/return observations.
+    for style_identity, stored_style in styles_by_code.items():
+        if style_identity not in style_keys_by_code:
+            style_row_key = f"catalog-style-{stored_style['style_id']}"
             style_items.append(
                 {
                     "row_key": style_row_key,
-                    "style_code": style_code,
-                    "standard_name": existing_style["standard_name"],
+                    "style_code": str(stored_style["style_code"]),
+                    "standard_name": stored_style["standard_name"],
                     "candidate_seller_sku_count": 0,
                     "source_title_count": 0,
                 }
             )
             style_keys_by_code[style_identity] = style_row_key
+    for existing_sku in existing_skus:
+        target_value = int(cast(int | str, existing_sku["sku_id"]))
+        style_code = str(existing_sku["style_code"])
+        style_identity = catalog_identity_key_v1(style_code).utf8
+        matched_style_key = style_keys_by_code.get(style_identity)
+        if matched_style_key is None:
+            raise CatalogWorkbookUnsafeError("catalog_export_payload_invalid")
+        style_row_key = matched_style_key
         variant_identity = (
             style_identity,
             catalog_identity_key_v1(str(existing_sku["standard_color"])).utf8,

@@ -17,6 +17,11 @@ from app.api.catalog_common import (
     require_catalog_session,
     require_matching_token,
 )
+from app.api.publications import (
+    ReturnDedupDecisionResponse,
+    ReturnDedupGroupPageResponse,
+    _group_page_response,
+)
 from app.catalog.models import CatalogWireUuid, StrictCatalogModel
 from app.catalog.return_dedup_repository import (
     DecideReturnDedupGroup,
@@ -43,14 +48,22 @@ class DedupPayloadResponse(StrictCatalogModel):
     payload: str
 
 
-@router.get("/return-dedup/groups", response_model=DedupPayloadResponse)
+class DedupGroupsResponse(ReturnDedupGroupPageResponse):
+    payload: str
+
+
+class DedupDecisionResponse(ReturnDedupDecisionResponse):
+    payload: str
+
+
+@router.get("/return-dedup/groups", response_model=DedupGroupsResponse)
 def list_dedup_groups(
     context: CatalogReadContext,
     engine: CatalogEngine,
     status: Literal["unresolved", "resolved", "all"] = "all",
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
-) -> DedupPayloadResponse:
+) -> DedupGroupsResponse:
     try:
         value = MySqlReturnDedupRepository(engine).list_groups(
             context,
@@ -58,14 +71,16 @@ def list_dedup_groups(
             page=page,
             page_size=page_size,
         )
-        return DedupPayloadResponse(payload=repr(value))
+        return DedupGroupsResponse(
+            **_group_page_response(value).model_dump(), payload=repr(value)
+        )
     except Exception as error:
         raise catalog_error(error) from error
 
 
 @router.post(
     "/return-dedup/groups/{group_id}/decision",
-    response_model=DedupPayloadResponse,
+    response_model=DedupDecisionResponse,
 )
 def decide_dedup_group(
     group_id: str,
@@ -73,7 +88,7 @@ def decide_dedup_group(
     context: CatalogWriteContext,
     engine: CatalogEngine,
     idempotency_key: CatalogIdempotencyKey,
-) -> DedupPayloadResponse:
+) -> DedupDecisionResponse:
     require_matching_token(idempotency_key, request.operation_token)
     try:
         command = DecideReturnDedupGroup(
@@ -85,7 +100,14 @@ def decide_dedup_group(
             command,
             occurred_at=datetime.now(tz=UTC),
         )
-        return DedupPayloadResponse(payload=repr(value))
+        return DedupDecisionResponse.model_validate(
+            {
+                **ReturnDedupDecisionResponse.model_validate(
+                    value, from_attributes=True
+                ).model_dump(),
+                "payload": repr(value),
+            }
+        )
     except Exception as error:
         raise catalog_error(error) from error
 

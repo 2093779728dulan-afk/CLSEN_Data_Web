@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Path, Query
+from fastapi import APIRouter, Depends, Header, Path, Query, Request
 from pydantic import UUID4, BaseModel, ConfigDict, Field
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -888,8 +888,10 @@ def publish_dataset(
     principal: _Manager,
     engine: _Engine,
     operation_token: _IdempotencyKey,
+    request: Request,
+    context: _SiteContext,
 ) -> PublicationCommandResponse:
-    return _run_publication_command(
+    result = _run_publication_command(
         lambda: _service(engine).publish(
             PublishCommand(
                 dataset_id=dataset_id,
@@ -903,6 +905,10 @@ def publish_dataset(
             )
         )
     )
+    from app.api.production_fba import sync_published_daily
+
+    sync_published_daily(request, context, engine)
+    return result
 
 
 @router.post(
@@ -940,8 +946,10 @@ def rollback_dataset(
     principal: _Administrator,
     engine: _Engine,
     operation_token: _IdempotencyKey,
+    request: Request,
+    context: _SiteContext,
 ) -> PublicationCommandResponse:
-    return _run_publication_command(
+    result = _run_publication_command(
         lambda: _service(engine).rollback(
             RollbackCommand(
                 dataset_id=dataset_id,
@@ -953,6 +961,11 @@ def rollback_dataset(
             )
         )
     )
+
+    from app.api.production_fba import sync_published_daily
+
+    sync_published_daily(request, context, engine)
+    return result
 
 
 @router.post(
@@ -1017,8 +1030,10 @@ def finalize_published_move(
     principal: _Administrator,
     engine: _Engine,
     operation_token: _IdempotencyKey,
+    request: Request,
+    context: _SiteContext,
 ) -> PublicationCommandResponse:
-    return _run_publication_command(
+    result = _run_publication_command(
         lambda: _service(engine).finalize_published_move(
             FinalizePublishedMoveCommand(
                 move_revision_operation_token=move_revision_operation_token,
@@ -1040,6 +1055,11 @@ def finalize_published_move(
         )
     )
 
+    from app.api.production_fba import sync_published_daily
+
+    sync_published_daily(request, context, engine)
+    return result
+
 
 @router.post(
     "/api/admin/published-moves/{move_command_id}/undo",
@@ -1051,8 +1071,10 @@ def undo_published_move(
     principal: _Administrator,
     engine: _Engine,
     operation_token: _IdempotencyKey,
+    request: Request,
+    context: _SiteContext,
 ) -> PublicationCommandResponse:
-    return _run_publication_command(
+    result = _run_publication_command(
         lambda: _service(engine).undo_published_move(
             UndoPublishedMoveCommand(
                 move_command_id=move_command_id,
@@ -1072,3 +1094,8 @@ def undo_published_move(
             )
         )
     )
+
+    from app.api.production_fba import sync_published_daily
+
+    sync_published_daily(request, context, engine)
+    return result

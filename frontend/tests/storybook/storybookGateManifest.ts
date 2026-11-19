@@ -1,3 +1,5 @@
+export const PRODUCTION_STORY_IDS = ["pages-inventory-review--preview", "pages-inventory-review--conflict", "pages-inventory-review--result-unknown", "pages-production--order-list", "pages-production--order-detail", "pages-production--shipment-detail", "pages-production--summary", "pages-production--long-values", "pages-production--empty", "pages-production--result-unknown", "pages-production--closed-tracking", "pages-production--demand-history", "pages-production--allocation-history", "pages-production--period-summary", "pages-production--filtered-empty", "pages-production-read-only--inventory-reference", "pages-production-read-only--inventory-filtered-empty", "pages-production-read-only--catalog-reference", "pages-production-read-only--catalog-outside-scope"] as const;
+
 export const CATALOG_MAINTENANCE_OVERVIEW_STORY_IDS = [
   "patterns-catalog-maintenance-overview--reference", "patterns-catalog-maintenance-overview--uninitialized",
   "patterns-catalog-maintenance-overview--first-version", "patterns-catalog-maintenance-overview--long-identifiers",
@@ -511,6 +513,7 @@ export const TABLE_HEADER_STORY_IDS = [
 ] as const;
 
 export const VISUAL_STORY_IDS = [
+  ...PRODUCTION_STORY_IDS,
   ...COVERAGE_RECONCILIATION_STORY_IDS,
   ...LEDGER_METRIC_HELP_STORY_IDS,
   ...TREND_MATRIX_STORY_IDS,

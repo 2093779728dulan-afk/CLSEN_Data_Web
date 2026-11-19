@@ -821,6 +821,10 @@ class MySqlBatchReviewRepository:
         assignments.extend(f"{name} = :{name}" for name in sorted(values))
         timestamp = _mysql_time(_now())
         with self._engine.begin() as connection:
+            # Serialize completion with other items and pause/resume. Otherwise
+            # parallel finishers can each miss the other's uncommitted terminal
+            # state and leave a fully finished run marked running.
+            self._get_run(connection, run_id, site_id, lock=True)
             updated = connection.execute(
                 sa.text(
                     f"""

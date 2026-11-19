@@ -32,7 +32,14 @@ from app.catalog.import_repository import MySqlCatalogImportRepository
 from app.catalog.import_service import DraftProjection, project_catalog_workbook
 from app.catalog.inventory import load_catalog_identity_inventory
 from app.catalog.models import CatalogWireUuid, StrictCatalogModel
+from app.catalog.production_sources import production_evidence
+from app.catalog.scope_projection import SCOPES_WITH_DISPLAY_NAMES
 from app.catalog.service import CatalogService
+from app.catalog.task_queries import (
+    IMPORT_SELECT,
+    import_metadata,
+    require_review_candidate,
+)
 from app.catalog.upload_service import (
     CatalogRawUploadCommand,
     CatalogRawUploadService,
@@ -49,10 +56,35 @@ from app.catalog.workflow import (
 from app.config import StorageSettings
 from app.imports.storage import ContentStoreError, LocalContentStore
 
+
+def production_write_boundary(
+    request: Request, context: CatalogReadContext, engine: CatalogEngine
+) -> None:
+    raw_id = request.path_params.get("import_id")
+    if request.method != "POST" or raw_id is None:
+        return
+    kind = engine.connect()
+    with kind as connection:
+        require_review_candidate(connection, context.site_id, int(raw_id))
+        source_kind = connection.scalar(
+            sa.text(
+                "SELECT source_kind FROM catalog_imports WHERE id=:id AND site_id=:site"
+            ),
+            {"id": int(raw_id), "site": context.site_id},
+        )
+    if (
+        source_kind == "production"
+        and not request.app.state.settings.catalog_production_sources_enabled
+    ):
+        raise ApiError(
+            403, "production_catalog_disabled", "当前环境尚未启用生产商品候选写入。"
+        )
+
+
 router = APIRouter(
     prefix="/api/catalog",
     tags=["catalog"],
-    dependencies=[Depends(require_catalog_session)],
+    dependencies=[Depends(require_catalog_session), Depends(production_write_boundary)],
 )
 Digest = Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
 
@@ -115,7 +147,7 @@ def _projection_for_export(
         row = (
             connection.execute(
                 sa.text(
-                    """
+                    f"""
                     SELECT exports.id, exports.base_catalog_version_id,
                            exports.normalization_manifest_id, exports.created_at,
                            exports.export_status, payloads.candidate_payload_json,
@@ -136,7 +168,7 @@ def _projection_for_export(
                     INNER JOIN publication_snapshots AS snapshots
                       ON snapshots.id = tuples.publication_snapshot_id
                      AND snapshots.site_id = tuples.site_id
-                    INNER JOIN report_source_scopes AS scopes
+                    INNER JOIN {SCOPES_WITH_DISPLAY_NAMES} AS scopes
                       ON scopes.id = tuples.report_source_scope_id
                      AND scopes.site_id = tuples.site_id
                     INNER JOIN sites ON sites.id = exports.site_id
@@ -276,7 +308,58 @@ def _detail(
             """),
             {"id": import_id, "site_id": context.site_id},
         ).scalar_one_or_none()
+    with engine.connect() as connection:
+        source = production_evidence(
+            connection, import_id=import_id, site_id=context.site_id
+        )
+    registration_summary = None
+    if source and state.status == "approved":
+        from app.catalog.repository import load_import_rows
+
+        with engine.connect() as connection:
+            approved_rows = load_import_rows(
+                connection,
+                import_id=import_id,
+                workflow_revision=int(row["workflow_revision"]),
+            )
+        source_rows = cast(list[dict[str, object]], source.get("rows", []))
+        reused = sum(bool(item.get("selected_sku_id")) for item in source_rows)
+        mapping_count = sum(
+            item.section == "mappings"
+            and item.projection_state == "included"
+            and item.payload.get("identity_decision") == "mapped"
+            for item in approved_rows
+        )
+        registration_summary = {
+            "products": len(source_rows),
+            "reused": reused,
+            "created": len(source_rows) - reused,
+            "mappings": mapping_count,
+        }
+    if (
+        source
+        and source.get("source_schema") == "amazon_listing_v1"
+        and not any(
+            s.get("record_type") == "variant" and s.get("sku_row_key")
+            for s in cast(list[dict[str, object]], source.get("selections", []))
+        )
+    ):
+        for field in permission_payload:
+            if field not in {"can_view", "can_download_original"}:
+                permission_payload[field] = False
     return {
+        **import_metadata(
+            dict(row)
+            | {
+                "import_id": import_id,
+                "evidence_payload_json": {"production_source": source}
+                if source
+                else {},
+                "approved_catalog_version_number": approved_version,
+            }
+        ),
+        "production_source": source,
+        "registration_summary": registration_summary,
         "issues": [dict(issue) for issue in issues],
         "approved_catalog_version_number": approved_version,
         "import_id": int(row["id"]),
@@ -396,9 +479,8 @@ def list_catalog_imports(
         rows = (
             connection.execute(
                 sa.text(
-                    "SELECT id AS import_id, source_kind, status, workflow_revision "
-                    "FROM catalog_imports WHERE site_id = :site_id "
-                    "ORDER BY id DESC LIMIT 21 OFFSET :offset"
+                    IMPORT_SELECT + " WHERE i.site_id = :site_id "
+                    "ORDER BY i.id DESC LIMIT 21 OFFSET :offset"
                 ),
                 {"site_id": context.site_id, "offset": (page - 1) * 20},
             )
@@ -407,7 +489,7 @@ def list_catalog_imports(
         )
     return catalog_json(
         {
-            "items": [dict(row) for row in rows[:20]],
+            "items": [import_metadata(dict(row)) for row in rows[:20]],
             "page": page,
             "has_next": len(rows) > 20,
         }
@@ -723,9 +805,14 @@ def download_catalog_import_file(
                     sa.text(
                         """
                     SELECT files.storage_key, files.sha256, files.size_bytes,
-                           files.original_filename
+                           files.original_filename,
+                       JSON_UNQUOTE(JSON_EXTRACT(payload.evidence_payload_json,
+                           '$.production_source.source_schema')) AS source_schema
                     FROM catalog_imports AS imports
                     INNER JOIN raw_files AS files ON files.id = imports.raw_file_id
+                LEFT JOIN catalog_export_payloads payload
+                  ON payload.export_id=imports.export_id
+                 AND payload.site_id=imports.site_id
                     WHERE imports.id = :id AND imports.site_id = :site_id
                     """
                     ),
@@ -737,7 +824,12 @@ def download_catalog_import_file(
         if row is None:
             raise ApiError(404, "catalog_import_file_not_found", "File was not found.")
         storage = StorageSettings.from_env()
-        content = LocalContentStore(storage.root, storage.max_upload_bytes).read_bytes(
+        limit = (
+            64 * 1024 * 1024
+            if row["source_schema"] == "amazon_listing_v1"
+            else storage.max_upload_bytes
+        )
+        content = LocalContentStore(storage.root, limit).read_bytes(
             str(row["storage_key"]), bytes(row["sha256"]).hex(), int(row["size_bytes"])
         )
         return Response(

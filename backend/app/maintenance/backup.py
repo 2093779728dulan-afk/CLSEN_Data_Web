@@ -51,6 +51,7 @@ _SEMANTIC_CHECKSUM_TABLES: Final = (
     "fact_snapshot_tuples",
     "product_catalog_exclusions",
     "product_catalog_mappings",
+    "product_catalog_shop_memberships",
     "product_catalog_publications",
     "product_catalog_sku_members",
     "product_catalog_style_members",

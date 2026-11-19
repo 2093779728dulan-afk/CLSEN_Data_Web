@@ -25,3 +25,12 @@ it("sorts actual variants and keeps the whole-style denominator when filtering",
   expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(3);
   expect(response.variants[0]?.sku_id).toBe("1");
 });
+
+it("renders a missing formal code without inventing an identifier", () => {
+  const pending = structuredClone(response);
+  pending.variants[0]!.internal_display_sku = null;
+  render(<VariantReviewTable response={pending} />);
+  expect(screen.getByText("正式SKU待补")).toBeVisible();
+  expect(screen.getByRole("columnheader", {name: "正式 SKU"})).toBeVisible();
+  expect(screen.queryByText("DEMO-Blue-M")).not.toBeInTheDocument();
+});

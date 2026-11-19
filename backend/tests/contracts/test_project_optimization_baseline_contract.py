@@ -46,7 +46,7 @@ def test_mysql_exclusion_audit_matches_current_ci_manifest_exactly() -> None:
     )
     audited = BASELINE["mysql_hosted_exclusions"]
     assert audited == ci["mysql_exclusions"]
-    assert len(audited) == 14
+    assert len(audited) == 15
 
 
 def test_known_queue_state_sources_remain_traceable() -> None:
@@ -94,7 +94,7 @@ def test_operations_guide_covers_safety_profiles_approval_and_rebuild() -> None:
         "项目负责人批准",
         "不得覆盖",
         "data/",
-        "14 个排除项",
+        "15 个排除项",
         "project_owner",
         "backend_maintainer",
         "frontend_maintainer",

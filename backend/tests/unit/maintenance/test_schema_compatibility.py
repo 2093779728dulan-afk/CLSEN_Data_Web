@@ -135,6 +135,30 @@ def test_current_revision_executes_one_read_only_observation() -> None:
         assert forbidden not in statement
 
 
+def test_optional_manual_tables_allow_only_previous_core_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine, fake = _engine(rows=[("0034",)])
+    with pytest.raises(SchemaCompatibilityFailure):
+        assert_schema_compatible(
+            engine, database_identity="task", allow_manual_tables_absent=True
+        )
+    from app.maintenance import schema_compatibility
+
+    monkeypatch.setattr(schema_compatibility, "CURRENT_SCHEMA_REVISION", "0035")
+    assert_schema_compatible(
+        engine, database_identity="task", allow_manual_tables_absent=True
+    )
+    assert fake.connect_count == 2
+    with pytest.raises(SchemaCompatibilityFailure):
+        assert_schema_compatible(engine, database_identity="task")
+    older, _ = _engine(rows=[("0033",)])
+    with pytest.raises(SchemaCompatibilityFailure):
+        assert_schema_compatible(
+            older, database_identity="task", allow_manual_tables_absent=True
+        )
+
+
 @pytest.mark.parametrize(
     ("rows", "expected_code", "actual_revision"),
     (
@@ -145,7 +169,7 @@ def test_current_revision_executes_one_read_only_observation() -> None:
             None,
         ),
         ((("0021",),), SchemaCompatibilityCode.REVISION_OLDER, "0021"),
-        ((("0031",),), SchemaCompatibilityCode.REVISION_NEWER, "0031"),
+        ((("0038",),), SchemaCompatibilityCode.REVISION_NEWER, "0038"),
         ((("branch-head",),), SchemaCompatibilityCode.REVISION_UNKNOWN, "branch-head"),
         (((None,),), SchemaCompatibilityCode.REVISION_UNKNOWN, None),
     ),

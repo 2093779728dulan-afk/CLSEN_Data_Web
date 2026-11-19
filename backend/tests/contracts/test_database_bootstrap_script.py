@@ -146,6 +146,19 @@ def _migration_created_table_names() -> set[str]:
             assert isinstance(table_name, ast.Constant)
             assert isinstance(table_name.value, str)
             table_names.append(table_name.value)
+        if migration_file.name == "0035_manual_table_preparation.py":
+            from app.manual_tables.models import batches, operations, profiles
+
+            created_objects = {
+                node.func.value.id
+                for node in ast.walk(module)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "create"
+                and isinstance(node.func.value, ast.Name)
+            }
+            assert created_objects == {"batches", "operations", "profiles"}
+            table_names.extend(table.name for table in (batches, operations, profiles))
     counts = Counter(table_names)
     assert {
         table_name: count for table_name, count in counts.items() if count != 1
@@ -182,6 +195,7 @@ def test_database_privilege_manifest_is_strict_and_protects_event_history() -> N
         "extension_cell_changes",
         "workbench_operation_tokens",
         "workbench_operation_results",
+        "catalog_platform_checks",
     }
 
     runtime = manifest["runtime"]
@@ -197,6 +211,23 @@ def test_runtime_can_reconcile_raw_file_integrity_without_deleting_history() -> 
     assert "raw_file_integrity_statuses" in runtime["mutable_insert"]
     assert "raw_file_integrity_statuses" in runtime["update"]
     assert "raw_file_integrity_statuses" not in runtime["delete"]
+
+
+def test_runtime_can_prepare_manual_tables_without_rewriting_history() -> None:
+    runtime = _load_and_validate_privilege_manifest()["runtime"]
+
+    assert "manual_table_batches" in runtime["mutable_insert"]
+    assert "manual_table_batches" in runtime["update"]
+    for table in ("manual_table_operations", "manual_table_profiles"):
+        assert table in runtime["insert_only"]
+        assert table not in runtime["update"]
+        assert table not in runtime["update_columns"]
+    for table in (
+        "manual_table_batches",
+        "manual_table_operations",
+        "manual_table_profiles",
+    ):
+        assert table not in runtime["delete"]
 
 
 def test_runtime_can_insert_and_lock_dataset_lock_rows_without_deleting_them() -> None:
@@ -286,7 +317,7 @@ def test_every_migration_table_has_exactly_one_insert_classification() -> None:
     )
     created_tables = _migration_created_table_names()
     assert created_tables == classified_tables
-    assert len(created_tables) == 115
+    assert len(created_tables) == 120
 
 
 def test_all_database_privilege_consumers_load_and_validate_the_manifest() -> None:

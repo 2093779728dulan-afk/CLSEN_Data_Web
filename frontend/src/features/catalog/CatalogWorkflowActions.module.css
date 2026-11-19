@@ -44,3 +44,8 @@
   .actions > button, .actions > a { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* Keep supplemental copy out of the primary workflow. */
+.panel [data-field-hint], .heading p, .note, .path { display:none; }
+
+.panel [hidden] {display:none;}

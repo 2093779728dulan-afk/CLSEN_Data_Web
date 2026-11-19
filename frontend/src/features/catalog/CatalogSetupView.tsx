@@ -7,6 +7,7 @@ import css from "./CatalogSetupView.module.css";
 
 export type SourceScopeFields = { account: string; name: string; reason: string; acknowledged: boolean };
 type Props = {
+  mode?: 'source'|'snapshot';
   current?: { readiness: AnalyticsReadiness; scope: CatalogScopeStatusResponse };
   editable: boolean;
   busy: boolean;
@@ -21,12 +22,23 @@ type Props = {
   onRefresh: () => void;
 };
 
-export function CatalogSetupView({ current, editable, busy, error, progress, preview, fields, onFieldsChange, onConfirm, onPrepare, onInitialize, onRefresh }: Props) {
+export function CatalogSetupView({ mode, current, editable, busy, error, progress, preview, fields, onFieldsChange, onConfirm, onPrepare, onInitialize, onRefresh }: Props) {
   const readiness = current?.readiness;
   const scope = current?.scope;
   const confirmed = scope?.status === "confirmed";
   const snapshot = readiness?.return_snapshot_present;
   const currentStep = !confirmed ? 0 : !snapshot ? 1 : !readiness?.catalog_approved ? 2 : 3;
+  if(mode)return <section aria-label={mode==='source'?'确认店铺':'建立退货快照'} className={css.panel}>
+    {error&&<StatusMessage kind="danger" title="操作未完成" action={<Button onClick={onRefresh} disabled={busy}>核对当前结果</Button>}>{error}</StatusMessage>}
+    {progress&&<StatusMessage kind="info" title={progress}/>}
+    {!current?<p role="status">正在读取…</p>:mode==='source'?confirmed?<StatusMessage kind="success" title={`已确认店铺：${scope.seller_account_display_name}`}/>:scope!.permissions.can_confirm&&editable?<form onSubmit={onConfirm}><fieldset disabled={busy} className={css.fields}>
+      <FormField label="卖家账号标识" required><Input required value={fields.account} onChange={e=>onFieldsChange({account:e.target.value})}/></FormField><FormField label="店铺名称" required><Input required value={fields.name} onChange={e=>onFieldsChange({name:e.target.value})}/></FormField><FormField label="确认依据" required><Input required value={fields.reason} onChange={e=>onFieldsChange({reason:e.target.value})}/></FormField>
+      <Checkbox label="已核对这些资料属于上述同一卖家账号及美国站" checked={fields.acknowledged} onChange={e=>onFieldsChange({acknowledged:e.target.checked})}/><Button type="submit" variant="primary" disabled={!fields.acknowledged||!fields.account.trim()||!fields.name.trim()||!fields.reason.trim()}>确认店铺</Button>
+    </fieldset></form>:<StatusMessage kind="warning" title="当前账号无权确认店铺"/>:snapshot?<StatusMessage kind="success" title="退货快照已建立"/>:<>
+      {(readiness?.published_return_reports??0)===0?<StatusMessage kind="info" title="尚未发布退货报告">请在上一步上传并审核退货报告，或先完成商品建档。</StatusMessage>:<Button disabled={busy||!editable} onClick={onPrepare}>准备首次退货快照</Button>}
+      {preview&&<section aria-label="首次快照预览"><p>{preview.coverage_from} 至 {preview.coverage_to} · {preview.published_return_reports}份退货报告</p><Button disabled={busy||!editable} variant="primary" onClick={onInitialize}>确认建立首次快照</Button></section>}
+    </>}
+  </section>;
   return <section className={css.panel} aria-label="商品分析初始化" aria-busy={busy || !current && !error}>
     <header className={css.header}><div><span className={css.eyebrow}>商品主档 · 分析前置</span><h2>商品分析准备状态</h2><p>报表发布与商品主档批准是两个步骤；款式映射须审核后生效。</p></div><Button icon={<RefreshCw />} disabled={busy} onClick={onRefresh}>刷新准备状态</Button></header>
     {current && <ol className={css.steps} aria-label="准备顺序">{["确认来源范围", "建立退货快照", "审核商品主档", "读取产品分析"].map((label, index) => <li key={label} aria-current={index === currentStep ? "step" : undefined}><span>{index + 1}</span>{label}</li>)}</ol>}

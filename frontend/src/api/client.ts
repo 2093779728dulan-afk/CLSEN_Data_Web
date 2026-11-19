@@ -2,6 +2,7 @@ import {
   hasActiveSessionBoundary,
   revokeSessionBoundary,
 } from "./sessionRevocation";
+import { isBusinessWrite, productionDataChanged } from "./productionReadCache";
 
 type ApiErrorPayload = {
   error?: {
@@ -212,6 +213,7 @@ export async function requestApi<T>(
   path: string,
   init?: RequestInit,
   safeErrorFields: readonly SafeErrorField[] = LEGACY_ERROR_FIELDS,
+  responseType: "json" | "blob" = "json",
 ): Promise<T> {
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -240,8 +242,9 @@ export async function requestApi<T>(
       apiErrorDetails(payload.error, safeErrorFields),
     );
   }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  if (isBusinessWrite(path, init?.method ?? "GET")) productionDataChanged();
+  const result: unknown = response.status === 204 ? undefined : await (responseType === "blob" ? response.blob() : response.json());
+  return result as T;
 }
 
 export async function commandApi<T>(

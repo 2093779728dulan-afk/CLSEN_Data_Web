@@ -22,7 +22,7 @@ from app.catalog.import_repository import (
     MySqlCatalogImportRepository,
     _reconcile_draft_reservations,
 )
-from app.catalog.import_service import DraftRow
+from app.catalog.import_service import DraftRow, validate_production_approval_rows
 from app.catalog.normalization import catalog_identity_key_v1
 from app.catalog.repository import CatalogReservationConflict, load_import_rows
 from app.catalog.validation import CatalogApprovalEvaluation, evaluate_approval_rows
@@ -59,7 +59,7 @@ class CatalogApprovalPreview:
     validation_run_id: int
     base_catalog_version_id: int | None
     catalog_publication_revision: int
-    fact_snapshot_tuple_id: int
+    fact_snapshot_tuple_id: int | None
     risk: str
     diff_digest: bytes
     created_at: datetime
@@ -158,7 +158,7 @@ def _existing_identity_values(
     skus = {
         int(row["id"]): (
             int(row["style_id"]),
-            str(row["internal_display_sku"]),
+            str(row["internal_display_sku"] or ""),
             str(row["standard_color"]),
             str(row["standard_size"]),
             str(row["status"]),
@@ -257,7 +257,19 @@ def _source_decision_key(
     site_id: int,
     export_id: int,
     raw_sha256_ref: str,
+    scope_ref: str | None = None,
 ) -> tuple[int, bytes, bytes]:
+    from app.catalog.production_code_evidence import production_source_key
+
+    production_key = production_source_key(
+        connection,
+        site_id=site_id,
+        export_id=export_id,
+        raw_sha256_ref=raw_sha256_ref,
+        scope_ref=scope_ref,
+    )
+    if production_key is not None:
+        return production_key
     if not raw_sha256_ref.startswith("sha256:") or len(raw_sha256_ref) != 71:
         raise CatalogApprovalValidationFailed()
     try:
@@ -356,6 +368,7 @@ def _evaluate_with_database(
             site_id=site_id,
             export_id=export_id,
             raw_sha256_ref=raw_sha,
+            scope_ref=str(row.payload.get("seller_account", "")),
         )
         prior = (
             connection.execute(
@@ -537,7 +550,7 @@ class MySqlCatalogApprovalRepository:
                     SELECT status, workflow_revision, validation_run_id,
                            submitted_by_user_id, base_catalog_version_id,
                            fact_snapshot_tuple_id, normalization_manifest_id,
-                           export_id
+                           export_id, source_kind
                     FROM catalog_imports
                     WHERE id = :import_id AND site_id = :site_id FOR UPDATE
                     """
@@ -606,8 +619,8 @@ class MySqlCatalogApprovalRepository:
             != base_id
             or int(projection["catalog_publication_revision"])
             != expected_catalog_publication_revision
-            or int(projection["fact_snapshot_tuple_id"])
-            != int(imported["fact_snapshot_tuple_id"])
+            or projection["fact_snapshot_tuple_id"]
+            != imported["fact_snapshot_tuple_id"]
         ):
             raise CatalogProjectionStale()
 
@@ -616,6 +629,27 @@ class MySqlCatalogApprovalRepository:
             import_id=import_id,
             workflow_revision=expected_workflow_revision,
         )
+        if (imported["fact_snapshot_tuple_id"] is None) != (
+            imported["source_kind"] == "production"
+        ):
+            raise CatalogApprovalValidationFailed()
+        if imported["source_kind"] == "production" and any(
+            row.section == "exceptions" for row in rows
+        ):
+            raise CatalogApprovalValidationFailed()
+
+        from app.catalog.listing_sources import assert_listing_approval
+
+        listing_source = assert_listing_approval(
+            connection, site_id=site_id, import_id=import_id, rows=rows, lock=True
+        )
+        if imported["source_kind"] == "production" and (
+            validate_production_approval_rows(
+                rows, listing_source=listing_source
+            ).issues
+        ):
+            raise CatalogApprovalValidationFailed()
+
         evaluation = _evaluate_with_database(
             connection,
             rows=rows,
@@ -666,7 +700,9 @@ class MySqlCatalogApprovalRepository:
         for row in style_rows:
             payload = row.payload
             style_code = _text(payload.get("style_code")) or ""
-            standard_name = _text(payload.get("standard_name")) or ""
+            standard_name = (
+                _text(payload.get("standard_name") or None, required=False) or ""
+            ).strip()
             status = _text(payload.get("status")) or ""
             key = catalog_identity_key_v1(style_code)
             style_id = _positive_id(payload.get("system_style_id"))
@@ -891,11 +927,13 @@ class MySqlCatalogApprovalRepository:
             if style_key not in style_members:
                 raise CatalogApprovalValidationFailed()
             style_id = style_members[style_key][0]
-            display = _text(payload.get("internal_display_sku")) or ""
+            display = _text(payload.get("internal_display_sku"), required=False)
+            code_status = _text(payload.get("code_status"), required=False) or "legacy"
+            code_evidence = _text(payload.get("code_evidence"), required=False)
             color = _text(payload.get("standard_color")) or ""
             size = _text(payload.get("standard_size")) or ""
             status = _text(payload.get("status")) or ""
-            display_key = catalog_identity_key_v1(display)
+            display_key = catalog_identity_key_v1(display) if display else None
             color_key = catalog_identity_key_v1(color)
             size_key = catalog_identity_key_v1(size)
             variant_bytes = (
@@ -913,7 +951,8 @@ class MySqlCatalogApprovalRepository:
                 prior = (
                     connection.execute(
                         sa.text(
-                            "SELECT style_id, internal_display_sku, standard_color, "
+                            "SELECT style_id, internal_display_sku, code_status, "
+                            "code_evidence, standard_color, "
                             "standard_size, status, current_revision FROM product_skus "
                             "WHERE id = :id AND site_id = :site_id FOR UPDATE"
                         ),
@@ -931,12 +970,13 @@ class MySqlCatalogApprovalRepository:
                         """
                         INSERT INTO product_skus (
                             site_id, style_id, internal_display_sku,
+                            code_status, code_evidence,
                             display_key_sha256, display_key_bytes,
                             standard_color, color_key_sha256, color_key_bytes,
                             standard_size, size_key_sha256, size_key_bytes,
                             status, current_revision
                         ) VALUES (
-                            :site_id, :style_id, :display,
+                            :site_id, :style_id, :display, :code_status, :code_evidence,
                             :display_sha, :display_bytes,
                             :color, :color_sha, :color_bytes,
                             :size, :size_sha, :size_bytes, :status, 1
@@ -947,8 +987,10 @@ class MySqlCatalogApprovalRepository:
                         "site_id": site_id,
                         "style_id": style_id,
                         "display": display,
-                        "display_sha": display_key.sha256,
-                        "display_bytes": display_key.utf8,
+                        "code_status": code_status,
+                        "code_evidence": code_evidence,
+                        "display_sha": display_key.sha256 if display_key else None,
+                        "display_bytes": display_key.utf8 if display_key else None,
                         "color": color,
                         "color_sha": color_key.sha256,
                         "color_bytes": color_key.utf8,
@@ -964,11 +1006,13 @@ class MySqlCatalogApprovalRepository:
                 created_skus += 1
             changed = prior is None or (
                 int(prior["style_id"]),
-                str(prior["internal_display_sku"]),
+                prior["internal_display_sku"],
+                prior["code_status"],
+                prior["code_evidence"],
                 str(prior["standard_color"]),
                 str(prior["standard_size"]),
                 str(prior["status"]),
-            ) != (style_id, display, color, size, status)
+            ) != (style_id, display, code_status, code_evidence, color, size, status)
             revision_number = (
                 1 if prior is None else current_revision + (1 if changed else 0)
             )
@@ -978,7 +1022,8 @@ class MySqlCatalogApprovalRepository:
                         """
                         INSERT INTO product_sku_revisions (
                             site_id, sku_id, style_id, revision,
-                            internal_display_sku, display_key_sha256,
+                            internal_display_sku, code_status, code_evidence,
+                            display_key_sha256,
                             display_key_bytes, standard_color,
                             color_key_sha256, color_key_bytes, standard_size,
                             size_key_sha256, size_key_bytes, status,
@@ -986,7 +1031,8 @@ class MySqlCatalogApprovalRepository:
                             source_command_token
                         ) VALUES (
                             :site_id, :sku_id, :style_id, :revision,
-                            :display, :display_sha, :display_bytes, :color,
+                            :display, :code_status, :code_evidence,
+                            :display_sha, :display_bytes, :color,
                             :color_sha, :color_bytes, :size,
                             :size_sha, :size_bytes, :status,
                             :reason, :actor_user_id, :import_id, :token
@@ -999,8 +1045,10 @@ class MySqlCatalogApprovalRepository:
                         "style_id": style_id,
                         "revision": revision_number,
                         "display": display,
-                        "display_sha": display_key.sha256,
-                        "display_bytes": display_key.utf8,
+                        "code_status": code_status,
+                        "code_evidence": code_evidence,
+                        "display_sha": display_key.sha256 if display_key else None,
+                        "display_bytes": display_key.utf8 if display_key else None,
                         "color": color,
                         "color_sha": color_key.sha256,
                         "color_bytes": color_key.utf8,
@@ -1024,6 +1072,8 @@ class MySqlCatalogApprovalRepository:
                             """
                             UPDATE product_skus SET style_id = :style_id,
                                 internal_display_sku = :display,
+                                code_status = :code_status,
+                                code_evidence = :code_evidence,
                                 display_key_sha256 = :display_sha,
                                 display_key_bytes = :display_bytes,
                                 standard_color = :color,
@@ -1039,8 +1089,10 @@ class MySqlCatalogApprovalRepository:
                         {
                             "style_id": style_id,
                             "display": display,
-                            "display_sha": display_key.sha256,
-                            "display_bytes": display_key.utf8,
+                            "code_status": code_status,
+                            "code_evidence": code_evidence,
+                            "display_sha": display_key.sha256 if display_key else None,
+                            "display_bytes": display_key.utf8 if display_key else None,
                             "color": color,
                             "color_sha": color_key.sha256,
                             "color_bytes": color_key.utf8,
@@ -1069,7 +1121,11 @@ class MySqlCatalogApprovalRepository:
                     )
                 )
             for kind, digest_value, bytes_value in (
-                ("display_sku", display_key.sha256, display_key.utf8),
+                *(
+                    ([("display_sku", display_key.sha256, display_key.utf8)])
+                    if display_key
+                    else []
+                ),
                 ("variant", variant_sha, variant_bytes),
             ):
                 if _reserve(
@@ -1133,7 +1189,7 @@ class MySqlCatalogApprovalRepository:
                 "version_number": version_number,
                 "base_id": base_id,
                 "manifest_id": str(imported["normalization_manifest_id"]),
-                "tuple_id": int(imported["fact_snapshot_tuple_id"]),
+                "tuple_id": imported["fact_snapshot_tuple_id"],
                 "import_id": import_id,
                 "validation_run_id": int(imported["validation_run_id"]),
                 "approval_digest": approval_digest,
@@ -1191,6 +1247,60 @@ class MySqlCatalogApprovalRepository:
                 },
             )
 
+        if base_id is not None:
+            replacement_keys = [
+                _source_decision_key(
+                    connection,
+                    site_id=site_id,
+                    export_id=int(imported["export_id"]),
+                    raw_sha256_ref=str(row.payload["seller_sku_sha256"]),
+                    scope_ref=str(row.payload.get("seller_account", "")),
+                )
+                for row in evaluation.reachability.rows
+                if row.section == "mappings"
+            ]
+            copy_params: dict[str, object] = {
+                "version": version_id,
+                "base": base_id,
+                "site": site_id,
+            }
+            copy_filter = ""
+            for index, (scope, digest, raw) in enumerate(replacement_keys):
+                copy_filter += (
+                    f" AND NOT (report_source_scope_id=:scope{index} "
+                    f"AND seller_sku_match_sha256=:sha{index} "
+                    f"AND seller_sku_match_bytes=:raw{index})"
+                )
+                copy_params.update(
+                    {f"scope{index}": scope, f"sha{index}": digest, f"raw{index}": raw}
+                )
+            for table, columns in (
+                (
+                    "product_catalog_mappings",
+                    (
+                        "site_id, report_source_scope_id, marketplace_scope_code,"
+                        " seller_sku_match_sha256, seller_sku_match_bytes, sku_id"
+                        ", decision_source, actor_user_id, evidence_digest"
+                    ),
+                ),
+                (
+                    "product_catalog_exclusions",
+                    (
+                        "site_id, report_source_scope_id, marketplace_scope_code,"
+                        " seller_sku_match_sha256, seller_sku_match_bytes, reason"
+                        ", actor_user_id, evidence_digest"
+                    ),
+                ),
+            ):
+                connection.execute(
+                    sa.text(
+                        f"INSERT INTO {table}(catalog_version_id,{columns}) "
+                        f"SELECT :version,{columns} FROM {table} "
+                        "WHERE catalog_version_id=:base AND site_id=:site" + copy_filter
+                    ),
+                    copy_params,
+                )
+
         for row in evaluation.reachability.rows:
             if row.section != "mappings":
                 continue
@@ -1200,6 +1310,7 @@ class MySqlCatalogApprovalRepository:
                 site_id=site_id,
                 export_id=int(imported["export_id"]),
                 raw_sha256_ref=raw_sha,
+                scope_ref=str(row.payload.get("seller_account", "")),
             )
             evidence_digest = hashlib.sha256(
                 canonical_json_bytes([raw_sha, row.payload_digest.hex()])
@@ -1263,6 +1374,26 @@ class MySqlCatalogApprovalRepository:
                         "evidence_digest": evidence_digest,
                     },
                 )
+
+        from app.catalog.shop_membership import (
+            copy_shop_memberships,
+            record_shop_memberships,
+        )
+
+        if base_id is not None:
+            copy_shop_memberships(
+                connection,
+                site_id=site_id,
+                source_version=base_id,
+                version_id=version_id,
+            )
+        record_shop_memberships(
+            connection,
+            site_id=site_id,
+            version_id=version_id,
+            import_id=import_id,
+            sku_members=sku_members,
+        )
 
         next_catalog_revision = expected_catalog_publication_revision + 1
         updated_pointer = connection.execute(
@@ -1436,15 +1567,26 @@ class MySqlCatalogApprovalRepository:
             )
             if target is None:
                 raise CatalogApprovalValidationFailed()
-            tuple_ready = connection.scalar(
-                sa.text(
-                    "SELECT COUNT(*) FROM fact_snapshot_tuples "
-                    "WHERE id = :id AND site_id = :site_id AND status = 'ready'"
-                ),
-                {"id": int(target["fact_snapshot_tuple_id"]), "site_id": site_id},
-            )
-            if int(tuple_ready or 0) != 1:
-                raise CatalogApprovalValidationFailed()
+            if target["fact_snapshot_tuple_id"] is None:
+                source_kind = connection.scalar(
+                    sa.text(
+                        "SELECT source_kind FROM catalog_imports WHERE id=:id"
+                        " AND site_id=:site"
+                    ),
+                    {"id": target["source_import_id"], "site": site_id},
+                )
+                if source_kind != "production":
+                    raise CatalogApprovalValidationFailed()
+            else:
+                tuple_ready = connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM fact_snapshot_tuples WHERE id=:"
+                        "id AND site_id=:site AND status='ready'"
+                    ),
+                    {"id": target["fact_snapshot_tuple_id"], "site": site_id},
+                )
+                if int(tuple_ready or 0) != 1:
+                    raise CatalogApprovalValidationFailed()
             version_number = int(
                 connection.scalar(
                     sa.text(
@@ -1533,6 +1675,14 @@ class MySqlCatalogApprovalRepository:
                     ),
                     {"version_id": version_id, "target_id": target_version_id},
                 )
+            from app.catalog.shop_membership import copy_shop_memberships
+
+            copy_shop_memberships(
+                connection,
+                site_id=site_id,
+                source_version=target_version_id,
+                version_id=version_id,
+            )
             next_revision = expected_catalog_publication_revision + 1
             connection.execute(
                 sa.text(

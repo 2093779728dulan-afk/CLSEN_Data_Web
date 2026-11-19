@@ -196,6 +196,42 @@ describe("DraftReviewGate row and note commands", () => {
     expect(within(dialog).getByText(/服务器将按该会话写入发布审计/)).toBeVisible();
   });
 
+  it("keeps embedded publication confirmation inside the current window", async () => {
+    const currentWorkspace = readyWorkspace();
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const path = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (path.startsWith("/api/drafts/51/review-workspace")) {
+        return Promise.resolve(jsonResponse(currentWorkspace));
+      }
+      throw new Error(`Unhandled request: ${path}`);
+    }));
+
+    const user = userEvent.setup();
+    render(
+      <DraftReviewGate embedded
+        context={{
+          head: currentWorkspace.head,
+          publicationMode: "ordinary",
+          publishedMove: null,
+          reportDate: currentWorkspace.report_date,
+          reportType: currentWorkspace.report_type,
+          rulesetVersion: currentWorkspace.ruleset_version,
+          publication: { version_id: null, published_at: null },
+        }}
+        onPublished={vi.fn()}
+        operator={{ id: 3, username: "manager", display_name: "录入审核" }}
+      />,
+    );
+    await user.click(await screen.findByRole("button", { name: "打开发布确认" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const dialog = screen.getByRole("region", { name: "发布确认" });
+    expect(within(dialog).getByLabelText("发布说明")).toHaveValue(
+      "操作人：录入审核（manager / 用户 #3）；操作：确认发布审核版本；来源：2026-08-10 经营报告 · 版本 v2 · 校验 #901。",
+    );
+    expect(within(dialog).getByText(/服务器将按该会话写入发布审计/)).toBeVisible();
+  });
+
   it("explicitly discards the active draft before reopening a source batch for reparse", async () => {
     const reparseSource = vi.fn<(batchId: number) => Promise<void>>().mockResolvedValue(undefined);
     let discardBody: Record<string, unknown> | undefined;

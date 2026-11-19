@@ -1,12 +1,18 @@
+const scopeState = vi.hoisted(() => ({ scopes: [] as {id:number; seller_account_display_name:string; marketplace_scope_code:string}[] }));
+vi.mock("../../api/client", async importOriginal => {
+  const original = await importOriginal<typeof import("../../api/client")>();
+  return { ...original, requestApi: (path:string, options?: Parameters<typeof original.requestApi>[1]) => path.endsWith("/capabilities") ? Promise.resolve({scopes:scopeState.scopes}) : original.requestApi(path, options) };
+});
 vi.mock("./CatalogSetup", () => ({ CatalogSetup: () => <div>初始化状态面板</div> }));
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CatalogHomePage } from "./CatalogHomePage";
 
 describe("CatalogHomePage", () => {
+  beforeEach(() => { scopeState.scopes = []; });
   afterEach(() => vi.unstubAllGlobals());
   it("refreshes an uninitialized tab after another tab approves the catalog", async () => {
     const fetchMock = vi.fn()
@@ -32,12 +38,30 @@ describe("CatalogHomePage", () => {
     render(<MemoryRouter><CatalogHomePage canManage={false} /></MemoryRouter>);
     await waitFor(() => expect(screen.getByRole("heading", { name: "经典衬衫" })).toBeVisible());
     expect(screen.getByText("已启用", { selector: "article span" })).toBeVisible();
-    expect(screen.getAllByText("款式编号").length).toBeGreaterThan(0);
+    expect(screen.queryByText("初始化状态面板")).not.toBeInTheDocument();
+    expect(screen.getAllByText("款号").length).toBeGreaterThan(0);
     expect(screen.getByText("系统身份 STYLE #8")).toBeVisible();
     expect(screen.getByText("3", { selector: "dd" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "批量表格" }));
     expect(screen.getByRole("columnheader", { name: "Seller SKU" })).toBeVisible();
-    expect(screen.getByRole("columnheader", { name: "款式编号" })).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "款号" })).toBeVisible();
     expect(screen.getByRole("link", { name: "2301" })).toHaveAttribute("href", "/catalog/styles/8");
   });
+});
+
+it("reads only the selected store and preserves the store on product links", async () => {
+  scopeState.scopes = [{id:7,seller_account_display_name:"广州店",marketplace_scope_code:"amazon_us"}];
+  const fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>().mockResolvedValue(new Response(JSON.stringify({catalog:{version_number:1,catalog_publication_revision:1,skus:[],styles:[{style_id:8,style_code:"2301",standard_name:"广州衬衫",status:"enabled",variant_count:1,seller_sku_count:1,source_summary:{}}]}}),{status:200}));
+  vi.stubGlobal("fetch",fetchMock);
+  render(<MemoryRouter><CatalogHomePage canManage={false}/></MemoryRouter>);
+  expect(await screen.findByRole("heading",{name:"广州衬衫"})).toBeVisible();
+  expect(fetchMock.mock.calls[0]?.[0]).toContain("report_source_scope_id=7");
+  expect(screen.getByRole("link",{name:"查看 2301 商品卡"})).toHaveAttribute("href","/catalog/styles/8?scope=7");
+});
+it("rejects an inaccessible store without falling back to the global catalog", async () => {
+  scopeState.scopes = [{id:7,seller_account_display_name:"广州店",marketplace_scope_code:"amazon_us"}];
+  const fetchMock = vi.fn(); vi.stubGlobal("fetch",fetchMock);
+  render(<MemoryRouter initialEntries={["/catalog?scope=99"]}><CatalogHomePage canManage={false}/></MemoryRouter>);
+  expect(await screen.findByText("店铺不存在或无权访问。")).toBeVisible();
+  expect(fetchMock).not.toHaveBeenCalled();
 });

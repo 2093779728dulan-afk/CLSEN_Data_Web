@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 
-_LOCK_NAME_SQL = "CONCAT('clsen:maintenance-write:', DATABASE())"
+from app.maintenance.barrier import MAINTENANCE_LOCK_NAME_SQL
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +74,9 @@ def probe_maintenance_lock(
     """Read named-lock ownership without acquiring or disturbing the lock."""
 
     with engine.connect() as connection:
-        owner = connection.scalar(sa.text(f"SELECT IS_USED_LOCK({_LOCK_NAME_SQL})"))
+        owner = connection.scalar(
+            sa.text(f"SELECT IS_USED_LOCK({MAINTENANCE_LOCK_NAME_SQL})")
+        )
     owner_connection_id = None if owner is None else int(owner)
     if owner_connection_id == ignored_owner_connection_id:
         owner_connection_id = None

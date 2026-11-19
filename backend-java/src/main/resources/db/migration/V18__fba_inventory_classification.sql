@@ -1,0 +1,22 @@
+CREATE TABLE fba_inventory_classification (
+ id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ site_id BIGINT NOT NULL, scope_id BIGINT NOT NULL, sku_id BIGINT NOT NULL,
+ inventory_event_id BIGINT NULL, origin_event_id BIGINT NULL,
+ after_event_id BIGINT NOT NULL, entry_key VARCHAR(255) NOT NULL,
+ reason_code VARCHAR(32) NOT NULL, units BIGINT NOT NULL,
+ operation_kind VARCHAR(24) NOT NULL, source_kind VARCHAR(16) NOT NULL,
+ raw_disposition VARCHAR(64) NOT NULL DEFAULT '', report_version_id BIGINT NULL,
+ related_id BIGINT NULL, operation_token CHAR(36) NOT NULL,
+ note VARCHAR(2000) NOT NULL, actor_id BIGINT NOT NULL, actor_name VARCHAR(255) NOT NULL,
+ business_date DATE NOT NULL, created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ UNIQUE KEY fba_classification_entry(site_id,scope_id,entry_key),
+ KEY fba_classification_scope(site_id,scope_id,sku_id,id),
+ KEY fba_classification_event(site_id,inventory_event_id),
+ FOREIGN KEY(site_id,scope_id) REFERENCES fba_scope(site_id,id),
+ FOREIGN KEY(inventory_event_id) REFERENCES inventory_event(id),
+ FOREIGN KEY(origin_event_id) REFERENCES inventory_event(id),
+ CHECK(reason_code IN ('WAREHOUSE_DAMAGED','CARRIER_DAMAGED','DEFECTIVE','CUSTOMER_DAMAGED','OTHER','UNCLASSIFIED')),
+ CHECK(operation_kind IN ('ASSIGN','CONSUME','CORRECT','REPORT_CORRECT','REVIEW','RESOLVE','SOURCE')),
+ CHECK(source_kind IN ('MANUAL','REPORT','LEGACY')),
+ CHECK(units<>0 OR operation_kind IN ('REVIEW','RESOLVE','SOURCE'))
+) ENGINE=InnoDB;

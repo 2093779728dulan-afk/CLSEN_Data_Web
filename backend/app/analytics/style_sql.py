@@ -963,7 +963,8 @@ STYLE_VARIANTS_SQL: Final = sa.text(
 
 STYLE_ALIASES_SQL: Final = sa.text(
     """
-    SELECT DISTINCT mappings.sku_id, refs.id AS source_ref_id,
+    SELECT DISTINCT mappings.sku_id, mappings.id AS mapping_id,
+           mappings.seller_sku_match_sha256, refs.id AS source_ref_id,
            refs.safe_preview, refs.raw_sha256, refs.is_unsafe,
            refs.is_truncated, mappings.seller_sku_match_bytes
     FROM product_catalog_mappings AS mappings
@@ -972,16 +973,16 @@ STYLE_ALIASES_SQL: Final = sa.text(
        AND members.site_id = mappings.site_id
        AND members.sku_id = mappings.sku_id
        AND members.style_id = :style_id
-    INNER JOIN report_source_keys AS source_keys
+    LEFT JOIN report_source_keys AS source_keys
         ON source_keys.site_id = mappings.site_id
        AND source_keys.report_source_scope_id = mappings.report_source_scope_id
        AND source_keys.seller_sku_match_sha256 = mappings.seller_sku_match_sha256
        AND source_keys.seller_sku_match_bytes = mappings.seller_sku_match_bytes
-    INNER JOIN catalog_source_evidence AS evidence
+    LEFT JOIN catalog_source_evidence AS evidence
         ON evidence.source_key_id = source_keys.id
        AND evidence.site_id = source_keys.site_id
        AND evidence.report_source_scope_id = source_keys.report_source_scope_id
-    INNER JOIN catalog_source_refs AS refs
+    LEFT JOIN catalog_source_refs AS refs
         ON refs.id = evidence.seller_sku_ref_id
        AND refs.site_id = evidence.site_id
     WHERE mappings.catalog_version_id = :catalog_version_id
@@ -1061,6 +1062,16 @@ STYLE_RETURN_DAILY_EVENT_DATE_SQL: Final = sa.text(
     )
 ).bindparams(sa.bindparam("return_version_ids", expanding=True))
 
+# Same mapping, latest-key and dedup rules, without a single-style restriction.
+SKU_DAILY_SQL: Final = sa.text(
+    STYLE_DAILY_SQL.text.replace("AND sku_members.style_id = :style_id", "")
+).bindparams(sa.bindparam("business_version_ids", expanding=True))
+SKU_RETURN_DAILY_SQL: Final = sa.text(
+    STYLE_RETURN_DAILY_EVENT_DATE_SQL.text.replace(
+        "AND members.style_id = :style_id", ""
+    )
+).bindparams(sa.bindparam("return_version_ids", expanding=True))
+
 
 _STYLE_UNRESOLVED = f"""
 WITH RECURSIVE {_DEDUP_STATE}
@@ -1117,6 +1128,18 @@ STYLE_UNRESOLVED_EVENT_DATE_SQL: Final = sa.text(
             "AND report_rows.return_date >= :event_from_utc "
             "AND report_rows.return_date < :event_to_utc"
         )
+    )
+).bindparams(sa.bindparam("return_version_ids", expanding=True))
+
+SKU_UNRESOLVED_DAILY_SQL: Final = sa.text(
+    STYLE_UNRESOLVED_EVENT_DATE_SQL.text.replace(
+        "COUNT(*) AS unresolved_rows",
+        "DATE(CONVERT_TZ(report_rows.return_date, '+00:00', :reporting_timezone)) "
+        "AS metric_date, COUNT(*) AS unresolved_rows",
+    ).replace(
+        "GROUP BY sku_members.style_id, sku_members.sku_id",
+        "GROUP BY sku_members.style_id, sku_members.sku_id, "
+        "DATE(CONVERT_TZ(report_rows.return_date, '+00:00', :reporting_timezone))",
     )
 ).bindparams(sa.bindparam("return_version_ids", expanding=True))
 

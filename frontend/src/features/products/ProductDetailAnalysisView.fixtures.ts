@@ -26,6 +26,7 @@ export function detailFixture(view: ProductDetailView, scenario = "reference"): 
   const colorTotals = missing ? { ...observedTotals } : { units: Number(observedTotals.units) / 2, sales: scenario === "partial" ? "120.00" : "180.00", returns: 1, sessions: Number(observedTotals.sessions) / 2, conversion_numerator: Number(observedTotals.conversion_numerator) / 2, conversion_denominator: Number(observedTotals.conversion_denominator) / 2 };
   const unitsAt = (key: string, d: number) => view.dimension === "total" ? 6 : key === "blue-key" || key === "sku-1" || view.dimension === "size" && view.color_key === "blue-key" ? 4 - d : 2 + d;
   const data: StyleCardResponse = {
+    platform_identity_review: null,
     style: { style_id: "501", style_code: "10001", standard_name: "标准轻量夹克", status: "enabled", color_count: scenario === "empty-variants" ? 0 : 2, size_count: scenario === "empty-variants" ? 0 : 2, sku_count: scenario === "empty-variants" ? 0 : 2 },
     provenance: { ...structuredClone(productLedgerFixture.provenance), from: view.from, to: view.to, fact_basis: view.fact_basis, return_basis: view.return_basis, effective_return_basis: view.return_basis },
     permissions: { ...productLedgerFixture.permissions, can_manage_catalog: scenario !== "read-only" },

@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCheck, CircleAlert, FileClock, History, LoaderCircle, Pencil, SlidersHorizontal, Upload, Undo2, ShieldCheck } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction, ReactNode } from "react";
 import type { SetURLSearchParams } from "react-router-dom";
 import type { SupportedEncoding, WorkbenchImportResponse } from "../../api/generated";
 import type { ReportType } from "../../api/types";
@@ -16,6 +16,7 @@ import cellCss from "./WorkbenchCell.module.css";
 
 export type ImportConfirmation = { encoding: SupportedEncoding; reportDate: string; reportType: ReportType };
 type Props = {
+  productMatch?: ReactNode;
   canWrite: boolean; reportDate: string; reportType: ReportType; returnTo?: string; page?: WorkbenchPage; busy: boolean; error?: string;
   editors: Record<string, CellEditorState>; searchParams: URLSearchParams; setSearchParams: SetURLSearchParams;
   importResult?: WorkbenchImportResponse; importFileName: string; confirmation?: ImportConfirmation;
@@ -31,7 +32,7 @@ type Props = {
 };
 
 /** Shared presentation; all API ownership, revisions and operation keys stay in DateWorkbenchPage. */
-export function DateWorkbenchView({ canWrite, reportDate, reportType, returnTo, page, busy, error, editors, searchParams, setSearchParams, importResult, importFileName, confirmation, setConfirmation, settingsOpen, setSettingsOpen, layout, sort, onRetry, switchReport, uploadFile, confirmImport, continueUploadedSource, startPublishedRevision, closeSettings, discardCellEdit, editCell, saveCell, applySort, undo, openAdvancedPublishControls }: Props) {
+export function DateWorkbenchView({ productMatch, canWrite, reportDate, reportType, returnTo, page, busy, error, editors, searchParams, setSearchParams, importResult, importFileName, confirmation, setConfirmation, settingsOpen, setSettingsOpen, layout, sort, onRetry, switchReport, uploadFile, confirmImport, continueUploadedSource, startPublishedRevision, closeSettings, discardCellEdit, editCell, saveCell, applySort, undo, openAdvancedPublishControls }: Props) {
   if (!page && busy) return <main className={css["date-workbench"]} id="main-content" aria-busy="true"><p>正在加载日期表格…</p><Skeleton lines={4} /></main>;
   if (!page) return <main className={css["date-workbench"]} id="main-content"><ErrorState title="工作台读取失败" description={error ?? "工作台不可用。"} action={<Button onClick={() => onRetry()}>重新读取</Button>} /></main>;
   const pendingCount = Object.values(editors).filter((item) => item.state === "editing" || item.state === "saving").length;
@@ -51,6 +52,7 @@ export function DateWorkbenchView({ canWrite, reportDate, reportType, returnTo, 
     <nav aria-label="报表类型" className={css["workbench-tabs"]}>
       {(["business_report", "return_report"] as const).map((type) => <Button variant={type === reportType ? "secondary" : "quiet"} aria-current={type === reportType ? "page" : undefined} key={type} onClick={() => switchReport(type)} type="button">{type === "business_report" ? "经营报告" : "退货报告"}<StatusBadge tone="quiet" label={({ empty: "未导入", draft: "工作草稿", published: "已发布" })[page.tabs.find((tab) => tab.report_type === type)?.source ?? "empty"]} /></Button>)}
     </nav>
+    {productMatch}
     <section aria-label="表格筛选与布局" className={css["workbench-filters"]}>
       <Input key={searchParams.get("search") ?? ""} aria-label="搜索表格" defaultValue={searchParams.get("search") ?? ""} onKeyDown={(event) => { if (event.key === "Enter") { const next = new URLSearchParams(searchParams); const value = event.currentTarget.value.trim(); if (value) next.set("search", value); else next.delete("search"); next.set("page", "1"); setSearchParams(next); } }} placeholder="搜索当前表格，按 Enter" />
       <Checkbox label="只看修改" checked={searchParams.get("changed_only") === "true"} onChange={(event) => { const next = new URLSearchParams(searchParams); if (event.target.checked) next.set("changed_only", "true"); else next.delete("changed_only"); next.set("page", "1"); setSearchParams(next); }} />

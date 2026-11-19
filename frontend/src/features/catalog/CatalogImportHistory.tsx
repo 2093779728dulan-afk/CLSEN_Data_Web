@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CatalogImportHistoryView, type CatalogHistory } from "./CatalogImportHistoryView";
 import { requestApi } from "../../api/client";
 import { useCatalogNavigation } from "./CatalogNavigationContext";
-export function CatalogImportHistory() {
+export function CatalogImportHistory({refreshKey=0}:{refreshKey?:number}={}) {
   const { setReviewReturn } = useCatalogNavigation();
   const [page, setPage] = useState(1);
   const [retry, setRetry] = useState(0);
@@ -13,6 +13,6 @@ export function CatalogImportHistory() {
     setResult(undefined); setError(undefined);
     void requestApi<CatalogHistory>(`/api/catalog/imports?page=${page}`).then((value) => { if (active) setResult(value); }).catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "读取失败"); });
     return () => { active = false; };
-  }, [page, retry]);
+  }, [page, retry, refreshKey]);
   return <CatalogImportHistoryView result={result} error={error} page={page} onReload={() => setRetry(retry + 1)} onPageChange={setPage} onOpenReview={() => setReviewReturn("/catalog/maintenance")} />;
 }

@@ -1,0 +1,5 @@
+.batchHeader { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px 16px; padding-bottom:12px; }
+.route { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; font-size:14px; }
+.route span,.route strong { overflow-wrap:anywhere; }
+.route svg { flex-shrink:0; color:var(--color-text-muted); }
+.shipment { min-width:0; max-width:34ch; font-size:13px; color:var(--color-text-muted); overflow-wrap:anywhere; text-align:right; }

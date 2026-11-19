@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, ClipboardCheck, History, LayoutDashboard, LogOut, Menu, Package, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { BarChart3, ClipboardCheck, ClipboardList, Factory, History, House, LayoutDashboard, LogOut, Menu, Package, PanelLeftClose, PanelLeftOpen, ShieldCheck, Warehouse } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import type { Principal } from "../api/types";
 import { Button, Dialog, StatusMessage } from "../design-system";
+import { productionSection, productionSections } from "../features/production/productionSections";
 import styles from "./AppShell.module.css";
 
 export type WorkspaceSiteContext = {
@@ -20,6 +21,7 @@ export type WorkspaceShellProps = {
   principal: Principal;
   siteContext: WorkspaceSiteContext;
   today: string;
+  productionEnabled?: boolean;
   analyticsSource: "p0_catalog" | "legacy_parser";
   online: boolean;
   logoutBusy: boolean;
@@ -35,7 +37,7 @@ function savedSidebarCollapsed() {
 }
 
 /** Shared application navigation; Radix Dialog supplies the shadcn Sheet interaction. */
-export function WorkspaceShell({ children, principal, siteContext, today, analyticsSource, online, logoutBusy, logoutError, onLogout }: WorkspaceShellProps) {
+export function WorkspaceShell({ children, principal, siteContext, today, analyticsSource, productionEnabled = false, online, logoutBusy, logoutError, onLogout }: WorkspaceShellProps) {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(savedSidebarCollapsed);
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -43,15 +45,19 @@ export function WorkspaceShell({ children, principal, siteContext, today, analyt
   const mobileNavigationToggle = useRef<HTMLButtonElement>(null);
   const isAdmin = principal.roles.includes("admin");
   const canWrite = isAdmin || principal.roles.includes("data_manager");
+  const warehouseFocusMode = location.pathname === "/production/warehouses" || location.pathname.startsWith("/production/warehouses/");
   const entries = [
+    ...(productionEnabled ? [{ label: "首页", to: "/home", section: "/home", icon: House }] : []),
     { label: "发布总表", to: "/", section: "/", icon: LayoutDashboard },
     { label: "商品主档", to: "/catalog", section: "/catalog", icon: Package },
     ...(analyticsSource === "p0_catalog" ? [{ label: "产品分析", to: "/products", section: "/products", icon: BarChart3 }] : []),
     ...(canWrite ? [{ label: "数据审核", to: `/review/${today}`, section: "/review", icon: ClipboardCheck }] : []),
+    ...(productionEnabled ? productionSections.map(section => ({ label: section.label, to: section.to, section: section.to, icon: section.id === "overview" ? LayoutDashboard : section.id === "orders" ? ClipboardList : section.id === "factories" ? Factory : Warehouse })) : []),
     { label: "版本记录", to: "/versions", section: "/versions", icon: History },
     ...(isAdmin ? [{ label: "管理员控制台", to: "/admin", section: "/admin", icon: ShieldCheck }] : []),
   ];
-  const activeEntry = entries.find(entry => entry.section === "/" ? location.pathname === "/" : location.pathname === entry.section || location.pathname.startsWith(`${entry.section}/`) || entry.section === "/review" && location.pathname.startsWith("/review-advanced/"));
+  const production = productionEnabled ? productionSection(location.pathname, location.search) : undefined;
+  const activeEntry = production ? entries.find(entry => entry.to === production.to) : [...entries].sort((a, b) => b.section.length - a.section.length).find(entry => entry.section === "/" ? location.pathname === "/" : location.pathname === entry.section || location.pathname.startsWith(`${entry.section}/`) || entry.section === "/review" && location.pathname.startsWith("/review-advanced/"));
   useEffect(() => {
     if (previousNavigationPath.current === location.pathname) return;
     previousNavigationPath.current = location.pathname;
@@ -73,9 +79,9 @@ export function WorkspaceShell({ children, principal, siteContext, today, analyt
   const navigation = (inDrawer = false) => <nav aria-label="工作区" className={`${styles.navigation}${inDrawer ? ` ${styles.drawerNavigation}` : ""}`} id={inDrawer ? "mobile-primary-navigation" : "primary-navigation"}>
     {entries.map(({ label, to, icon: Icon }) => {
       const active = activeEntry?.label === label;
-      return <NavLink aria-current={active ? "page" : false} aria-label={label} className={`${styles.navigationLink}${active ? ` ${styles.navigationLinkActive}` : ""}`} end={to === "/"} key={to} onClick={() => setNavigationOpen(false)} title={label} to={to}>
+      return <Fragment key={to}>{productionEnabled && (to === "/production/overview" || to === "/versions") && <span className={styles.navigationGroupLabel}>{to === "/production/overview" ? "生产与库存" : "管理与记录"}</span>}<Link aria-current={active ? "page" : undefined} aria-label={label} className={`${styles.navigationLink}${active ? ` ${styles.navigationLinkActive}` : ""}`} onClick={() => setNavigationOpen(false)} title={label} to={to}>
         <span aria-hidden="true" className={styles.navigationMark}><Icon /></span><span className={styles.navigationLabel}>{label}</span>
-      </NavLink>;
+      </Link></Fragment>;
     })}
   </nav>;
   const connection = (inDrawer = false) => <div className={`${styles.connectionState}${inDrawer ? ` ${styles.drawerConnection}` : ""}`}>
@@ -98,9 +104,9 @@ export function WorkspaceShell({ children, principal, siteContext, today, analyt
         {connection()}
       </aside>
       <div className={styles.workspace}>
-        <header className={styles.topbar}><div className={styles.topbarContext}><span>当前工作区</span><p><strong>{siteContext.display_name}</strong><i aria-hidden="true" /><span>{activeEntry?.label ?? "数据工作台"}</span></p></div>
+        {!warehouseFocusMode && <header className={styles.topbar}><div className={styles.topbarContext}><span>当前工作区</span><p><strong>{siteContext.display_name}</strong><i aria-hidden="true" /><span>{activeEntry?.label ?? "数据工作台"}</span></p></div>
           <div className={styles.topbarMeta}><span aria-live="polite" className={`${styles.connectionIndicator}${online ? ` ${styles.connected}` : ""}`}><i aria-hidden="true" />{online ? "已连接" : "连接不可用"}</span><span className={`topbar__timezone ${styles.topbarTimezone}`}><small>报告时区</small><strong>{siteContext.reporting_timezone}</strong></span></div>
-        </header>
+        </header>}
         {logoutError && !navigationOpen && <div className={styles.sessionError}>{logoutFailure}</div>}
         {children}
       </div>

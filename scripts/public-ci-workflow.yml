@@ -187,10 +187,52 @@ jobs:
           MATRIX_RUN_ID: ${{ steps.mysql.outputs.mysql_run_id }}
         run: ./scripts/cleanup-ci-mysql.ps1
 
+  java-production:
+    name: Java production / JDK 21
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and prepare reference contracts
+        shell: pwsh
+        run: ./scripts/prepare-public-ci.ps1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install locked verification dependencies
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Prepare required Linux images
+        run: |
+          docker pull mysql:8.4.11
+          docker pull eclipse-temurin:21-jre-jammy
+      - name: Run Java contracts and Linux image
+        run: python scripts/run-production-ci.py --output /tmp/clsen-production-ci
+      - name: Clean this job's Java MySQL resources
+        if: always()
+        run: python scripts/run-production-ci.py --cleanup-only --output /tmp/clsen-production-ci
+      - name: Upload redacted Java results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-production-results
+          path: |
+            /tmp/clsen-production-ci/*.log
+            /tmp/clsen-production-ci/result.json
+            /tmp/clsen-production-ci/resources.json
+
   public-required:
     name: public-required
     if: always()
-    needs: [backend-ubuntu, backend-windows, frontend, mysql-84]
+    needs: [backend-ubuntu, backend-windows, frontend, mysql-84, java-production]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every public profile

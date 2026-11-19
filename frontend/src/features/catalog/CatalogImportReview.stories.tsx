@@ -71,6 +71,8 @@ export const PendingChanges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // Fixture setup stays idempotent when Storybook replays after hot updates.
+    const pendingOnly = canvas.getByRole("checkbox", { name: "仅看待处理" });
+    if ((pendingOnly as HTMLInputElement).checked) await userEvent.click(pendingOnly);
     await fireEvent.change(canvas.getByLabelText("demo-style-1 standard_name"), { target: { value: "示例 · 雾蓝针织开衫" } });
     await fireEvent.change(canvas.getByLabelText("demo-style-2 standard_name"), { target: { value: "示例 · 暖灰直筒长裤" } });
     const summary = canvas.getByText("核对本次修改 · 2 行（含筛选隐藏的修改）");

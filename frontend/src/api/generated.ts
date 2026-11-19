@@ -2,7 +2,7 @@
  * Generated from FastAPI OpenAPI. Do not edit by hand.
  * Run: pwsh ./scripts/generate-api-client.ps1
  */
-// OpenAPI SHA-256: a8fc0e39a907cd22e0289b88754b312a536136e290ca13a8fbce76806605651d
+// OpenAPI SHA-256: 36c8223ef3b4fbbb3e95c809ba773c5d7d0ab5104eda83885a25729e3d0c019d
 
 export interface components {
   schemas: {
@@ -21,6 +21,7 @@ export interface components {
     "AuditEventResponse": { "actor_user_id": number | null; "actor_username": string | null; "event_type": string; "id": number; "object_id": string | null; "object_type": string; "occurred_at": string; "redacted_payload": Record<string, unknown>; "request_id": string | null; "site_id": number | null; };
     "AvailableSeries": { "active": boolean; "dimension": components["schemas"]["SeriesDimension"]; "key": string; "label": string; "sort_order": number; "total": components["schemas"]["MetricValue"]; };
     "BackupSnapshotStatus": { "audit_event_count": number; "backup_uuid": string; "completed_at": string | null; "database_name": string; "failure_code": string | null; "id": number; "key_id": string; "publication_count": number; "raw_file_count": number; "restore_verified_at": string | null; "schema_revision": string; "sealed_at": string | null; "started_at": string; "status": "running" | "sealed" | "succeeded" | "failed"; "version_count": number; };
+    "BatchReference": { "id": string; "revision": number; };
     "BatchReviewItemResponse": { "attempt_count": number; "batch_id": number; "dataset_id": number | null; "encoding": string | null; "filename": string; "id": number; "manual_review_url": string | null; "operation_token": string | null; "outcome_unknown": boolean; "reason_code": string | null; "reason_message": string | null; "recognition_status": string; "recovery_available": boolean; "report_date": string | null; "report_type": string | null; "retry_allowed": boolean; "selected": boolean; "status": string; "validation_run_id": number | null; "version_id": number | null; };
     "BatchReviewRunResponse": { "allowed_actions": Array<string>; "id": number; "items": Array<components["schemas"]["BatchReviewItemResponse"]>; "revision": number; "status": string; "summary": components["schemas"]["BatchReviewSummaryResponse"]; };
     "BatchReviewSummaryResponse": { "active": number; "eligible": number; "failed": number; "manual_review": number; "ready_for_publish": number; "skipped": number; "total": number; };
@@ -37,6 +38,8 @@ export interface components {
     "CellValue": string | number | null;
     "ChangeDateRequest": { "report_date": string; };
     "ChangeRowStateRequest": { "data_revision": number; "dataset_id": number; "operation": "exclude" | "restore" | "delete"; "pointed_at": string; "reason": string; "review_revision": number; "status": "draft" | "ready_for_publish"; };
+    "Command": { "expected_revision": number; "operation_token": string; "options"?: components["schemas"]["Options"]; "preview_hash"?: string; "reason"?: string; "target"?: "inventory_review" | "order" | "shipment" | null; };
+    "ComparisonRequest": { "references": Record<string, components["schemas"]["BatchReference"]>; };
     "ConfirmCatalogScopeRequest": { "expected_site_config_revision": number; "marketplace_scope_code": "amazon_us"; "operation_token": string; "reason": string; "seller_account_display_name": string; "seller_account_scope_key": string; };
     "ConfirmParseRequest": { "encoding": "utf-8-sig" | "utf-8" | "windows-1252"; "report_date": string; "report_type": "business_report" | "return_report"; "site_config_version_id"?: number | null; };
     "ConfirmRequest": { "confirmation_accepted": true; "confirmation_statement_version": string; "expected_revision": number; "selected_item_ids": Array<number>; };
@@ -47,6 +50,7 @@ export interface components {
     "CreateCatalogExportRequest": { "expected_catalog_publication_revision": number; "operation_token": string; };
     "CreateImportBatchNoteRequest": { "body": string; "visibility"?: "internal"; };
     "CreateNoteRequest": { "body": string; "expected_review_revision": number; "field_name"?: string | null; "row_id"?: number | null; "target_type"?: "version" | "row" | "field"; "visibility"?: "internal" | "viewer_visible"; };
+    "CreateProductionSource": { "expected_catalog_publication_revision": number; "operation_token": string; "source": components["schemas"]["ProductionSource"]; };
     "CreatePublishedMoveRequest": { "expected_source_publication": components["schemas"]["PublicationPointerRequest"]; "merge_decisions"?: Array<components["schemas"]["MergeDecisionRequest"]>; "reason": string; "source_dataset_id": number; "target": components["schemas"]["MoveTargetRequest"]; "target_report_date": string; };
     "CreateRevisionRequest": { "expected_publication": components["schemas"]["PublicationPointerRequest"]; "reason": string; };
     "CreateSiteConfigVersionRequest": { "change_reason": string; "currency_code": string; "effective_at": string; "reporting_timezone": string; "site_id": number; "source_timezone": string; };
@@ -54,16 +58,23 @@ export interface components {
     "CreateWorkbenchRevisionRequest": { "published_version_id": number; "reason": string; };
     "CsrfTokenResponse": { "csrf_token": string; };
     "CurrentUserResponse": { "display_name": string; "id": number; "roles": Array<string>; "username": string; };
+    "CutoffChange": { "type": "set_cutoff_note"; "value": string; };
     "DailyLedgerResponse": { "publications": Array<components["schemas"]["PublicationReference"]>; "range": components["schemas"]["DateRange"]; "rows": Array<components["schemas"]["DailyLedgerRow"]>; "site_config_versions": Array<components["schemas"]["SiteConfigurationReference"]>; };
     "DailyLedgerRow": { "business_status": components["schemas"]["ReportLedgerStatus"]; "conversion_rate": string | null; "counts_as_incomplete": boolean; "overall_status": components["schemas"]["OverallLedgerStatus"]; "pending_summary": string | null; "reasons": Array<components["schemas"]["LedgerReason"]>; "report_date": string; "return_quantity": number | null; "return_status": components["schemas"]["ReportLedgerStatus"]; "sales": string | null; "sessions": number | null; "units_ordered": number | null; };
     "DashboardMetric": { "business_version_id": number | null; "conversion_rate": string | null; "report_date": string; "return_quantity": number; "return_version_id": number | null; "sales": string; "sessions": number; "units_ordered": number; };
     "DashboardSummary": { "metrics": Array<components["schemas"]["DashboardMetric"]>; "publications": Array<components["schemas"]["PublicationReference"]>; "range": components["schemas"]["DateRange"]; "site_config_versions": Array<components["schemas"]["SiteConfigurationReference"]>; };
+    "DateChange": { "type": "set_stocktake_date"; "value": string | null; };
     "DateRange": { "from_date": string; "to_date": string; };
     "DateWorkbenchResponse": { "actions": Array<components["schemas"]["WorkbenchAction"]>; "columns": Array<components["schemas"]["WorkbenchColumnResponse"]>; "head": components["schemas"]["WorkbenchHeadResponse"] | null; "pagination": components["schemas"]["WorkbenchPaginationResponse"]; "pending_upload_count": number; "permissions": components["schemas"]["WorkbenchPermissionsResponse"]; "report_date": string; "report_type": components["schemas"]["ReportType"]; "rows": Array<components["schemas"]["WorkbenchRowResponse"]>; "source": components["schemas"]["WorkbenchSource"]; "tabs": Array<components["schemas"]["WorkbenchTabResponse"]>; "validation": components["schemas"]["WorkbenchValidationSummaryResponse"] | null; };
     "DecisionMutationRequest": { "decision_group_key"?: string | null; "mutation_id": string; "payload": Record<string, components["schemas"]["JsonValue"]>; "row_key"?: string | null; "type": string; };
     "DedupDecisionRequest": { "canonical_member_id"?: number | null; "decision": "confirmed_distinct" | "duplicate_of"; "expected_dedup_publication_revision": number; "expected_group_revision": number; "operation_token": string; "reason": string; };
-    "DedupPayloadResponse": { "payload": string; };
+    "DedupDecisionResponse": { "canonical_member_id": number | null; "decision": "confirmed_distinct" | "duplicate_of"; "dedup_publication_revision": number; "group_id": string; "group_revision": number; "payload": string; "snapshot_id": number; };
+    "DedupGroupsResponse": { "dedup_publication_revision": number; "groups": Array<components["schemas"]["ReturnDedupGroupResponse"]>; "page": number; "page_size": number; "payload": string; "snapshot_id": number; "total_items": number; };
     "DiscardDraftRequest": { "dataset_id": number; "expected_active_draft": components["schemas"]["VersionExpectationRequest"]; "reason": string; };
+    "DispatchReviewInput": { "layout"?: "standard" | "packing_totals"; "owner_id": string; "rows": Array<components["schemas"]["DispatchReviewRow"]>; "source_id": string; "sources"?: Array<components["schemas"]["DispatchSourceInput"]> | null; "warehouse_id": string; };
+    "DispatchReviewRow": { "actual_units": string; "line_id"?: string | null; "sku_id": string; "source_row"?: number | null; };
+    "DispatchSourceInput": { "layout"?: "standard" | "packing_totals"; "source_id": string; };
+    "DispatchSourcesInput": { "owner_id": string; "sources": Array<components["schemas"]["DispatchSourceInput"]>; "warehouse_id": string; };
     "DraftCommandResponse": { "completed_at": string; "data_revision": number; "dataset_id": number; "operation_token": string; "result_kind": "revision_created" | "published_move_revision_created" | "published_move_revision_cancelled"; "review_revision": number; "source_dataset_id": number | null; "source_version_id": number | null; "status": "draft" | "cancelled"; "version_id": number; "version_no": number; };
     "DraftHeadResponse": { "data_revision": number; "dataset_id": number; "pointed_at": string; "review_revision": number; "status": "draft" | "ready_for_publish"; "version_id": number; "version_no": number; };
     "DraftMutationResponse": { "data_revision": number; "dataset_id": number; "operation_token": string; "review_revision": number; "source_dataset_id": number | null; "source_version_id": number | null; "status": "draft" | "discarded" | "cancelled"; "superseded_version_ids": Array<number>; "version_id": number; "version_no": number; };
@@ -71,6 +82,7 @@ export interface components {
     "DraftWorkspaceHeadResponse": { "data_revision": number; "dataset_id": number; "pointed_at": string; "review_revision": number; "status": "draft" | "ready_for_publish"; "version_id": number; "version_no": number; };
     "EmptyMoveTargetRequest": { "dataset_id"?: null; "target_kind": "empty"; };
     "EmptyReassignmentTargetRequest": { "expected_dataset_id"?: null; "target_kind": "empty"; };
+    "ExportRequest": { "mode"?: "standard" | "wide" | "issues" | "template"; "query"?: string; "revision": number; };
     "FactBasis": "current" | "catalog_snapshot";
     "FieldChangeResponse": { "actor_user_id": number; "actor_username": string; "after": components["schemas"]["TypedFieldValueResponse"]; "before": components["schemas"]["TypedFieldValueResponse"]; "data_revision": number; "id": number; "occurred_at": string; "operation": "set" | "restore_source" | "restore_parent" | "restore_previous"; "reason": string; "restored_field_change_id": number | null; "restored_parent_version_id": number | null; "restored_source_row_id": number | null; };
     "FieldContractResponse": { "ascii_only": boolean; "editable": boolean; "included_in_totals": boolean; "kind": "text" | "integer" | "decimal" | "utc_datetime"; "max_length": number | null; "name": string; "nullable": boolean; "precision": number | null; "required_on_add": boolean; "scale": number | null; };
@@ -78,6 +90,7 @@ export interface components {
     "ForceRebuildDraftRequest": { "batch_id": number; "expected_active_draft": components["schemas"]["VersionExpectationRequest"]; "expected_publication_version_id"?: number | null; "parse_baseline_id": number; "reason": string; "report_date": string; };
     "FromExportImportRequest": { "expected_catalog_publication_revision": number; "export_id": number; "operation_token": string; };
     "FullValidationResponse": { "completed_at": string; "data_digest": string; "data_revision": number; "id": number; "is_current": boolean; "issues": Array<components["schemas"]["ValidationIssueResponse"]>; "result": "passed" | "failed" | "error"; "ruleset_version": string; "started_at": string; "status": "succeeded" | "failed"; "summary": Record<string, unknown>; };
+    "HandoffCommand": { "expected_revision": number; "handoff_preview_hash"?: string; "operation_token": string; "options"?: components["schemas"]["Options"]; "preview_hash"?: string; "reason"?: string; "target"?: "inventory_review" | "order" | "shipment" | null; };
     "HeartbeatThresholdsResponse": { "heartbeat_seconds": 10; "offline_seconds": 60; "refresh_seconds": 15; "stale_seconds": 30; };
     "ImportBatchNoteResponse": { "author_user_id": number; "author_username": string; "body": string; "created_at": string; "import_batch_id": number; "note_id": number; "note_key": string; "revision_number": number; "target_type"?: "import_batch"; "visibility": "internal" | "viewer_visible"; };
     "ImportReasonRequest": { "expected_workflow_revision": number; "operation_token": string; "reason": string; };
@@ -88,6 +101,9 @@ export interface components {
     "LatestNoteResponse": { "author_user_id": number; "author_username": string; "body": string; "created_at": string; "field_name": string | null; "note_id": number; "note_key": string; "review_revision": number; "revision_number": number; "row_id": number | null; "target_type": "version" | "row" | "field"; "visibility": "internal" | "viewer_visible"; };
     "LedgerReason": "blocking_issues" | "failed_import" | "file_integrity_error" | "draft" | "warnings" | "processing_import";
     "LineageType": "base" | "draft_predecessor" | "merge_target" | "merge_source" | "moved_source";
+    "ListingPreviewRequest": { "bindings": Record<string, number>; "expected_catalog_publication_revision": number; "expected_workflow_revision": number; "operation_token": string; "selections": Array<components["schemas"]["ListingSelection"]>; };
+    "ListingSelection": { "color"?: string; "confirm_raw_parent"?: boolean; "include"?: boolean; "note"?: string; "record_type"?: "unknown" | "parent" | "variant"; "row_id": string; "selected_sku_id"?: number | null; "size"?: string; "style_code"?: string; "use_official"?: boolean; };
+    "LocationChange": { "source_key": string; "type": "set_location"; "value": "WAREHOUSE_1" | "OUTSIDE_SCOPE" | "UNCONFIRMED"; };
     "LoginRequest": { "password": string; "username": string; };
     "LoginResponse": { "csrf_token": string; "expires_at": string; "user": components["schemas"]["CurrentUserResponse"]; };
     "MaintenanceStatusResponse": { "backups": Array<components["schemas"]["BackupSnapshotStatus"]>; "maintenance_active": boolean; "observed_at": string; "outbox": components["schemas"]["OutboxStatus"]; "queues": Array<components["schemas"]["QueueStatusResponse"]>; "restores": Array<components["schemas"]["RestoreVerificationStatus"]>; "worker": components["schemas"]["WorkerFleetStatusResponse"]; "write_lock": components["schemas"]["MaintenanceWriteLockStatus"]; };
@@ -105,21 +121,30 @@ export interface components {
     "MetricValues": { "conversion": components["schemas"]["MetricValue"]; "returns": components["schemas"]["MetricValue"]; "sales": components["schemas"]["MetricValue"]; "sessions": components["schemas"]["MetricValue"]; "units": components["schemas"]["MetricValue"]; };
     "MoveTargetRequest": components["schemas"]["EmptyMoveTargetRequest"] | components["schemas"]["PublishedMoveTargetRequest"] | components["schemas"]["ActiveDraftMoveTargetRequest"];
     "NullReason": "missing_report" | "undefined_denominator" | "no_observed_reports";
+    "Options": { "aggregate_duplicates"?: boolean; "aggregation_reason"?: string; "columns"?: Record<string, number>; "context"?: Record<string, string>; "decisions"?: Record<string, Record<string, unknown>>; "end_row"?: number | null; "header_row"?: number | null; "profile_id"?: string | null; "profile_version"?: number | null; "sheet"?: string; "start_row"?: number | null; "zero_policy"?: "unknown" | "blank_slash_zero"; };
     "OutboxStatus": { "completed": number; "failed": number; "oldest_pending_at": string | null; "pending": number; "processing": number; };
     "OverallLedgerStatus": "complete" | "partial" | "review" | "blocked" | "empty" | "future";
+    "PackingDraftLine": { "actual_units": string; "order_reference_note"?: string; "review_note"?: string; "source_row": number; };
     "ParentRestoreOptionResponse": { "parent_version_id": number; "value": components["schemas"]["TypedFieldValueResponse"]; };
+    "ParseProductionSource": { "content": string; "format": "csv" | "tsv" | "xlsx"; "source_name": string; };
     "PreflightRequest": { "batch_ids": Array<number>; };
+    "PreviewCommand": { "changes": Array<components["schemas"]["LocationChange"] | components["schemas"]["DateChange"] | components["schemas"]["CutoffChange"] | components["schemas"]["SizeChange"] | components["schemas"]["TotalChange"] | components["schemas"]["ProductChange"] | components["schemas"]["RestoreChange"]>; "expected_revision": number; "reason": string; "source_identity": string; };
     "ProductCardResponse": { "latest_published_date": string | null; "name_status": components["schemas"]["ProductNameStatus"]; "product_name": string | null; "publications": Array<components["schemas"]["PublicationReference"]>; "range": components["schemas"]["DateRange"]; "site_config_versions": Array<components["schemas"]["SiteConfigurationReference"]>; "style_code": string; "summary": components["schemas"]["ProductCardSummary"]; "trend": Array<components["schemas"]["ProductTrendPoint"]>; "variants": Array<components["schemas"]["ProductVariant"]>; };
     "ProductCardSummary": { "conversion_rate": string | null; "published_days": number; "return_quantity": number; "sales": string; "sessions": number; "units_ordered": number; };
+    "ProductChange": { "size": "XS" | "S" | "M" | "L" | "XL" | "XXL" | "3XL"; "source_key": string; "type": "set_product"; "value": components["schemas"]["ProductReference"] | null; };
     "ProductDashboard": { "publications": Array<components["schemas"]["PublicationReference"]>; "range": components["schemas"]["DateRange"]; "rows": Array<components["schemas"]["ProductMetric"]>; "site_config_versions": Array<components["schemas"]["SiteConfigurationReference"]>; };
     "ProductLedgerResponse": { "direction": components["schemas"]["SortDirection"]; "page": number; "page_size": number; "publications": Array<components["schemas"]["PublicationReference"]>; "range": components["schemas"]["DateRange"]; "rows": Array<components["schemas"]["ProductLedgerRow"]>; "site_config_versions": Array<components["schemas"]["SiteConfigurationReference"]>; "sort": components["schemas"]["ProductLedgerSort"]; "total_rows": number; };
     "ProductLedgerRow": { "color_count": number; "conversion_rate": string | null; "latest_published_date": string | null; "name_status": components["schemas"]["ProductNameStatus"]; "product_name": string | null; "published_days": number; "return_quantity": number; "row_kind": components["schemas"]["ProductRowKind"]; "sales": string; "sessions": number; "size_count": number; "style_code": string | null; "unclassified_sku": string | null; "units_ordered": number; "variant_count": number; };
     "ProductLedgerSort": "sales" | "units_ordered" | "sessions" | "conversion_rate" | "return_quantity" | "published_days" | "latest_published_date" | "style_code" | "product_name";
     "ProductMetric": { "asin": string | null; "conversion_rate": string | null; "sales": string; "sessions": number; "sku": string | null; "units_ordered": number; };
     "ProductNameStatus": "available" | "multiple" | "missing";
+    "ProductReference": { "catalog_publication_revision": string; "catalog_version_id": string; "sku_id": string; };
     "ProductRowKind": "product" | "unclassified";
     "ProductTrendPoint": { "conversion_rate": string | null; "report_date": string; "return_quantity": number; "sales": string; "sessions": number; "units_ordered": number; };
     "ProductVariant": { "asins": Array<string>; "color": string; "fnskus": Array<string>; "product_name": string | null; "seller_sku": string; "size": string; };
+    "ProductionSource": { "channel_evidence"?: string | null; "report_source_scope_id"?: number | null; "rows": Array<components["schemas"]["ProductionSourceRow"]>; "source_name": string; };
+    "ProductionSourceRow": { "color": string; "formal_sku"?: string | null; "selected_sku_id"?: number | null; "size": string; "source_location"?: string | null; "style_code": string; };
+    "ProfileRequest": { "batch_id": string; "expected_version"?: number | null; "name": string; "shared"?: boolean; };
     "PublicationCommandResponse": { "command_id": number; "command_type": "publish" | "rollback" | "move" | "reverse_move"; "completed_at": string; "operation_token": string; "transitions": Array<components["schemas"]["PublicationTransitionResponse"]>; };
     "PublicationConfirmationRequest": { "confirmed_report_date": string; "report_type": "business_report" | "return_report"; "row_count": number; "totals"?: Array<components["schemas"]["ConfirmationTotalRequest"]>; };
     "PublicationDay": { "dataset_id": string | null; "pointer_revision": number | null; "published_version_id": string | null; "report_date": string; "report_status": components["schemas"]["ReportStatus"]; "report_type": components["schemas"]["ReportType"]; "snapshot_member_id": string | null; };
@@ -149,10 +174,15 @@ export interface components {
     "ReassignDraftDateRequest": { "merge_decisions"?: Array<components["schemas"]["MergeDecisionRequest"]>; "reason": string; "source_dataset_id": number; "source_draft": components["schemas"]["VersionExpectationRequest"]; "target": components["schemas"]["ReassignmentTargetRequest"]; "target_report_date": string; };
     "ReassignmentTargetRequest": components["schemas"]["EmptyReassignmentTargetRequest"] | components["schemas"]["PublishedReassignmentTargetRequest"] | components["schemas"]["ActiveDraftReassignmentTargetRequest"];
     "RebaseImportRequest": { "expected_catalog_publication_revision": number; "expected_workflow_revision": number; "operation_token": string; "replacement_export_id": number; };
+    "RebaseProductionSource": { "expected_catalog_publication_revision": number; "expected_workflow_revision": number; "operation_token": string; };
+    "RenameCatalogScopeRequest": { "display_name": string; "expected_revision": number; "operation_token": string; "reason": string; "scope_id": number; };
     "ReportLedgerStatus": "published" | "draft" | "processing" | "failed" | "blocked" | "missing" | "future";
+    "ReportSelection": { "action": "map" | "create" | "exclude"; "color"?: string; "expected_catalog_publication_revision": number; "expected_workflow_revision"?: number | null; "reason": string; "replace_import_id"?: number | null; "scope_id": number; "selected_sku_id"?: number | null; "size"?: string; "source_key": string; "style_code"?: string; "version_ids": Array<number>; };
+    "ReportSource": { "scope_id": number; "source_key": string; "version_ids": Array<number>; };
     "ReportStatus": "published" | "missing";
     "ReportType": "business_report" | "return_report";
     "RestoreCatalogVersionRequest": { "expected_catalog_publication_revision": number; "operation_token": string; "reason": string; };
+    "RestoreChange": { "field": "location" | "stocktaken_on" | "cutoff_note" | "reviewed_total" | "XS" | "S" | "M" | "L" | "XL" | "XXL" | "3XL"; "source_key"?: string | null; "type": "restore_source_field"; };
     "RestoreFieldRequest": { "data_revision": number; "dataset_id": number; "field_change_id"?: number | null; "parent_version_id"?: number | null; "parsed_source_row_id"?: number | null; "pointed_at": string; "reason": string; "review_revision": number; "row_id": number; "source_batch_id"?: number | null; "source_kind": "previous" | "parent" | "source"; "status": "draft" | "ready_for_publish"; };
     "RestoreVerificationStatus": { "backup_uuid": string; "completed_at": string | null; "failure_code": string | null; "id": number; "started_at": string; "status": "running" | "succeeded" | "failed"; "target_database_name": string; "verification_uuid": string; };
     "ResumeCatalogExportRequest": { "expected_job_revision": number; "operation_token": string; };
@@ -181,6 +211,10 @@ export interface components {
     "RollbackRequest": { "expected_publication": components["schemas"]["PublicationPointerRequest"]; "reason": string; "target_version_id": number; };
     "RowChangeResponse": { "actor_user_id": number; "actor_username": string; "after": Record<string, unknown>; "before": Record<string, unknown>; "data_revision": number; "id": number; "occurred_at": string; "operation": "add" | "exclude" | "restore" | "delete"; "reason": string; "source_batch_id": number | null; };
     "RunValidationRequest": { "data_revision": number; "dataset_id": number; "ruleset_version": string; };
+    "SaveCommand": { "changes": Array<components["schemas"]["LocationChange"] | components["schemas"]["DateChange"] | components["schemas"]["CutoffChange"] | components["schemas"]["SizeChange"] | components["schemas"]["TotalChange"] | components["schemas"]["ProductChange"] | components["schemas"]["RestoreChange"]>; "expected_revision": number; "preview_hash": string; "reason": string; "source_identity": string; };
+    "SavePackingDraft": { "business_date"?: string; "business_number"?: string; "lines": Array<components["schemas"]["PackingDraftLine"]>; "notes"?: string; "revision": number; "source_digest": string; };
+    "SaveReportSelection": { "action": "map" | "create" | "exclude"; "color"?: string; "expected_catalog_publication_revision": number; "expected_workflow_revision"?: number | null; "operation_token": string; "preview_digest": string; "reason": string; "replace_import_id"?: number | null; "scope_id": number; "selected_sku_id"?: number | null; "size"?: string; "source_key": string; "style_code"?: string; "version_ids": Array<number>; };
+    "SaveSourceDraft": { "business_date": string; "business_number"?: string; "lines": Array<components["schemas"]["SourceDraftLine"]>; "notes"?: string; "revision": number; "source_digest": string; };
     "SeriesDimension": "total" | "color" | "size" | "sku";
     "SetFieldRequest": { "data_revision": number; "dataset_id": number; "field_name": string; "pointed_at": string; "reason": string; "review_revision": number; "row_id": number; "status": "draft" | "ready_for_publish"; "value": components["schemas"]["TypedFieldValueRequest"]; };
     "SetWorkbenchCellRequest": { "expected_cell_revision": number; "head": components["schemas"]["WorkbenchExpectedHeadRequest"]; "reason": string; "value": components["schemas"]["WorkbenchCellValueRequest"]; };
@@ -189,21 +223,25 @@ export interface components {
     "SiteContextResponse": { "currency_code": string; "display_name": string; "reporting_timezone": string; "site_code": string; "site_config_version_id": number; "site_id": number; "source_timezone": string; };
     "SiteCoverage": { "business": components["schemas"]["CoverageBlock"]; "returns": components["schemas"]["CoverageBlock"]; "scope": "site"; };
     "SiteReconciliation": { "duplicate_totals": components["schemas"]["MetricTotals"]; "excluded_totals": components["schemas"]["MetricTotals"]; "mapped_totals": components["schemas"]["MetricTotals"]; "metric_status": components["schemas"]["MetricEvaluability"]; "scope": "site"; "source_totals": components["schemas"]["MetricTotals"]; "unmatched_totals": components["schemas"]["MetricTotals"]; "unresolved_duplicate_totals": components["schemas"]["MetricTotals"]; };
+    "SizeChange": { "size": "XS" | "S" | "M" | "L" | "XL" | "XXL" | "3XL"; "source_key": string; "type": "set_size_quantity"; "value": string | null; };
     "SortDirection": "asc" | "desc";
     "SourceBatchResponse": { "batch_id": number; };
     "SourceCompleteness": "complete" | "partial" | "indeterminate";
+    "SourceDraftLine": { "expected_units": string; "review_note"?: string; "source_row": number; };
     "SourceReportCoverage": { "contributing_report_date_from": string | null; "contributing_report_date_to": string | null; "coverage_from": string; "coverage_to": string; "days": Array<components["schemas"]["PublicationDay"]>; };
     "SourceRestoreOptionResponse": { "parsed_source_row_id": number; "source_batch_id": number; "value": components["schemas"]["TypedFieldValueResponse"]; };
-    "StyleCardResponse": { "available_series": Array<components["schemas"]["AvailableSeries"]>; "effective_return_basis": components["schemas"]["ReturnBasis"]; "permissions": components["schemas"]["AnalyticsPermissions"]; "provenance": components["schemas"]["AnalyticsProvenance"]; "series": Array<components["schemas"]["TrendSeries"]>; "source_report_coverage": components["schemas"]["SourceReportCoverage"]; "style": components["schemas"]["StyleIdentity"]; "style_reconciliation": components["schemas"]["StyleReconciliation"]; "summary": components["schemas"]["StyleSummary"]; "trend_effective_return_basis": components["schemas"]["ReturnBasis"] | null; "variants": Array<components["schemas"]["StyleVariant"]>; };
+    "StartReview": { "source_digest": string; "source_manifest_digest": string; };
+    "StyleCardResponse": { "available_series": Array<components["schemas"]["AvailableSeries"]>; "effective_return_basis": components["schemas"]["ReturnBasis"]; "permissions": components["schemas"]["AnalyticsPermissions"]; "platform_identity_review": Record<string, unknown> | null; "provenance": components["schemas"]["AnalyticsProvenance"]; "series": Array<components["schemas"]["TrendSeries"]>; "source_report_coverage": components["schemas"]["SourceReportCoverage"]; "style": components["schemas"]["StyleIdentity"]; "style_reconciliation": components["schemas"]["StyleReconciliation"]; "summary": components["schemas"]["StyleSummary"]; "trend_effective_return_basis": components["schemas"]["ReturnBasis"] | null; "variants": Array<components["schemas"]["StyleVariant"]>; };
     "StyleChangeApproveRequest": { "expected_catalog_publication_revision": number; "expected_draft_revision": number; "operation_token": string; "reason": string; };
     "StyleChangeDraftRequest": { "category_action": string; "category_id"?: number | null; "expected_catalog_publication_revision": number; "expected_style_revision": number; "operation_token": string; "standard_name": string; };
     "StyleIdentity": { "color_count": number; "size_count": number; "sku_count": number; "standard_name": string; "status": "enabled" | "disabled"; "style_code": string; "style_id": string; };
-    "StyleLedgerResponse": { "coverage": components["schemas"]["SiteCoverage"]; "direction": "asc" | "desc"; "filtered_sales_total": string | null; "page": number; "page_size": number; "permissions": components["schemas"]["AnalyticsPermissions"]; "provenance": components["schemas"]["AnalyticsProvenance"]; "reconciliation": components["schemas"]["SiteReconciliation"]; "rows": Array<components["schemas"]["StyleLedgerRow"]>; "sort": "style_code" | "standard_name" | "units" | "sales" | "returns" | "sessions" | "conversion"; "total_rows": number; };
+    "StyleLedgerResponse": { "coverage": components["schemas"]["SiteCoverage"]; "direction": "asc" | "desc"; "filtered_sales_total": string | null; "page": number; "page_size": number; "permissions": components["schemas"]["AnalyticsPermissions"]; "platform_identity_review": Record<string, unknown> | null; "provenance": components["schemas"]["AnalyticsProvenance"]; "reconciliation": components["schemas"]["SiteReconciliation"]; "rows": Array<components["schemas"]["StyleLedgerRow"]>; "sort": "style_code" | "standard_name" | "units" | "sales" | "returns" | "sessions" | "conversion"; "total_rows": number; };
     "StyleLedgerRow": { "color_count": number; "latest_report_date": string | null; "metrics": components["schemas"]["MetricValues"]; "size_count": number; "sku_count": number; "source_title_count": number; "standard_name": string; "status": "enabled" | "disabled"; "style_code": string; "style_id": string; };
     "StyleReconciliation": { "metric_status": components["schemas"]["MetricEvaluability"]; "scope": "style"; "selected_color_totals": components["schemas"]["MetricTotals"] | null; "series_scope": "style" | "selected_color"; "series_scope_totals": components["schemas"]["MetricTotals"]; "summary_totals": components["schemas"]["MetricTotals"]; "variant_totals": components["schemas"]["MetricTotals"]; };
     "StyleSummary": { "metrics": components["schemas"]["MetricValues"]; };
-    "StyleVariant": { "internal_display_sku": string; "metrics": components["schemas"]["MetricValues"]; "seller_sku_aliases": Array<components["schemas"]["app__analytics__style_models__SafeSourceRef"]>; "sku_id": string; "standard_color": string; "standard_size": string; "status": "enabled" | "disabled"; };
+    "StyleVariant": { "internal_display_sku": string | null; "metrics": components["schemas"]["MetricValues"]; "seller_sku_aliases": Array<components["schemas"]["app__analytics__style_models__SafeSourceRef"]>; "sku_id": string; "standard_color": string; "standard_size": string; "status": "enabled" | "disabled"; };
     "SupportedEncoding": "utf-8-sig" | "utf-8" | "windows-1252";
+    "TotalChange": { "source_key": string; "type": "set_reviewed_total"; "value": string | null; };
     "TrendPoint": { "date": string; "denominator": number | null; "null_reason": components["schemas"]["NullReason"] | null; "numerator": number | null; "source_completeness": components["schemas"]["SourceCompleteness"]; "value": number | string | null; "value_state": components["schemas"]["ValueState"]; };
     "TrendSeries": { "key": string; "points": Array<components["schemas"]["TrendPoint"]>; };
     "TypedFieldValueRequest": { "type": "text" | "integer" | "decimal" | "utc_datetime" | "null"; "value": string | number | null; };
@@ -267,6 +305,7 @@ export type AuditEventPageResponse = components["schemas"]["AuditEventPageRespon
 export type AuditEventResponse = components["schemas"]["AuditEventResponse"];
 export type AvailableSeries = components["schemas"]["AvailableSeries"];
 export type BackupSnapshotStatus = components["schemas"]["BackupSnapshotStatus"];
+export type BatchReference = components["schemas"]["BatchReference"];
 export type BatchReviewItemResponse = components["schemas"]["BatchReviewItemResponse"];
 export type BatchReviewRunResponse = components["schemas"]["BatchReviewRunResponse"];
 export type BatchReviewSummaryResponse = components["schemas"]["BatchReviewSummaryResponse"];
@@ -283,6 +322,8 @@ export type CellComparisonResponse = components["schemas"]["CellComparisonRespon
 export type CellValue = components["schemas"]["CellValue"];
 export type ChangeDateRequest = components["schemas"]["ChangeDateRequest"];
 export type ChangeRowStateRequest = components["schemas"]["ChangeRowStateRequest"];
+export type Command = components["schemas"]["Command"];
+export type ComparisonRequest = components["schemas"]["ComparisonRequest"];
 export type ConfirmCatalogScopeRequest = components["schemas"]["ConfirmCatalogScopeRequest"];
 export type ConfirmParseRequest = components["schemas"]["ConfirmParseRequest"];
 export type ConfirmRequest = components["schemas"]["ConfirmRequest"];
@@ -293,6 +334,7 @@ export type CoverageStatus = components["schemas"]["CoverageStatus"];
 export type CreateCatalogExportRequest = components["schemas"]["CreateCatalogExportRequest"];
 export type CreateImportBatchNoteRequest = components["schemas"]["CreateImportBatchNoteRequest"];
 export type CreateNoteRequest = components["schemas"]["CreateNoteRequest"];
+export type CreateProductionSource = components["schemas"]["CreateProductionSource"];
 export type CreatePublishedMoveRequest = components["schemas"]["CreatePublishedMoveRequest"];
 export type CreateRevisionRequest = components["schemas"]["CreateRevisionRequest"];
 export type CreateSiteConfigVersionRequest = components["schemas"]["CreateSiteConfigVersionRequest"];
@@ -300,16 +342,23 @@ export type CreateUserRequest = components["schemas"]["CreateUserRequest"];
 export type CreateWorkbenchRevisionRequest = components["schemas"]["CreateWorkbenchRevisionRequest"];
 export type CsrfTokenResponse = components["schemas"]["CsrfTokenResponse"];
 export type CurrentUserResponse = components["schemas"]["CurrentUserResponse"];
+export type CutoffChange = components["schemas"]["CutoffChange"];
 export type DailyLedgerResponse = components["schemas"]["DailyLedgerResponse"];
 export type DailyLedgerRow = components["schemas"]["DailyLedgerRow"];
 export type DashboardMetric = components["schemas"]["DashboardMetric"];
 export type DashboardSummary = components["schemas"]["DashboardSummary"];
+export type DateChange = components["schemas"]["DateChange"];
 export type DateRange = components["schemas"]["DateRange"];
 export type DateWorkbenchResponse = components["schemas"]["DateWorkbenchResponse"];
 export type DecisionMutationRequest = components["schemas"]["DecisionMutationRequest"];
 export type DedupDecisionRequest = components["schemas"]["DedupDecisionRequest"];
-export type DedupPayloadResponse = components["schemas"]["DedupPayloadResponse"];
+export type DedupDecisionResponse = components["schemas"]["DedupDecisionResponse"];
+export type DedupGroupsResponse = components["schemas"]["DedupGroupsResponse"];
 export type DiscardDraftRequest = components["schemas"]["DiscardDraftRequest"];
+export type DispatchReviewInput = components["schemas"]["DispatchReviewInput"];
+export type DispatchReviewRow = components["schemas"]["DispatchReviewRow"];
+export type DispatchSourceInput = components["schemas"]["DispatchSourceInput"];
+export type DispatchSourcesInput = components["schemas"]["DispatchSourcesInput"];
 export type DraftCommandResponse = components["schemas"]["DraftCommandResponse"];
 export type DraftHeadResponse = components["schemas"]["DraftHeadResponse"];
 export type DraftMutationResponse = components["schemas"]["DraftMutationResponse"];
@@ -317,6 +366,7 @@ export type DraftPointerRequest = components["schemas"]["DraftPointerRequest"];
 export type DraftWorkspaceHeadResponse = components["schemas"]["DraftWorkspaceHeadResponse"];
 export type EmptyMoveTargetRequest = components["schemas"]["EmptyMoveTargetRequest"];
 export type EmptyReassignmentTargetRequest = components["schemas"]["EmptyReassignmentTargetRequest"];
+export type ExportRequest = components["schemas"]["ExportRequest"];
 export type FactBasis = components["schemas"]["FactBasis"];
 export type FieldChangeResponse = components["schemas"]["FieldChangeResponse"];
 export type FieldContractResponse = components["schemas"]["FieldContractResponse"];
@@ -324,6 +374,7 @@ export type FinalizePublishedMoveRequest = components["schemas"]["FinalizePublis
 export type ForceRebuildDraftRequest = components["schemas"]["ForceRebuildDraftRequest"];
 export type FromExportImportRequest = components["schemas"]["FromExportImportRequest"];
 export type FullValidationResponse = components["schemas"]["FullValidationResponse"];
+export type HandoffCommand = components["schemas"]["HandoffCommand"];
 export type HeartbeatThresholdsResponse = components["schemas"]["HeartbeatThresholdsResponse"];
 export type ImportBatchNoteResponse = components["schemas"]["ImportBatchNoteResponse"];
 export type ImportReasonRequest = components["schemas"]["ImportReasonRequest"];
@@ -334,6 +385,9 @@ export type JsonValue = components["schemas"]["JsonValue"];
 export type LatestNoteResponse = components["schemas"]["LatestNoteResponse"];
 export type LedgerReason = components["schemas"]["LedgerReason"];
 export type LineageType = components["schemas"]["LineageType"];
+export type ListingPreviewRequest = components["schemas"]["ListingPreviewRequest"];
+export type ListingSelection = components["schemas"]["ListingSelection"];
+export type LocationChange = components["schemas"]["LocationChange"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type LoginResponse = components["schemas"]["LoginResponse"];
 export type MaintenanceStatusResponse = components["schemas"]["MaintenanceStatusResponse"];
@@ -351,21 +405,30 @@ export type MetricValue = components["schemas"]["MetricValue"];
 export type MetricValues = components["schemas"]["MetricValues"];
 export type MoveTargetRequest = components["schemas"]["MoveTargetRequest"];
 export type NullReason = components["schemas"]["NullReason"];
+export type Options = components["schemas"]["Options"];
 export type OutboxStatus = components["schemas"]["OutboxStatus"];
 export type OverallLedgerStatus = components["schemas"]["OverallLedgerStatus"];
+export type PackingDraftLine = components["schemas"]["PackingDraftLine"];
 export type ParentRestoreOptionResponse = components["schemas"]["ParentRestoreOptionResponse"];
+export type ParseProductionSource = components["schemas"]["ParseProductionSource"];
 export type PreflightRequest = components["schemas"]["PreflightRequest"];
+export type PreviewCommand = components["schemas"]["PreviewCommand"];
 export type ProductCardResponse = components["schemas"]["ProductCardResponse"];
 export type ProductCardSummary = components["schemas"]["ProductCardSummary"];
+export type ProductChange = components["schemas"]["ProductChange"];
 export type ProductDashboard = components["schemas"]["ProductDashboard"];
 export type ProductLedgerResponse = components["schemas"]["ProductLedgerResponse"];
 export type ProductLedgerRow = components["schemas"]["ProductLedgerRow"];
 export type ProductLedgerSort = components["schemas"]["ProductLedgerSort"];
 export type ProductMetric = components["schemas"]["ProductMetric"];
 export type ProductNameStatus = components["schemas"]["ProductNameStatus"];
+export type ProductReference = components["schemas"]["ProductReference"];
 export type ProductRowKind = components["schemas"]["ProductRowKind"];
 export type ProductTrendPoint = components["schemas"]["ProductTrendPoint"];
 export type ProductVariant = components["schemas"]["ProductVariant"];
+export type ProductionSource = components["schemas"]["ProductionSource"];
+export type ProductionSourceRow = components["schemas"]["ProductionSourceRow"];
+export type ProfileRequest = components["schemas"]["ProfileRequest"];
 export type PublicationCommandResponse = components["schemas"]["PublicationCommandResponse"];
 export type PublicationConfirmationRequest = components["schemas"]["PublicationConfirmationRequest"];
 export type PublicationDay = components["schemas"]["PublicationDay"];
@@ -395,10 +458,15 @@ export type RawFilePreviewResponse = components["schemas"]["RawFilePreviewRespon
 export type ReassignDraftDateRequest = components["schemas"]["ReassignDraftDateRequest"];
 export type ReassignmentTargetRequest = components["schemas"]["ReassignmentTargetRequest"];
 export type RebaseImportRequest = components["schemas"]["RebaseImportRequest"];
+export type RebaseProductionSource = components["schemas"]["RebaseProductionSource"];
+export type RenameCatalogScopeRequest = components["schemas"]["RenameCatalogScopeRequest"];
 export type ReportLedgerStatus = components["schemas"]["ReportLedgerStatus"];
+export type ReportSelection = components["schemas"]["ReportSelection"];
+export type ReportSource = components["schemas"]["ReportSource"];
 export type ReportStatus = components["schemas"]["ReportStatus"];
 export type ReportType = components["schemas"]["ReportType"];
 export type RestoreCatalogVersionRequest = components["schemas"]["RestoreCatalogVersionRequest"];
+export type RestoreChange = components["schemas"]["RestoreChange"];
 export type RestoreFieldRequest = components["schemas"]["RestoreFieldRequest"];
 export type RestoreVerificationStatus = components["schemas"]["RestoreVerificationStatus"];
 export type ResumeCatalogExportRequest = components["schemas"]["ResumeCatalogExportRequest"];
@@ -427,6 +495,10 @@ export type RoleResponse = components["schemas"]["RoleResponse"];
 export type RollbackRequest = components["schemas"]["RollbackRequest"];
 export type RowChangeResponse = components["schemas"]["RowChangeResponse"];
 export type RunValidationRequest = components["schemas"]["RunValidationRequest"];
+export type SaveCommand = components["schemas"]["SaveCommand"];
+export type SavePackingDraft = components["schemas"]["SavePackingDraft"];
+export type SaveReportSelection = components["schemas"]["SaveReportSelection"];
+export type SaveSourceDraft = components["schemas"]["SaveSourceDraft"];
 export type SeriesDimension = components["schemas"]["SeriesDimension"];
 export type SetFieldRequest = components["schemas"]["SetFieldRequest"];
 export type SetWorkbenchCellRequest = components["schemas"]["SetWorkbenchCellRequest"];
@@ -435,11 +507,14 @@ export type SiteConfigurationReference = components["schemas"]["SiteConfiguratio
 export type SiteContextResponse = components["schemas"]["SiteContextResponse"];
 export type SiteCoverage = components["schemas"]["SiteCoverage"];
 export type SiteReconciliation = components["schemas"]["SiteReconciliation"];
+export type SizeChange = components["schemas"]["SizeChange"];
 export type SortDirection = components["schemas"]["SortDirection"];
 export type SourceBatchResponse = components["schemas"]["SourceBatchResponse"];
 export type SourceCompleteness = components["schemas"]["SourceCompleteness"];
+export type SourceDraftLine = components["schemas"]["SourceDraftLine"];
 export type SourceReportCoverage = components["schemas"]["SourceReportCoverage"];
 export type SourceRestoreOptionResponse = components["schemas"]["SourceRestoreOptionResponse"];
+export type StartReview = components["schemas"]["StartReview"];
 export type StyleCardResponse = components["schemas"]["StyleCardResponse"];
 export type StyleChangeApproveRequest = components["schemas"]["StyleChangeApproveRequest"];
 export type StyleChangeDraftRequest = components["schemas"]["StyleChangeDraftRequest"];
@@ -450,6 +525,7 @@ export type StyleReconciliation = components["schemas"]["StyleReconciliation"];
 export type StyleSummary = components["schemas"]["StyleSummary"];
 export type StyleVariant = components["schemas"]["StyleVariant"];
 export type SupportedEncoding = components["schemas"]["SupportedEncoding"];
+export type TotalChange = components["schemas"]["TotalChange"];
 export type TrendPoint = components["schemas"]["TrendPoint"];
 export type TrendSeries = components["schemas"]["TrendSeries"];
 export type TypedFieldValueRequest = components["schemas"]["TypedFieldValueRequest"];
@@ -543,18 +619,40 @@ export const API_OPERATIONS = {
   "submit_catalog_import_api_catalog_imports__import_id__submit_post": { method: "POST", path: "/api/catalog/imports/{import_id}/submit" },
   "validate_catalog_import_api_catalog_imports__import_id__validate_post": { method: "POST", path: "/api/catalog/imports/{import_id}/validate" },
   "withdraw_catalog_import_api_catalog_imports__import_id__withdraw_post": { method: "POST", path: "/api/catalog/imports/{import_id}/withdraw" },
+  "current_platform_status_api_catalog_listing_sources_platform_status_get": { method: "GET", path: "/api/catalog/listing-sources/platform/status" },
+  "style_platform_status_api_catalog_listing_sources_styles__style_id__status_get": { method: "GET", path: "/api/catalog/listing-sources/styles/{style_id}/status" },
+  "upload_listing_api_catalog_listing_sources_uploads_post": { method: "POST", path: "/api/catalog/listing-sources/uploads" },
+  "detail_api_catalog_listing_sources__import_id__get": { method: "GET", path: "/api/catalog/listing-sources/{import_id}" },
+  "compare_api_catalog_listing_sources__import_id__compare_post": { method: "POST", path: "/api/catalog/listing-sources/{import_id}/compare" },
+  "preview_api_catalog_listing_sources__import_id__preview_post": { method: "POST", path: "/api/catalog/listing-sources/{import_id}/preview" },
+  "recent_sources_api_catalog_production_sources_get": { method: "GET", path: "/api/catalog/production-sources" },
+  "create_api_catalog_production_sources_post": { method: "POST", path: "/api/catalog/production-sources" },
+  "capabilities_api_catalog_production_sources_capabilities_get": { method: "GET", path: "/api/catalog/production-sources/capabilities" },
+  "parse_source_api_catalog_production_sources_parse_post": { method: "POST", path: "/api/catalog/production-sources/parse" },
+  "preview_api_catalog_production_sources_preview_post": { method: "POST", path: "/api/catalog/production-sources/preview" },
+  "source_template_api_catalog_production_sources_template_get": { method: "GET", path: "/api/catalog/production-sources/template" },
+  "rebase_api_catalog_production_sources__import_id__rebase_post": { method: "POST", path: "/api/catalog/production-sources/{import_id}/rebase" },
+  "report_product_matching_api_catalog_report_matching__version_id__get": { method: "GET", path: "/api/catalog/report-matching/{version_id}" },
   "list_return_dedup_groups_api_catalog_return_dedup_groups_get": { method: "GET", path: "/api/catalog/return-dedup/groups" },
   "decide_return_dedup_group_api_catalog_return_dedup_groups__group_id__decision_post": { method: "POST", path: "/api/catalog/return-dedup/groups/{group_id}/decision" },
   "reveal_approved_source_api_catalog_source_identifiers__source_ref_id__get": { method: "GET", path: "/api/catalog/source-identifiers/{source_ref_id}" },
   "get_catalog_scope_api_catalog_source_scope_get": { method: "GET", path: "/api/catalog/source-scope" },
   "confirm_catalog_scope_api_catalog_source_scope_confirm_post": { method: "POST", path: "/api/catalog/source-scope/confirm" },
+  "get_display_name_api_catalog_source_scope_display_name_get": { method: "GET", path: "/api/catalog/source-scope/display-name" },
+  "rename_display_name_api_catalog_source_scope_display_name_post": { method: "POST", path: "/api/catalog/source-scope/display-name" },
   "preview_style_change_api_catalog_style_change_drafts__draft_id__get": { method: "GET", path: "/api/catalog/style-change-drafts/{draft_id}" },
   "approve_style_change_api_catalog_style_change_drafts__draft_id__approve_post": { method: "POST", path: "/api/catalog/style-change-drafts/{draft_id}/approve" },
   "list_catalog_styles_api_catalog_styles_get": { method: "GET", path: "/api/catalog/styles" },
   "get_catalog_style_api_catalog_styles__style_id__get": { method: "GET", path: "/api/catalog/styles/{style_id}" },
   "create_style_change_api_catalog_styles__style_id__change_drafts_post": { method: "POST", path: "/api/catalog/styles/{style_id}/change-drafts" },
+  "list_catalog_name_suggestions_api_catalog_styles__style_id__name_suggestions_get": { method: "GET", path: "/api/catalog/styles/{style_id}/name-suggestions" },
   "list_catalog_style_pending_items_api_catalog_styles__style_id__pending_items_get": { method: "GET", path: "/api/catalog/styles/{style_id}/pending-items" },
+  "list_catalog_tasks_api_catalog_tasks_get": { method: "GET", path: "/api/catalog/tasks" },
   "list_catalog_unmatched_api_catalog_unmatched_get": { method: "GET", path: "/api/catalog/unmatched" },
+  "report_selection_save_api_catalog_unmatched_selection_candidates_post": { method: "POST", path: "/api/catalog/unmatched/selection-candidates" },
+  "report_selection_recheck_source_api_catalog_unmatched_selection_candidates__import_id__source_get": { method: "GET", path: "/api/catalog/unmatched/selection-candidates/{import_id}/source" },
+  "report_selection_context_api_catalog_unmatched_selection_context_post": { method: "POST", path: "/api/catalog/unmatched/selection-context" },
+  "report_selection_preview_api_catalog_unmatched_selection_preview_post": { method: "POST", path: "/api/catalog/unmatched/selection-preview" },
   "list_catalog_variant_evidence_api_catalog_variants__sku_id__evidence_get": { method: "GET", path: "/api/catalog/variants/{sku_id}/evidence" },
   "list_catalog_variant_seller_skus_api_catalog_variants__sku_id__seller_skus_get": { method: "GET", path: "/api/catalog/variants/{sku_id}/seller-skus" },
   "list_catalog_versions_api_catalog_versions_get": { method: "GET", path: "/api/catalog/versions" },
@@ -608,6 +706,113 @@ export const API_OPERATIONS = {
   "revise_import_batch_note_api_imports__batch_id__notes__note_key__revisions_post": { method: "POST", path: "/api/imports/{batch_id}/notes/{note_key}/revisions" },
   "download_raw_file_api_imports__batch_id__raw_file_get": { method: "GET", path: "/api/imports/{batch_id}/raw-file" },
   "preview_raw_file_api_imports__batch_id__raw_file_preview_get": { method: "GET", path: "/api/imports/{batch_id}/raw-file/preview" },
+  "listing_api_manual_tables_batches_get": { method: "GET", path: "/api/manual-tables/batches" },
+  "upload_api_manual_tables_batches_post": { method: "POST", path: "/api/manual-tables/batches" },
+  "detail_api_manual_tables_batches__batch_id__get": { method: "GET", path: "/api/manual-tables/batches/{batch_id}" },
+  "export_api_manual_tables_batches__batch_id__export_post": { method: "POST", path: "/api/manual-tables/batches/{batch_id}/export" },
+  "handoff_api_manual_tables_batches__batch_id__handoff_post": { method: "POST", path: "/api/manual-tables/batches/{batch_id}/handoff" },
+  "handoff_preview_api_manual_tables_batches__batch_id__handoff_preview_post": { method: "POST", path: "/api/manual-tables/batches/{batch_id}/handoff-preview" },
+  "history_api_manual_tables_batches__batch_id__history_get": { method: "GET", path: "/api/manual-tables/batches/{batch_id}/history" },
+  "operation_api_manual_tables_batches__batch_id__operations__token__get": { method: "GET", path: "/api/manual-tables/batches/{batch_id}/operations/{token}" },
+  "preview_api_manual_tables_batches__batch_id__preview_post": { method: "POST", path: "/api/manual-tables/batches/{batch_id}/preview" },
+  "save_api_manual_tables_batches__batch_id__save_post": { method: "POST", path: "/api/manual-tables/batches/{batch_id}/save" },
+  "source_api_manual_tables_batches__batch_id__source_get": { method: "GET", path: "/api/manual-tables/batches/{batch_id}/source" },
+  "capabilities_api_manual_tables_capabilities_get": { method: "GET", path: "/api/manual-tables/capabilities" },
+  "catalog_api_manual_tables_catalog_get": { method: "GET", path: "/api/manual-tables/catalog" },
+  "compare_batches_api_manual_tables_compare_post": { method: "POST", path: "/api/manual-tables/compare" },
+  "sample_api_manual_tables_examples__kind__get": { method: "GET", path: "/api/manual-tables/examples/{kind}" },
+  "profile_list_api_manual_tables_profiles_get": { method: "GET", path: "/api/manual-tables/profiles" },
+  "profile_save_api_manual_tables_profiles_post": { method: "POST", path: "/api/manual-tables/profiles" },
+  "profile_save_api_manual_tables_profiles__profile_id__versions_post": { method: "POST", path: "/api/manual-tables/profiles/{profile_id}/versions" },
+  "result_api_production_commands__token__get": { method: "GET", path: "/api/production/commands/{token}" },
+  "factories_api_production_factories_get": { method: "GET", path: "/api/production/factories" },
+  "create_factory_api_production_factories_post": { method: "POST", path: "/api/production/factories" },
+  "directory_detail_api_production_factories__entity_id__get": { method: "GET", path: "/api/production/factories/{entity_id}" },
+  "directory_save_api_production_factories__entity_id__put": { method: "PUT", path: "/api/production/factories/{entity_id}" },
+  "batch_api_production_fba_batches__batch_id__get": { method: "GET", path: "/api/production/fba/batches/{batch_id}" },
+  "export_api_production_fba_batches__batch_id__export_get": { method: "GET", path: "/api/production/fba/batches/{batch_id}/export" },
+  "original_api_production_fba_batches__batch_id__original_get": { method: "GET", path: "/api/production/fba/batches/{batch_id}/original" },
+  "prepare_batch_api_production_fba_batches__batch_id__prepare_post": { method: "POST", path: "/api/production/fba/batches/{batch_id}/prepare" },
+  "reimport_api_production_fba_batches__batch_id__reimport_post": { method: "POST", path: "/api/production/fba/batches/{batch_id}/reimport" },
+  "approved_products_api_production_fba_catalog_products_get": { method: "GET", path: "/api/production/fba/catalog-products" },
+  "classifications_api_production_fba_classifications_get": { method: "GET", path: "/api/production/fba/classifications" },
+  "command_api_production_fba_commands__command__post": { method: "POST", path: "/api/production/fba/commands/{command}" },
+  "published_daily_status_api_production_fba_daily_status_get": { method: "GET", path: "/api/production/fba/daily/status" },
+  "update_daily_api_production_fba_daily_sync_post": { method: "POST", path: "/api/production/fba/daily/sync" },
+  "upload_daily_api_production_fba_daily_uploads_post": { method: "POST", path: "/api/production/fba/daily/uploads" },
+  "mapping_preview_api_production_fba_mapping_preview_post": { method: "POST", path: "/api/production/fba/mapping-preview" },
+  "identity_original_api_production_fba_mapping_source__source_id__get": { method: "GET", path: "/api/production/fba/mapping-source/{source_id}" },
+  "reconciliation_export_api_production_fba_reconciliation_export_get": { method: "GET", path: "/api/production/fba/reconciliation/export" },
+  "state_api_production_fba_state_get": { method: "GET", path: "/api/production/fba/state" },
+  "upload_api_production_fba_uploads_post": { method: "POST", path: "/api/production/fba/uploads" },
+  "confirm_preview_api_production_files_previews__preview_id__confirm_post": { method: "POST", path: "/api/production/files/previews/{preview_id}/confirm" },
+  "export_api_production_files__kind__export_get": { method: "GET", path: "/api/production/files/{kind}/export" },
+  "preview_api_production_files__kind__preview_post": { method: "POST", path: "/api/production/files/{kind}/preview" },
+  "template_api_production_files__kind__template_get": { method: "GET", path: "/api/production/files/{kind}/template" },
+  "inventory_export_api_production_inventory_export_get": { method: "GET", path: "/api/production/inventory-export" },
+  "inventory_start_api_production_inventory_reviews_post": { method: "POST", path: "/api/production/inventory-reviews" },
+  "inventory_current_api_production_inventory_reviews_current_get": { method: "GET", path: "/api/production/inventory-reviews/current" },
+  "inventory_detail_api_production_inventory_reviews__review_id__get": { method: "GET", path: "/api/production/inventory-reviews/{review_id}" },
+  "inventory_save_api_production_inventory_reviews__review_id__commands_post": { method: "POST", path: "/api/production/inventory-reviews/{review_id}/commands" },
+  "inventory_history_api_production_inventory_reviews__review_id__history_get": { method: "GET", path: "/api/production/inventory-reviews/{review_id}/history" },
+  "inventory_operation_api_production_inventory_reviews__review_id__operations__operation_id__get": { method: "GET", path: "/api/production/inventory-reviews/{review_id}/operations/{operation_id}" },
+  "inventory_preview_api_production_inventory_reviews__review_id__preview_post": { method: "POST", path: "/api/production/inventory-reviews/{review_id}/preview" },
+  "inventory_product_match_api_production_inventory_reviews__review_id__product_match_get": { method: "GET", path: "/api/production/inventory-reviews/{review_id}/product-match" },
+  "stocktake_snapshot_api_production_inventory_snapshot_get": { method: "GET", path: "/api/production/inventory-snapshot" },
+  "inventory_count_preview_api_production_inventory_count_table_preview_post": { method: "POST", path: "/api/production/inventory/count-table/preview" },
+  "inventory_count_template_api_production_inventory_count_table_template_get": { method: "GET", path: "/api/production/inventory/count-table/template" },
+  "destination_preview_api_production_inventory_destination_files_preview_post": { method: "POST", path: "/api/production/inventory/destination-files/preview" },
+  "destination_template_api_production_inventory_destination_files_template_get": { method: "GET", path: "/api/production/inventory/destination-files/template" },
+  "destination_export_api_production_inventory_destination_files__receipt_id__export_get": { method: "GET", path: "/api/production/inventory/destination-files/{receipt_id}/export" },
+  "destination_receipt_api_production_inventory_destination_receipts__receipt_id__get": { method: "GET", path: "/api/production/inventory/destination-receipts/{receipt_id}" },
+  "destination_original_api_production_inventory_destination_uploads__upload_id__original_get": { method: "GET", path: "/api/production/inventory/destination-uploads/{upload_id}/original" },
+  "stock_document_api_production_inventory_documents__document_id__get": { method: "GET", path: "/api/production/inventory/documents/{document_id}" },
+  "opening_table_parse_api_production_inventory_opening_table_parse_post": { method: "POST", path: "/api/production/inventory/opening-table/parse" },
+  "opening_table_source_api_production_inventory_opening_table_source__source_id__get": { method: "GET", path: "/api/production/inventory/opening-table/source/{source_id}" },
+  "opening_table_template_api_production_inventory_opening_table_template_get": { method: "GET", path: "/api/production/inventory/opening-table/template" },
+  "stock_opening_api_production_inventory_openings__action__post": { method: "POST", path: "/api/production/inventory/openings/{action}" },
+  "overview_sheet_api_production_inventory_overview_sheet_get": { method: "GET", path: "/api/production/inventory/overview-sheet" },
+  "overview_sheet_details_api_production_inventory_overview_sheet_details_get": { method: "GET", path: "/api/production/inventory/overview-sheet/details" },
+  "overview_sheet_export_api_production_inventory_overview_sheet_export_get": { method: "GET", path: "/api/production/inventory/overview-sheet/export" },
+  "overview_sheet_options_api_production_inventory_overview_sheet_options_get": { method: "GET", path: "/api/production/inventory/overview-sheet/options" },
+  "stock_read_api_production_inventory__resource__get": { method: "GET", path: "/api/production/inventory/{resource}" },
+  "stock_create_api_production_inventory__resource__post": { method: "POST", path: "/api/production/inventory/{resource}" },
+  "stock_change_api_production_inventory__resource___document_id___action__post": { method: "POST", path: "/api/production/inventory/{resource}/{document_id}/{action}" },
+  "order_source_samples_api_production_order_source_drafts_get": { method: "GET", path: "/api/production/order-source-drafts" },
+  "order_source_detail_api_production_order_source_drafts__sample_id__get": { method: "GET", path: "/api/production/order-source-drafts/{sample_id}" },
+  "order_source_save_api_production_order_source_drafts__sample_id__post": { method: "POST", path: "/api/production/order-source-drafts/{sample_id}" },
+  "workbench_table_preview_api_production_orders__document_id__tables__operation__preview_post": { method: "POST", path: "/api/production/orders/{document_id}/tables/{operation}/preview" },
+  "workbench_template_api_production_orders__document_id__tables__operation__template_get": { method: "GET", path: "/api/production/orders/{document_id}/tables/{operation}/template" },
+  "order_table_export_api_production_orders__order_id__table_get": { method: "GET", path: "/api/production/orders/{order_id}/table" },
+  "receipt_batch_sources_api_production_receipt_batches_sources_get": { method: "GET", path: "/api/production/receipt-batches/sources" },
+  "receipt_batch_preview_api_production_receipt_batches_table_preview_post": { method: "POST", path: "/api/production/receipt-batches/table/preview" },
+  "receipt_batch_template_api_production_receipt_batches_table_template_get": { method: "GET", path: "/api/production/receipt-batches/table/template" },
+  "shipment_source_detail_api_production_shipment_source_drafts__source_id__get": { method: "GET", path: "/api/production/shipment-source-drafts/{source_id}" },
+  "shipment_source_save_api_production_shipment_source_drafts__source_id__post": { method: "POST", path: "/api/production/shipment-source-drafts/{source_id}" },
+  "warehouse_dispatch_combine_api_production_shipments_table_combine_post": { method: "POST", path: "/api/production/shipments/table/combine" },
+  "warehouse_dispatch_preview_api_production_shipments_table_preview_post": { method: "POST", path: "/api/production/shipments/table/preview" },
+  "warehouse_dispatch_review_save_api_production_shipments_table_reviews_post": { method: "POST", path: "/api/production/shipments/table/reviews" },
+  "warehouse_dispatch_review_read_api_production_shipments_table_reviews__review_id__get": { method: "GET", path: "/api/production/shipments/table/reviews/{review_id}" },
+  "warehouse_dispatch_original_api_production_shipments_table_sources__source_id__get": { method: "GET", path: "/api/production/shipments/table/sources/{source_id}" },
+  "warehouse_dispatch_template_api_production_shipments_table_template_get": { method: "GET", path: "/api/production/shipments/table/template" },
+  "skus_api_production_skus_get": { method: "GET", path: "/api/production/skus" },
+  "source_draft_list_api_production_source_drafts_get": { method: "GET", path: "/api/production/source-drafts" },
+  "source_draft_upload_api_production_source_drafts__kind__upload_post": { method: "POST", path: "/api/production/source-drafts/{kind}/upload" },
+  "source_check_api_production_sources__kind__check_post": { method: "POST", path: "/api/production/sources/{kind}/check" },
+  "summary_api_production_summary_get": { method: "GET", path: "/api/production/summary" },
+  "table_baseline_read_api_production_table_baselines__baseline_id__get": { method: "GET", path: "/api/production/table-baselines/{baseline_id}" },
+  "table_baseline_original_api_production_table_baselines__baseline_id__original_get": { method: "GET", path: "/api/production/table-baselines/{baseline_id}/original" },
+  "warehouses_api_production_warehouses_get": { method: "GET", path: "/api/production/warehouses" },
+  "directory_save_api_production_warehouses_post": { method: "POST", path: "/api/production/warehouses" },
+  "directory_detail_api_production_warehouses__entity_id__get": { method: "GET", path: "/api/production/warehouses/{entity_id}" },
+  "directory_save_api_production_warehouses__entity_id__put": { method: "PUT", path: "/api/production/warehouses/{entity_id}" },
+  "workbench_api_production_workbench_get": { method: "GET", path: "/api/production/workbench" },
+  "list_documents_api_production__kind__get": { method: "GET", path: "/api/production/{kind}" },
+  "create_api_production__kind__post": { method: "POST", path: "/api/production/{kind}" },
+  "delete_api_production__kind___document_id__delete": { method: "DELETE", path: "/api/production/{kind}/{document_id}" },
+  "document_api_production__kind___document_id__get": { method: "GET", path: "/api/production/{kind}/{document_id}" },
+  "update_api_production__kind___document_id__put": { method: "PUT", path: "/api/production/{kind}/{document_id}" },
+  "change_api_production__kind___document_id___action__post": { method: "POST", path: "/api/production/{kind}/{document_id}/{action}" },
   "create_return_dedup_staging_api_publications_return_dedup_staging_post": { method: "POST", path: "/api/publications/return-dedup-staging" },
   "get_return_dedup_staging_api_publications_return_dedup_staging__job_id__get": { method: "GET", path: "/api/publications/return-dedup-staging/{job_id}" },
   "retry_return_dedup_staging_api_publications_return_dedup_staging__job_id__retry_post": { method: "POST", path: "/api/publications/return-dedup-staging/{job_id}/retry" },
@@ -1139,6 +1344,160 @@ export interface operations {
       422: components["schemas"]["ApiErrorResponse"];
     };
   };
+  "current_platform_status_api_catalog_listing_sources_platform_status_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "style_platform_status_api_catalog_listing_sources_styles__style_id__status_get": {
+    security: "SessionCookie";
+    path: { "style_id": number | null; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "upload_listing_api_catalog_listing_sources_uploads_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "sku_policy"?: "legacy" | "style-color-size-v1"; };
+    headers: { "Idempotency-Key": string; "X-Original-Filename": string; "Content-Length": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      201: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "detail_api_catalog_listing_sources__import_id__get": {
+    security: "SessionCookie";
+    path: { "import_id": number; };
+    query: { "history_page"?: number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "compare_api_catalog_listing_sources__import_id__compare_post": {
+    security: "SessionCookie";
+    path: { "import_id": number; };
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, number>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "preview_api_catalog_listing_sources__import_id__preview_post": {
+    security: "SessionCookie";
+    path: { "import_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ListingPreviewRequest"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "recent_sources_api_catalog_production_sources_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "create_api_catalog_production_sources_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["CreateProductionSource"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "capabilities_api_catalog_production_sources_capabilities_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "parse_source_api_catalog_production_sources_parse_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ParseProductionSource"];
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "preview_api_catalog_production_sources_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ProductionSource"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "source_template_api_catalog_production_sources_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "rebase_api_catalog_production_sources__import_id__rebase_post": {
+    security: "SessionCookie";
+    path: { "import_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["RebaseProductionSource"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "report_product_matching_api_catalog_report_matching__version_id__get": {
+    security: "SessionCookie";
+    path: { "version_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
   "list_return_dedup_groups_api_catalog_return_dedup_groups_get": {
     security: "SessionCookie";
     path: Record<string, never>;
@@ -1194,6 +1553,28 @@ export interface operations {
       422: components["schemas"]["ApiErrorResponse"];
     };
   };
+  "get_display_name_api_catalog_source_scope_display_name_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "rename_display_name_api_catalog_source_scope_display_name_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["RenameCatalogScopeRequest"];
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
   "preview_style_change_api_catalog_style_change_drafts__draft_id__get": {
     security: "SessionCookie";
     path: { "draft_id": number; };
@@ -1219,7 +1600,7 @@ export interface operations {
   "list_catalog_styles_api_catalog_styles_get": {
     security: "SessionCookie";
     path: Record<string, never>;
-    query: Record<string, never>;
+    query: { "contract_version"?: number; "report_source_scope_id"?: number | null; };
     headers: Record<string, never>;
     requestBody: never;
     responses: {
@@ -1230,7 +1611,7 @@ export interface operations {
   "get_catalog_style_api_catalog_styles__style_id__get": {
     security: "SessionCookie";
     path: { "style_id": number; };
-    query: Record<string, never>;
+    query: { "contract_version"?: number; "report_source_scope_id"?: number | null; };
     headers: Record<string, never>;
     requestBody: never;
     responses: {
@@ -1249,10 +1630,32 @@ export interface operations {
       422: components["schemas"]["ApiErrorResponse"];
     };
   };
+  "list_catalog_name_suggestions_api_catalog_styles__style_id__name_suggestions_get": {
+    security: "SessionCookie";
+    path: { "style_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
   "list_catalog_style_pending_items_api_catalog_styles__style_id__pending_items_get": {
     security: "SessionCookie";
     path: { "style_id": number; };
     query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "list_catalog_tasks_api_catalog_tasks_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "kind"?: "all" | "review" | "attention"; "status"?: string | null; "scope_id"?: number | null; "q"?: string; "page"?: number; "page_size"?: number; "updated_from"?: string | null; "updated_to"?: string | null; };
     headers: Record<string, never>;
     requestBody: never;
     responses: {
@@ -1266,6 +1669,50 @@ export interface operations {
     query: { "page"?: number; "page_size"?: number; "from"?: string | null; "to"?: string | null; "return_basis"?: "report_date" | "event_date"; };
     headers: Record<string, never>;
     requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "report_selection_save_api_catalog_unmatched_selection_candidates_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["SaveReportSelection"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "report_selection_recheck_source_api_catalog_unmatched_selection_candidates__import_id__source_get": {
+    security: "SessionCookie";
+    path: { "import_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "report_selection_context_api_catalog_unmatched_selection_context_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ReportSource"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "report_selection_preview_api_catalog_unmatched_selection_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ReportSelection"];
     responses: {
       200: unknown;
       422: components["schemas"]["ApiErrorResponse"];
@@ -1406,7 +1853,7 @@ export interface operations {
   "style_card_api_dashboard_styles__style_id__card_get": {
     security: "SessionCookie";
     path: { "style_id": string; };
-    query: { "from"?: string | null; "to"?: string | null; "metric"?: components["schemas"]["MetricName"]; "dimension"?: components["schemas"]["SeriesDimension"]; "color_key"?: string | null; "series"?: string | null; "catalog_version"?: string | null; "fact_basis"?: components["schemas"]["FactBasis"]; "return_basis"?: components["schemas"]["ReturnBasis"]; };
+    query: { "contract_version"?: number; "from"?: string | null; "to"?: string | null; "metric"?: components["schemas"]["MetricName"]; "dimension"?: components["schemas"]["SeriesDimension"]; "color_key"?: string | null; "series"?: string | null; "catalog_version"?: string | null; "fact_basis"?: components["schemas"]["FactBasis"]; "return_basis"?: components["schemas"]["ReturnBasis"]; };
     headers: Record<string, never>;
     requestBody: never;
     responses: {
@@ -1851,6 +2298,1183 @@ export interface operations {
     requestBody: never;
     responses: {
       200: components["schemas"]["RawFilePreviewResponse"];
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "listing_api_manual_tables_batches_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "page"?: number; "kind"?: "inventory" | "orders" | "packing" | null; "target_url"?: string | null; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "upload_api_manual_tables_batches_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "kind": "inventory" | "orders" | "packing"; "filename": string; };
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "detail_api_manual_tables_batches__batch_id__get": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "export_api_manual_tables_batches__batch_id__export_post": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ExportRequest"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "handoff_api_manual_tables_batches__batch_id__handoff_post": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["HandoffCommand"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "handoff_preview_api_manual_tables_batches__batch_id__handoff_preview_post": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["HandoffCommand"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "history_api_manual_tables_batches__batch_id__history_get": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "operation_api_manual_tables_batches__batch_id__operations__token__get": {
+    security: "SessionCookie";
+    path: { "batch_id": string; "token": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "preview_api_manual_tables_batches__batch_id__preview_post": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["Command"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "save_api_manual_tables_batches__batch_id__save_post": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["Command"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "source_api_manual_tables_batches__batch_id__source_get": {
+    security: "SessionCookie";
+    path: { "batch_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "capabilities_api_manual_tables_capabilities_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "catalog_api_manual_tables_catalog_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "compare_batches_api_manual_tables_compare_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ComparisonRequest"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "sample_api_manual_tables_examples__kind__get": {
+    security: "SessionCookie";
+    path: { "kind": "inventory" | "orders" | "packing"; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "profile_list_api_manual_tables_profiles_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "profile_save_api_manual_tables_profiles_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "profile_id"?: string | null; };
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ProfileRequest"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "profile_save_api_manual_tables_profiles__profile_id__versions_post": {
+    security: "SessionCookie";
+    path: { "profile_id": string | null; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["ProfileRequest"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "result_api_production_commands__token__get": {
+    security: "SessionCookie";
+    path: { "token": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "factories_api_production_factories_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "create_factory_api_production_factories_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "directory_detail_api_production_factories__entity_id__get": {
+    security: "SessionCookie";
+    path: { "entity_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "directory_save_api_production_factories__entity_id__put": {
+    security: "SessionCookie";
+    path: { "entity_id": number | null; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "batch_api_production_fba_batches__batch_id__get": {
+    security: "SessionCookie";
+    path: { "batch_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "export_api_production_fba_batches__batch_id__export_get": {
+    security: "SessionCookie";
+    path: { "batch_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "original_api_production_fba_batches__batch_id__original_get": {
+    security: "SessionCookie";
+    path: { "batch_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "prepare_batch_api_production_fba_batches__batch_id__prepare_post": {
+    security: "SessionCookie";
+    path: { "batch_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "reimport_api_production_fba_batches__batch_id__reimport_post": {
+    security: "SessionCookie";
+    path: { "batch_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "approved_products_api_production_fba_catalog_products_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "report_source_scope_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "classifications_api_production_fba_classifications_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "scope_id": number; "view"?: string; "reason_code"?: string; "sku_id"?: string; "page"?: number; "page_size"?: number; "from"?: string; "to"?: string; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "command_api_production_fba_commands__command__post": {
+    security: "SessionCookie";
+    path: { "command": "scopes" | "extend-identities" | "tracking" | "references" | "unified-save" | "unified-confirm" | "batch-save" | "batch-confirm" | "batch-abandon" | "actions" | "action-reverse" | "quality" | "classification-correct" | "stocktake"; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "published_daily_status_api_production_fba_daily_status_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "report_date": string; "report_type": "business_report" | "return_report"; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "update_daily_api_production_fba_daily_sync_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "scope_id": number; };
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "upload_daily_api_production_fba_daily_uploads_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "scope_id": number; "report_date": string; };
+    headers: { "Idempotency-Key": string; "X-Original-Filename": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: Record<string, unknown>;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "mapping_preview_api_production_fba_mapping_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "report_source_scope_id"?: number | null; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "identity_original_api_production_fba_mapping_source__source_id__get": {
+    security: "SessionCookie";
+    path: { "source_id": string; };
+    query: { "report_source_scope_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "reconciliation_export_api_production_fba_reconciliation_export_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; "scope_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "state_api_production_fba_state_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "upload_api_production_fba_uploads_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "scope_id": number; "prepare"?: boolean; "shipment_id"?: number | null; };
+    headers: { "Idempotency-Key": string; "X-Original-Filename": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "confirm_preview_api_production_files_previews__preview_id__confirm_post": {
+    security: "SessionCookie";
+    path: { "preview_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "export_api_production_files__kind__export_get": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments" | "summary"; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "preview_api_production_files__kind__preview_post": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: { "mode": "create" | "correct"; "filename"?: string; "target_id"?: string; "reason"?: string; "manual_source_note"?: string; "overage_reason"?: string; "workbench_order"?: boolean; "factory_id"?: string; "receipt_warehouse_id"?: string; "receipt_owner_id"?: string; "destination"?: string; "destination_id"?: string; "destination_type"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "template_api_production_files__kind__template_get": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: { "version"?: "v1" | "v2" | "v3" | "v4"; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_export_api_production_inventory_export_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "source_digest": string; "review_id"?: string | null; "revision"?: number | null; "source_only"?: boolean; "q"?: string; "focus"?: "" | "identity" | "quantity" | "extra"; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_start_api_production_inventory_reviews_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["StartReview"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_current_api_production_inventory_reviews_current_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_detail_api_production_inventory_reviews__review_id__get": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_save_api_production_inventory_reviews__review_id__commands_post": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["SaveCommand"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_history_api_production_inventory_reviews__review_id__history_get": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: { "before_revision"?: number; "limit"?: number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_operation_api_production_inventory_reviews__review_id__operations__operation_id__get": {
+    security: "SessionCookie";
+    path: { "review_id": string; "operation_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_preview_api_production_inventory_reviews__review_id__preview_post": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["PreviewCommand"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_product_match_api_production_inventory_reviews__review_id__product_match_get": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: { "expected_revision": number; "source_key": string; "size": "XS" | "S" | "M" | "L" | "XL" | "XXL" | "3XL"; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stocktake_snapshot_api_production_inventory_snapshot_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_count_preview_api_production_inventory_count_table_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; "owner_id": number; "filename"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "inventory_count_template_api_production_inventory_count_table_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; "owner_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "destination_preview_api_production_inventory_destination_files_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "shipment_id": number; "filename": string; };
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "destination_template_api_production_inventory_destination_files_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "shipment_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "destination_export_api_production_inventory_destination_files__receipt_id__export_get": {
+    security: "SessionCookie";
+    path: { "receipt_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "destination_receipt_api_production_inventory_destination_receipts__receipt_id__get": {
+    security: "SessionCookie";
+    path: { "receipt_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "destination_original_api_production_inventory_destination_uploads__upload_id__original_get": {
+    security: "SessionCookie";
+    path: { "upload_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stock_document_api_production_inventory_documents__document_id__get": {
+    security: "SessionCookie";
+    path: { "document_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "opening_table_parse_api_production_inventory_opening_table_parse_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "filename"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "opening_table_source_api_production_inventory_opening_table_source__source_id__get": {
+    security: "SessionCookie";
+    path: { "source_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "opening_table_template_api_production_inventory_opening_table_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stock_opening_api_production_inventory_openings__action__post": {
+    security: "SessionCookie";
+    path: { "action": "preview" | "confirm"; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "overview_sheet_api_production_inventory_overview_sheet_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "overview_sheet_details_api_production_inventory_overview_sheet_details_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "overview_sheet_export_api_production_inventory_overview_sheet_export_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "overview_sheet_options_api_production_inventory_overview_sheet_options_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stock_read_api_production_inventory__resource__get": {
+    security: "SessionCookie";
+    path: { "resource": "availability" | "documents" | "loans" | "plans" | "forecast" | "history" | "reservations" | "holds" | "destination-state" | "transport-state" | "warehouse-transit" | "transit-batches" | "progress-chains" | "sku-locations" | "transport-summary" | "display-settings" | "destination-shipments" | "destination-receipts"; };
+    query: { "shipment_id"?: number | null; "sku_id"?: number | null; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stock_create_api_production_inventory__resource__post": {
+    security: "SessionCookie";
+    path: { "resource": "display-settings" | "documents" | "reservations" | "holds" | "plans" | "destination-bindings" | "transport-records" | "transport-events" | "destination-receipts" | "destination-settlements"; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "stock_change_api_production_inventory__resource___document_id___action__post": {
+    security: "SessionCookie";
+    path: { "resource": "documents" | "reservations" | "holds" | "loans" | "plans" | "destination-receipts" | "destination-settlements" | "transport-records" | "transport-events"; "document_id": number; "action": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "order_source_samples_api_production_order_source_drafts_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "order_source_detail_api_production_order_source_drafts__sample_id__get": {
+    security: "SessionCookie";
+    path: { "sample_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "order_source_save_api_production_order_source_drafts__sample_id__post": {
+    security: "SessionCookie";
+    path: { "sample_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["SaveSourceDraft"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "workbench_table_preview_api_production_orders__document_id__tables__operation__preview_post": {
+    security: "SessionCookie";
+    path: { "document_id": number; "operation": "receipt" | "packing"; };
+    query: { "expected_revision": string; "filename"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "workbench_template_api_production_orders__document_id__tables__operation__template_get": {
+    security: "SessionCookie";
+    path: { "document_id": number; "operation": "receipt" | "packing"; };
+    query: { "expected_revision": string; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "order_table_export_api_production_orders__order_id__table_get": {
+    security: "SessionCookie";
+    path: { "order_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "receipt_batch_sources_api_production_receipt_batches_sources_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "orders": string; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "receipt_batch_preview_api_production_receipt_batches_table_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "orders": string; "filename"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "receipt_batch_template_api_production_receipt_batches_table_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "orders": string; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "shipment_source_detail_api_production_shipment_source_drafts__source_id__get": {
+    security: "SessionCookie";
+    path: { "source_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "shipment_source_save_api_production_shipment_source_drafts__source_id__post": {
+    security: "SessionCookie";
+    path: { "source_id": string; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["SavePackingDraft"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_combine_api_production_shipments_table_combine_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["DispatchSourcesInput"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_preview_api_production_shipments_table_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; "owner_id": number; "filename"?: string; "layout"?: "standard" | "packing_totals"; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_review_save_api_production_shipments_table_reviews_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: components["schemas"]["DispatchReviewInput"];
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_review_read_api_production_shipments_table_reviews__review_id__get": {
+    security: "SessionCookie";
+    path: { "review_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_original_api_production_shipments_table_sources__source_id__get": {
+    security: "SessionCookie";
+    path: { "source_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouse_dispatch_template_api_production_shipments_table_template_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "warehouse_id": number; "owner_id": number; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "skus_api_production_skus_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "contract_version"?: number; "report_source_scope_id"?: number | null; };
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "source_draft_list_api_production_source_drafts_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "source_draft_upload_api_production_source_drafts__kind__upload_post": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: { "filename"?: string; };
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "source_check_api_production_sources__kind__check_post": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: Record<string, never>;
+    headers: { "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "summary_api_production_summary_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "table_baseline_read_api_production_table_baselines__baseline_id__get": {
+    security: "SessionCookie";
+    path: { "baseline_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "table_baseline_original_api_production_table_baselines__baseline_id__original_get": {
+    security: "SessionCookie";
+    path: { "baseline_id": string; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "warehouses_api_production_warehouses_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "directory_save_api_production_warehouses_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "entity_id"?: number | null; };
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "directory_detail_api_production_warehouses__entity_id__get": {
+    security: "SessionCookie";
+    path: { "entity_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "directory_save_api_production_warehouses__entity_id__put": {
+    security: "SessionCookie";
+    path: { "entity_id": number | null; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "workbench_api_production_workbench_get": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "list_documents_api_production__kind__get": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "create_api_production__kind__post": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "delete_api_production__kind___document_id__delete": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; "document_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "document_api_production__kind___document_id__get": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; "document_id": number; };
+    query: Record<string, never>;
+    headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "update_api_production__kind___document_id__put": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; "document_id": number; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "change_api_production__kind___document_id___action__post": {
+    security: "SessionCookie";
+    path: { "kind": "orders" | "shipments"; "document_id": number; "action": "confirm" | "correct" | "void" | "demand-changes" | "close-tracking" | "reopen-tracking" | "allocation-corrections" | "production-progress" | "complete-production" | "reopen-production"; };
+    query: Record<string, never>;
+    headers: { "Idempotency-Key": string; "X-CSRF-Token"?: string | null; };
+    requestBody: Record<string, unknown>;
+    responses: {
+      200: unknown;
       422: components["schemas"]["ApiErrorResponse"];
     };
   };

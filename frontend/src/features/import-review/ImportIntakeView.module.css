@@ -68,3 +68,6 @@
 }
 
 .restoration p { line-height: 1.65; }
+
+/* Keep supplemental copy out of the primary workflow. */
+.import-workflow [data-field-hint], .import-queue__header-actions > p, .stage-placeholder { display:none; }

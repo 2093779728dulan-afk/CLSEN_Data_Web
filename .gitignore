@@ -35,3 +35,6 @@ coverage/
 .coverage
 .coverage.*
 *.log
+
+/backend-java/target/
+/.tmp/

@@ -58,6 +58,7 @@ describe("product analytics API", () => {
     const path = String(fetchMock.mock.calls[0]?.[0]);
     expect(path).toContain("/api/dashboard/styles/2301/card?");
     expect(path).toContain("color_key=black%2Fkey");
+    expect(path).toContain("contract_version=2");
     expect(path).toContain("series=series%2Ba%2C%E7%B3%BB%E5%88%97%E4%BA%8C");
     expect(path).not.toContain("product-card");
     expect(fetchMock).toHaveBeenCalledTimes(1);

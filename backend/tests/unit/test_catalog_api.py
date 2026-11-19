@@ -88,6 +88,67 @@ def test_catalog_detail_exposes_bounded_safe_revision_issues() -> None:
     assert "safe_message" not in str(query)
 
 
+def test_catalog_dedup_shadow_route_retains_structured_group_page(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.catalog_dedup import list_dedup_groups
+    from app.catalog.return_dedup_repository import ReturnDedupGroupPage
+
+    repository = MagicMock()
+    repository.list_groups.return_value = ReturnDedupGroupPage(
+        dedup_publication_revision=3,
+        snapshot_id=4,
+        page=1,
+        page_size=50,
+        total_items=0,
+        groups=(),
+    )
+    monkeypatch.setattr(
+        "app.api.catalog_dedup.MySqlReturnDedupRepository", lambda _: repository
+    )
+    result = list_dedup_groups(_context("admin"), MagicMock(), "all", 1, 50)
+    assert result.groups == []
+    assert result.snapshot_id == 4
+    assert result.dedup_publication_revision == 3
+    assert result.payload.startswith("ReturnDedupGroupPage(")
+
+
+def test_catalog_dedup_shadow_decision_retains_structured_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from app.api.catalog_dedup import DedupDecisionRequest, decide_dedup_group
+
+    repository = MagicMock()
+    repository.decide_group.return_value = SimpleNamespace(
+        group_id="a" * 64,
+        group_revision=2,
+        dedup_publication_revision=4,
+        snapshot_id=5,
+        decision="duplicate_of",
+        canonical_member_id=10,
+    )
+    monkeypatch.setattr(
+        "app.api.catalog_dedup.MySqlReturnDedupRepository", lambda _: repository
+    )
+    token = uuid4()
+    request = DedupDecisionRequest(
+        operation_token=token,
+        expected_group_revision=1,
+        expected_dedup_publication_revision=3,
+        decision="duplicate_of",
+        canonical_member_id=10,
+        reason="FICTIONAL duplicate event confirmed",
+    )
+    result = decide_dedup_group(
+        "a" * 64, request, _context("admin"), MagicMock(), token
+    )
+    assert result.group_revision == 2
+    assert result.dedup_publication_revision == 4
+    assert result.canonical_member_id == 10
+
+
 def _operations(*routers: object) -> set[tuple[str, str]]:
     result: set[tuple[str, str]] = set()
     for router in routers:

@@ -10,7 +10,13 @@ def test_public_ci_uses_only_standard_hosted_runners_and_mysql84() -> None:
         Loader=yaml.BaseLoader,
     )
     jobs = workflow["jobs"]
-    profiles = {"backend-ubuntu", "backend-windows", "frontend", "mysql-84"}
+    profiles = {
+        "backend-ubuntu",
+        "backend-windows",
+        "frontend",
+        "mysql-84",
+        "java-production",
+    }
     assert set(jobs) == profiles | {
         "frontend-stage",
         "frontend-storybook",
@@ -42,3 +48,20 @@ def test_public_ci_uses_only_standard_hosted_runners_and_mysql84() -> None:
     assert execution["timeout-minutes"] == "110"
     assert mysql["steps"][-1]["if"] == "always()"
     assert mysql["steps"][-1]["run"] == "./scripts/cleanup-ci-mysql.ps1"
+
+
+def test_java_contract_job_has_independent_cleanup_and_no_private_inputs() -> None:
+    root = Path(__file__).resolve().parents[3]
+    workflow = yaml.load(
+        (root / ".github/workflows/public-ci.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    job = workflow["jobs"]["java-production"]
+    cleanup = next(
+        step
+        for step in job["steps"]
+        if step.get("name") == "Clean this job's Java MySQL resources"
+    )
+    assert cleanup["if"] == "always()"
+    assert "--cleanup-only" in cleanup["run"]
+    assert "java-production" in workflow["jobs"]["public-required"]["needs"]

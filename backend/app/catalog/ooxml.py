@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001 -- Chinese user-facing punctuation.
 """Fail-closed ZIP and OOXML envelope validation for catalog workbooks."""
 
 from __future__ import annotations
@@ -5,6 +6,7 @@ from __future__ import annotations
 import io
 import os
 import posixpath
+import re
 import struct
 import unicodedata
 import zipfile
@@ -107,6 +109,17 @@ class CatalogWorkbookUnsafeError(ValueError):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(code={self.code!r}, reason={self.reason!r})"
+
+
+class CatalogWorkbookContentError(CatalogWorkbookUnsafeError):
+    """Expose only a fixed sheet name and validated coordinates, never cell data."""
+
+    code = "catalog_workbook_format_invalid"
+
+    def __init__(self, sheet: str, coordinate: str, message: str) -> None:
+        position = coordinate if re.fullmatch(r"[A-Z0-9:]{1,24}", coordinate) else ""
+        self.public_message = f"工作表“{sheet}”{position}：{message}"
+        super().__init__("ooxml_worksheet_unsafe_content")
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,10 +427,28 @@ def _validate_worksheet_content(parts: dict[str, bytes]) -> None:
             _unsafe("ooxml_worksheet_contract_mismatch")
         for element in root.iter():
             local_name = element.tag.rpartition("}")[2]
+            if (
+                local_name == "c"
+                and element.find(f"{{{_SPREADSHEET_NS}}}f") is not None
+            ):
+                raise CatalogWorkbookContentError(
+                    SHEET_NAMES[index - 1],
+                    element.attrib.get("r", ""),
+                    "不允许公式，请核对结果并粘贴为明确的值。",
+                )
+            if local_name in {"mergeCell", "mergeCells"}:
+                merged = (
+                    next(iter(element), element)
+                    if local_name == "mergeCells"
+                    else element
+                )
+                raise CatalogWorkbookContentError(
+                    SHEET_NAMES[index - 1],
+                    merged.attrib.get("ref", ""),
+                    "不允许合并单元格，请取消合并并逐行填写完整内容。",
+                )
             if local_name in {
                 "f",
-                "mergeCells",
-                "mergeCell",
                 "hyperlinks",
                 "oleObjects",
                 "controls",
@@ -430,7 +461,11 @@ def _validate_worksheet_content(parts: dict[str, bytes]) -> None:
                 "true",
                 "True",
             }:
-                _unsafe("ooxml_hidden_content")
+                raise CatalogWorkbookContentError(
+                    SHEET_NAMES[index - 1],
+                    element.attrib.get("r", element.attrib.get("min", "")),
+                    "存在隐藏行或列，请取消隐藏并核对全部内容。",
+                )
 
 
 def _validate_package_contract(parts: dict[str, bytes]) -> None:

@@ -17,6 +17,7 @@ import { CatalogNavigationProvider } from "../features/catalog/CatalogNavigation
 import { CatalogMaintenancePage } from "../features/catalog/CatalogMaintenancePage";
 import { CatalogHomePage } from "../features/catalog/CatalogHomePage";
 import { CatalogImportPage } from "../features/catalog/CatalogImportPage";
+import { CatalogProductionSourcePage } from "../features/catalog/CatalogProductionSourcePage";
 import { CatalogLayout } from "../features/catalog/CatalogLayout";
 import { CatalogStylePage } from "../features/catalog/CatalogStylePage";
 import { CatalogUnmatchedPage } from "../features/catalog/CatalogUnmatchedPage";
@@ -27,6 +28,9 @@ import { clearReviewRecoveryForIdentity } from "../features/import-review/review
 import type { ReviewLocationHandoff } from "../features/import-review/workflowTypes";
 import { PublishedDayPage } from "../features/published/PublishedDayPage";
 import { PublishedDetailLedgerPage } from "../features/published-details/PublishedDetailLedgerPage";
+import { InventoryOverviewSheet } from "../features/production/inventory-sheet/InventoryOverviewSheet";
+import { ProductionWorkspace } from "../features/production/ProductionWorkspace";
+import { ProductionTimezoneContext } from "../features/production/workbenchDate";
 import { ProductLedgerPage } from "../features/products/ProductLedgerPage";
 import { ProductDetailPage } from "../features/products/ProductDetailPage";
 import { PRODUCT_ANALYTICS_SOURCE } from "../features/products/productAnalyticsSource";
@@ -79,7 +83,7 @@ function monthRange(day: ReportDay) {
 
 function AppShell(props: Omit<React.ComponentProps<typeof WorkspaceShell>, "today" | "analyticsSource">) {
   const today = isoDate(currentReportDay(props.siteContext.reporting_timezone));
-  return <WorkspaceShell {...props} analyticsSource={PRODUCT_ANALYTICS_SOURCE} today={today} />;
+  return <WorkspaceShell {...props} productionEnabled={import.meta.env.VITE_PRODUCTION_ENABLED === "true"} analyticsSource={PRODUCT_ANALYTICS_SOURCE} today={today} />;
 }
 
 function LoginPage({ onLogin }: { onLogin: (principal: Principal) => void }) {
@@ -107,6 +111,7 @@ function ReviewPage({
   focus,
   onBatchReviewCreated,
   onFlowLocationChanged,
+  onPublicationChanged,
   onResolveFocus,
   onSelect,
   principal,
@@ -117,6 +122,7 @@ function ReviewPage({
   focus: ReviewFocus;
   onBatchReviewCreated: (runId: number) => void;
   onFlowLocationChanged: (handoff: ReviewLocationHandoff) => void;
+  onPublicationChanged?: () => void;
   onResolveFocus: (request: ReviewFocusRequest & { epoch: number }) => void;
   onSelect: (request: ReviewFocusRequest) => void;
   principal: Principal;
@@ -235,7 +241,7 @@ function ReviewPage({
   };
 
   return <AdvancedReviewWorkspaceView selected={selected} calendarDays={calendarDays} entries={entries} calendarKnown={loadedRange === rangeKey} loading={calendarLoading} error={error} reportingTimezone={reportingTimezone} canWrite={canWrite} activeVersionId={activeVersionId} onSelect={selectDay} onSelectDraft={changeReportDraft} onRetry={() => void reload()}>
-    {canWrite && (focusReady ? <ImportReviewFlow canFinalizePublishedMove={principal.roles.includes("admin")} canForceRebuild={principal.roles.includes("admin")} initialReportType={focus.reportType} initialVersionId={focus.versionId} key={`review-focus:${focus.epoch}`} onBatchReviewCreated={onBatchReviewCreated} onPublished={() => setCalendarRefreshEpoch((current) => current + 1)} onReportDateChanged={flowLocationChanged} operator={principal} reportDate={selectedDate} siteId={siteId} userId={principal.id} /> : !error && <div aria-label="正在确认活动草稿" role="status"><Spinner aria-hidden="true" /> 正在确认这个日期的活动草稿…</div>)}
+    {canWrite && (focusReady ? <ImportReviewFlow canFinalizePublishedMove={principal.roles.includes("admin")} canForceRebuild={principal.roles.includes("admin")} initialReportType={focus.reportType} initialVersionId={focus.versionId} key={`review-focus:${focus.epoch}`} onBatchReviewCreated={onBatchReviewCreated} onPublished={() => { setCalendarRefreshEpoch((current) => current + 1); onPublicationChanged?.(); }} onReportDateChanged={flowLocationChanged} operator={principal} reportDate={selectedDate} siteId={siteId} userId={principal.id} /> : !error && <div aria-label="正在确认活动草稿" role="status"><Spinner aria-hidden="true" /> 正在确认这个日期的活动草稿…</div>)}
   </AdvancedReviewWorkspaceView>;
 }
 
@@ -243,6 +249,7 @@ function ReviewRoutePage({
   focus,
   onBatchReviewCreated,
   onFlowLocationChanged,
+  onPublicationChanged,
   onResolveFocus,
   onSelect,
   principal,
@@ -252,6 +259,7 @@ function ReviewRoutePage({
   focus: ReviewFocus;
   onBatchReviewCreated: (runId: number) => void;
   onFlowLocationChanged: (handoff: ReviewLocationHandoff) => void;
+  onPublicationChanged?: () => void;
   onResolveFocus: (request: ReviewFocusRequest & { epoch: number }) => void;
   onSelect: (request: ReviewFocusRequest) => void;
   principal: Principal;
@@ -284,12 +292,12 @@ function ReviewRoutePage({
   }, [onSelect, reportDate, routeFocusDiffers, routeIdentity, routeIsAuthoritative, routeReportType, routeVersionId, sourceBatchId, valid]);
   if (!valid) return <Navigate replace to="/" />;
   if (sourceBatchId && (principal.roles.includes("admin") || principal.roles.includes("data_manager"))) {
-    return <SourceBatchReviewView batchId={sourceBatchId}><ImportReviewFlow key={`source:${siteId}:${principal.id}:${sourceBatchId}`} initialBatchId={sourceBatchId} canForceRebuild={principal.roles.includes("admin")} canFinalizePublishedMove={principal.roles.includes("admin")} onBatchReviewCreated={onBatchReviewCreated} onPublished={() => undefined} operator={principal} reportDate={reportDate} siteId={siteId} userId={principal.id} /></SourceBatchReviewView>;
+    return <SourceBatchReviewView batchId={sourceBatchId}><ImportReviewFlow key={`source:${siteId}:${principal.id}:${sourceBatchId}`} initialBatchId={sourceBatchId} canForceRebuild={principal.roles.includes("admin")} canFinalizePublishedMove={principal.roles.includes("admin")} onBatchReviewCreated={onBatchReviewCreated} onPublished={() => onPublicationChanged?.()} operator={principal} reportDate={reportDate} siteId={siteId} userId={principal.id} /></SourceBatchReviewView>;
   }
   if (routeFocusDiffers && routeIsAuthoritative) {
     return <main className="page" id="main-content"><div aria-label="正在进入日期审核" role="status"><Spinner aria-hidden="true" /> 正在进入日期审核…</div></main>;
   }
-  return <ReviewPage focus={focus} onBatchReviewCreated={onBatchReviewCreated} onFlowLocationChanged={onFlowLocationChanged} onResolveFocus={onResolveFocus} onSelect={onSelect} principal={principal} reportingTimezone={reportingTimezone} selected={reportDayFromIso(focus.reportDate)} siteId={siteId} />;
+  return <ReviewPage focus={focus} onPublicationChanged={onPublicationChanged} onBatchReviewCreated={onBatchReviewCreated} onFlowLocationChanged={onFlowLocationChanged} onResolveFocus={onResolveFocus} onSelect={onSelect} principal={principal} reportingTimezone={reportingTimezone} selected={reportDayFromIso(focus.reportDate)} siteId={siteId} />;
 }
 
 function ReviewWorkbenchReturn() {
@@ -306,10 +314,15 @@ function ViewerReviewRedirect() {
   return <Navigate replace to={`/published/${reportDate}`} />;
 }
 
-function DateWorkbenchRoute({ canWrite, siteId, userId }: { canWrite: boolean; siteId: number; userId: number }) {
+function DateWorkbenchRoute({ canWrite, refreshRevision = 0, siteId, userId }: { canWrite: boolean; refreshRevision?: number; siteId: number; userId: number }) {
   const { reportDate = "" } = useParams();
+  const location = useLocation();
+  const [parameters] = useSearchParams();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) return <Navigate replace to="/" />;
-  return <DateWorkbenchPage canWrite={canWrite} reportDate={reportDate} siteId={siteId} userId={userId} />;
+  if (canWrite && location.pathname.startsWith("/review/") && ["batch_id", "version_id"].some(key => /^[1-9][0-9]*$/.test(parameters.get(key) || ""))) {
+    return <Navigate replace to={`/review-advanced/${reportDate}${location.search}`} state={location.state as unknown} />;
+  }
+  return <DateWorkbenchPage canWrite={canWrite} refreshRevision={refreshRevision} reportDate={reportDate} siteId={siteId} userId={userId} />;
 }
 
 function DashboardRoute({ currencyCode, initialMonth, principal }: { currencyCode: string; initialMonth: string; principal: Principal }) {
@@ -325,6 +338,7 @@ export function App() {
   const navigate = useNavigate();
   const [principal, setPrincipal] = useState<Principal>();
   const [checked, setChecked] = useState(false);
+  const [publicationRevision, setPublicationRevision] = useState(0);
   const [siteContext, setSiteContext] = useState<SiteContext>();
   const [siteContextError, setSiteContextError] = useState<string>();
   const [selected, setSelected] = useState<ReportDay>(() => currentReportDay("UTC"));
@@ -404,8 +418,8 @@ export function App() {
     }));
     const parameters = new URLSearchParams({ report_type: handoff.reportType });
     if (handoff.versionId) parameters.set("version_id", String(handoff.versionId));
-    void navigate(`/review/${handoff.reportDate}?${parameters}`);
-  }, [navigate]);
+    void navigate(`/review-advanced/${handoff.reportDate}?${parameters}`, { state: location.state as unknown });
+  }, [navigate, location.state]);
   const openBatchReview = useCallback((runId: number) => {
     void navigate(`/review/batch/${runId}`);
   }, [navigate]);
@@ -439,6 +453,6 @@ export function App() {
   const canWrite = isAdmin || principal.roles.includes("data_manager");
   const selectedMonth = `${selected.year}-${String(selected.month).padStart(2, "0")}`;
   const today = isoDate(currentReportDay(siteContext.reporting_timezone));
-  const reviewRoute = <ReviewRoutePage focus={reviewFocus} onBatchReviewCreated={openBatchReview} onFlowLocationChanged={updateReviewLocation} onResolveFocus={resolveReviewFocus} onSelect={selectReviewRouteFocus} principal={principal} reportingTimezone={siteContext.reporting_timezone} siteId={siteContext.site_id} />;
-  return <AuthzGenerationProvider boundary={{ principalId: principal.id, roles: principal.roles, siteConfigVersionId: siteContext.site_config_version_id, siteId: siteContext.site_id }} onRevoked={clearSession}><AppShell logoutBusy={logoutBusy} logoutError={logoutError} online={online} onLogout={() => void logout()} principal={principal} siteContext={siteContext}><CatalogNavigationProvider key={`${principal.id}:${[...principal.roles].sort().join(",")}:${siteContext.site_id}:${siteContext.site_config_version_id}`}><Routes><Route element={<PublishedDetailLedgerPage principal={principal} reportingTimezone={siteContext.reporting_timezone} siteId={siteContext.site_id} today={today} />} path="/ledger/published-details" /><Route element={<DashboardRoute currencyCode={siteContext.currency_code} initialMonth={selectedMonth} principal={principal} />} path="/" /><Route element={PRODUCT_ANALYTICS_SOURCE === "p0_catalog" ? <ProductLedgerPage today={today} /> : <Navigate replace to="/?tab=products" />} path="/products" /><Route element={PRODUCT_ANALYTICS_SOURCE === "p0_catalog" ? <ProductDetailPage today={today} /> : <Navigate replace to="/?tab=products" />} path="/products/:style_id" /><Route element={<Navigate replace to="/" />} path="/dashboard" /><Route element={<CatalogLayout canManage={canWrite}><CatalogHomePage canManage={canWrite} /></CatalogLayout>} path="/catalog" /><Route element={<CatalogLayout canManage={canWrite}><CatalogStylePage /></CatalogLayout>} path="/catalog/styles/:style_id" /><Route element={canWrite ? <CatalogLayout canManage><CatalogImportPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/imports/:import_id" /><Route element={canWrite ? <CatalogLayout canManage><CatalogUnmatchedPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/unmatched" /><Route element={canWrite ? <CatalogLayout canManage><CatalogMaintenancePage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/maintenance" /><Route element={canWrite ? <CatalogLayout canManage><CatalogVersionsPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/versions" /><Route element={canWrite ? <BatchReviewPage /> : <Navigate replace to="/" />} path="/review/batch/:runId" /><Route element={canWrite ? <><DateWorkbenchRoute canWrite siteId={siteContext.site_id} userId={principal.id} /><section className="advanced-review" aria-label="高级审核与发布控制">{reviewRoute}</section></> : <ViewerReviewRedirect />} path="/review/:reportDate" /><Route element={<><DateWorkbenchRoute canWrite={canWrite} siteId={siteContext.site_id} userId={principal.id} /><section className="advanced-review" aria-label="已发布详情"><PublishedDayPage currencyCode={siteContext.currency_code} /></section></>} path="/published/:reportDate" /><Route element={canWrite ? <><ReviewWorkbenchReturn />{reviewRoute}</> : <ViewerReviewRedirect />} path="/review-advanced/:reportDate" /><Route element={<PublishedDayPage currencyCode={siteContext.currency_code} />} path="/published-details/:reportDate" /><Route element={<VersionHistory initialReportDate={isoDate(selected)} onFilterChange={({ reportDate, reportType }) => selectReviewFocus({ reportDate, reportType, resolved: false })} onMoveRevisionCreated={(handoff) => { selectReviewFocus({ reportDate: handoff.targetReportDate, reportType: handoff.reportType, resolved: true, versionId: handoff.command.version_id }); void navigate(`/review/${handoff.targetReportDate}`); }} onRevisionCreated={(handoff) => { selectReviewFocus({ reportDate: handoff.reportDate, reportType: handoff.reportType, resolved: true, versionId: handoff.command.version_id }); void navigate(`/review/${handoff.reportDate}`); }} principal={principal} />} path="/versions" /><Route element={isAdmin ? <AdminConsole onSiteConfigCreated={() => { void reloadSiteContext(); }} principal={principal} /> : <Navigate replace to="/" />} path="/admin" /><Route element={<Navigate replace to="/" />} path="*" /></Routes></CatalogNavigationProvider></AppShell></AuthzGenerationProvider>;
+  const reviewRoute = <ReviewRoutePage focus={reviewFocus} onPublicationChanged={() => setPublicationRevision(current => current + 1)} onBatchReviewCreated={openBatchReview} onFlowLocationChanged={updateReviewLocation} onResolveFocus={resolveReviewFocus} onSelect={selectReviewRouteFocus} principal={principal} reportingTimezone={siteContext.reporting_timezone} siteId={siteContext.site_id} />;
+  return <AuthzGenerationProvider boundary={{ principalId: principal.id, roles: principal.roles, siteConfigVersionId: siteContext.site_config_version_id, siteId: siteContext.site_id }} onRevoked={clearSession}><AppShell logoutBusy={logoutBusy} logoutError={logoutError} online={online} onLogout={() => void logout()} principal={principal} siteContext={siteContext}><CatalogNavigationProvider key={`${principal.id}:${[...principal.roles].sort().join(",")}:${siteContext.site_id}:${siteContext.site_config_version_id}`}><Routes>{import.meta.env.VITE_PRODUCTION_ENABLED === "true" && <Route path="/home" element={<InventoryOverviewSheet />} />}{import.meta.env.VITE_PRODUCTION_ENABLED === "true" && <Route path="/production/*" element={<ProductionTimezoneContext.Provider value={siteContext.reporting_timezone}><ProductionWorkspace key={`${principal.id}:${siteContext.site_id}`} canWrite={canWrite} /></ProductionTimezoneContext.Provider>} />}<Route element={<PublishedDetailLedgerPage principal={principal} reportingTimezone={siteContext.reporting_timezone} siteId={siteContext.site_id} today={today} />} path="/ledger/published-details" /><Route element={<DashboardRoute currencyCode={siteContext.currency_code} initialMonth={selectedMonth} principal={principal} />} path="/" /><Route element={PRODUCT_ANALYTICS_SOURCE === "p0_catalog" ? <ProductLedgerPage today={today} /> : <Navigate replace to="/?tab=products" />} path="/products" /><Route element={PRODUCT_ANALYTICS_SOURCE === "p0_catalog" ? <ProductDetailPage today={today} /> : <Navigate replace to="/?tab=products" />} path="/products/:style_id" /><Route element={<Navigate replace to="/" />} path="/dashboard" /><Route element={<CatalogLayout canManage={canWrite}><CatalogHomePage canManage={canWrite} /></CatalogLayout>} path="/catalog" />{import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" && <Route element={canWrite ? <CatalogLayout canManage><CatalogProductionSourcePage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/production-sources" />}<Route element={<CatalogLayout canManage={canWrite}><CatalogStylePage /></CatalogLayout>} path="/catalog/styles/:style_id" /><Route element={canWrite ? <CatalogLayout canManage><CatalogImportPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/imports/:import_id" /><Route element={canWrite ? <CatalogLayout canManage><CatalogUnmatchedPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/unmatched" /><Route element={canWrite ? <CatalogLayout canManage><CatalogMaintenancePage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/maintenance" /><Route element={canWrite ? <CatalogLayout canManage><CatalogVersionsPage /></CatalogLayout> : <Navigate replace to="/catalog" />} path="/catalog/versions" /><Route element={canWrite ? <BatchReviewPage /> : <Navigate replace to="/" />} path="/review/batch/:runId" /><Route element={canWrite ? <DateWorkbenchRoute canWrite siteId={siteContext.site_id} userId={principal.id} refreshRevision={publicationRevision} /> : <ViewerReviewRedirect />} path="/review/:reportDate" /><Route element={<><DateWorkbenchRoute canWrite={canWrite} siteId={siteContext.site_id} userId={principal.id} refreshRevision={publicationRevision} /><section className="advanced-review" aria-label="已发布详情"><PublishedDayPage currencyCode={siteContext.currency_code} /></section></>} path="/published/:reportDate" /><Route element={canWrite ? <><ReviewWorkbenchReturn />{reviewRoute}</> : <ViewerReviewRedirect />} path="/review-advanced/:reportDate" /><Route element={<PublishedDayPage currencyCode={siteContext.currency_code} />} path="/published-details/:reportDate" /><Route element={<VersionHistory initialReportDate={isoDate(selected)} onFilterChange={({ reportDate, reportType }) => selectReviewFocus({ reportDate, reportType, resolved: false })} onMoveRevisionCreated={(handoff) => { selectReviewFocus({ reportDate: handoff.targetReportDate, reportType: handoff.reportType, resolved: true, versionId: handoff.command.version_id }); void navigate(`/review-advanced/${handoff.targetReportDate}?${new URLSearchParams({report_type:handoff.reportType,version_id:String(handoff.command.version_id)})}`); }} onRevisionCreated={(handoff) => { selectReviewFocus({ reportDate: handoff.reportDate, reportType: handoff.reportType, resolved: true, versionId: handoff.command.version_id }); void navigate(`/review-advanced/${handoff.reportDate}?${new URLSearchParams({report_type:handoff.reportType,version_id:String(handoff.command.version_id)})}`); }} principal={principal} />} path="/versions" /><Route element={isAdmin ? <AdminConsole onSiteConfigCreated={() => { void reloadSiteContext(); }} principal={principal} /> : <Navigate replace to="/" />} path="/admin" /><Route element={<Navigate replace to="/" />} path="*" /></Routes></CatalogNavigationProvider></AppShell></AuthzGenerationProvider>;
 }

@@ -1,18 +1,28 @@
-vi.mock("../../app/AuthzGenerationContext", () => ({ useAuthzGeneration: () => ({ generation: 0 }) }));
-import { render, screen } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { CatalogMaintenancePage } from "./CatalogMaintenancePage";
+const api=vi.hoisted(()=>({current:vi.fn(),read:vi.fn()}));
+vi.mock('./catalogApi',()=>({getCurrentCatalog:api.current}));
+vi.mock('../../api/client',()=>({requestApi:api.read}));
+vi.mock('./CatalogGuidedFlow',()=>({CatalogGuidedFlow:({onClosed}:{onClosed:()=>void})=><><button>开始准备流程</button><button onClick={onClosed}>模拟完成操作</button></>}));
+afterEach(()=>{cleanup();vi.resetAllMocks();});
+it('keeps the preparation entry and history available without an initialized catalog',async()=>{
+ api.current.mockResolvedValue(null);api.read.mockResolvedValue({items:[],has_next:false});
+ render(<MemoryRouter><CatalogMaintenancePage/></MemoryRouter>);
+ expect(await screen.findByText('尚未建立目录')).toBeVisible();expect(screen.getByRole('button',{name:'开始准备流程'})).toBeEnabled();
+ expect(await screen.findByText('暂无审核批次')).toBeVisible();expect(screen.queryByRole('navigation',{name:'审核批次分页'})).not.toBeInTheDocument();
+});
+it('recovers a failed catalog read and retains the approved version and history links',async()=>{
+ api.current.mockRejectedValueOnce(Error('读取失败')).mockResolvedValue({version_number:4});api.read.mockResolvedValue({items:[{import_id:7,source_kind:'xlsx',workflow_revision:3,status:'needs_attention'}],has_next:false});
+ render(<MemoryRouter><CatalogMaintenancePage/></MemoryRouter>);
+ await userEvent.click(await screen.findByRole('button',{name:'重新读取'}));expect(await screen.findByText('当前目录 V4')).toBeVisible();
+ expect(await screen.findByRole('link',{name:'批次 #7 · 继续审核'})).toHaveAttribute('href','/catalog/imports/7');
+});
 
-afterEach(() => vi.unstubAllGlobals());
-it("keeps a usable first catalog path and explains the published-source prerequisite", async () => {
-  vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const body = url.includes("/style-readiness") ? { published_reports: 74, source_scope_confirmed: false, catalog_approved: false, return_snapshot_present: false, prerequisites_present: false } : url.includes("/source-scope") ? { status: "unconfirmed", permissions: { can_confirm: false } } : url.endsWith("/latest") ? { export: null } : url.includes("/api/catalog/imports") ? { items: [], has_next: false } : { catalog: null };
-    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
-  }));
-  render(<MemoryRouter><CatalogMaintenancePage /></MemoryRouter>);
-  expect(await screen.findByText(/先在每日核验中导入、审核并发布来源报告/)).toBeVisible();
-  expect(screen.getByRole("button", { name: "生成候选" })).toBeDisabled();
-  expect(screen.getByText("直接检查候选，不需要下载或重新上传。")).toBeVisible();
+it('refreshes the unified version and batch list after a task closes',async()=>{
+ api.current.mockResolvedValueOnce({version_number:1}).mockResolvedValue({version_number:2});api.read.mockResolvedValue({items:[],has_next:false});
+ render(<MemoryRouter><CatalogMaintenancePage/></MemoryRouter>);await screen.findByText('当前目录 V1');await waitFor(()=>expect(api.read).toHaveBeenCalledTimes(1));
+ await userEvent.click(screen.getByRole('button',{name:'模拟完成操作'}));expect(await screen.findByText('当前目录 V2')).toBeVisible();await waitFor(()=>expect(api.read).toHaveBeenCalledTimes(2));
 });

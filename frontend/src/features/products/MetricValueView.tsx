@@ -21,6 +21,7 @@ export function MetricValueView({ metric, kind, compact = false, percentage = fa
 }) {
   let value = observedValue(metric, kind);
   let detail: string | undefined;
+  let indeterminateReturnZero = false;
   if (metric.value_state === "missing_report" || metric.null_reason === "no_observed_reports") {
     value = "无报表";
     detail = `已发布 ${metric.observed_days}/${metric.expected_days} 天`;
@@ -29,13 +30,14 @@ export function MetricValueView({ metric, kind, compact = false, percentage = fa
     detail = "转化率未定义";
   } else if (metric.value_state === "zero") {
     value = kind === "sales" ? "0.00" : kind === "conversion" ? "0.000000" : "0";
-    detail = "已观测为零";
+    indeterminateReturnZero = kind === "returns" && metric.source_completeness === "indeterminate";
+    detail = indeterminateReturnZero ? "已载入事件记录为零，完整性未确定" : "已观测为零";
   }
   if (percentage && kind === "conversion" && (metric.value_state === "observed" || metric.value_state === "zero") && metric.value !== null) value = conversionPercent(String(metric.value));
   const stateClass = value === "无报表" ? css.missing_report : value === "分母为 0" ? css.undefined_denominator : css[metric.value_state] ?? "";
   return <span className={`${css.value} ${stateClass} ${compact ? css.compact : ""}`}>
     <span className={css.number}>{value === "无报表" && <FileMinus2 aria-hidden="true" />}{value === "分母为 0" && <CircleSlash2 aria-hidden="true" />}{value}</span>
-    {!compact && detail && <small className={css.detail}>{detail}</small>}
+    {detail && (!compact || indeterminateReturnZero) && <small className={css.detail}>{compact ? "完整性未确定" : detail}</small>}
     {metric.is_partial && <small className={css.partial}><CircleDashed aria-hidden="true" /><span>部分数据</span>{!compact && value !== "无报表" && <span className={css.coverage} aria-label={`已发布 ${metric.observed_days}/${metric.expected_days} 天`}>{metric.observed_days}/{metric.expected_days} 天</span>}</small>}
   </span>;
 }

@@ -1,5 +1,5 @@
 import type { FormEvent, ReactNode } from "react";
-import { Button, Checkbox, EmptyState, FormField, Input, Pagination, Select, Skeleton, StatusBadge, Table } from "../../design-system";
+import { Button, Checkbox, EmptyState, FormField, Input, Pagination, Select, Skeleton, StatusBadge, StatusMessage, Table } from "../../design-system";
 import { AnalyticsErrorState } from "./AnalyticsErrorState";
 import type { AnalyticsFailure } from "./analyticsError";
 import { LedgerMetricHelp, type LedgerHelpKey } from "./LedgerMetricHelp";
@@ -74,6 +74,7 @@ export function ProductLedgerView({ today, view, canonical, categories, draft, r
 
 
     {response && <>
+      {response.platform_identity_review && <StatusMessage kind={response.platform_identity_review.state === "pending" ? "warning" : "info"} title="平台身份核对">{response.platform_identity_review.message}{response.platform_identity_review.pending_metrics && <p>关联待核：经营{response.platform_identity_review.pending_metrics.business_rows}行／{response.platform_identity_review.pending_metrics.units}件，退货{response.platform_identity_review.pending_metrics.return_rows}行／{response.platform_identity_review.pending_metrics.returns}件；这些记录保留在来源总量中。待核数量已包含在未匹配总量中，请勿重复相加。</p>}</StatusMessage>}
       {response.coverage.business.published_days === 0 && response.coverage.returns.published_days === 0 && <EmptyState title="所选日期没有已发布报表" description="请调整日期或到每日数据查看已有报表；缺失数据不代表销量为零。" />}
       <section className={css.ledger} aria-labelledby="product-ledger-title">
         <div className={css.sectionHeading}><div><p className={css.count}>{response.total_rows.toLocaleString("zh-CN")} STYLES</p><h2 id="product-ledger-title">稳定款式</h2></div>

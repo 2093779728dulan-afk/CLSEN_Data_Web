@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import pytest
 import sqlalchemy as sa
 from app.auth.sessions import Principal
+from app.catalog.platform_evidence import lock_platform_scopes
 from app.catalog.scope_repository import (
     MySqlCatalogScopeRepository,
     ScopeAlreadyConfirmed,
@@ -18,6 +19,7 @@ from app.catalog.scope_service import (
     CatalogScopePermissionDenied,
     CatalogScopeService,
     ConfirmScopeCommand,
+    RenameScopeCommand,
 )
 from app.datasets.repository import MySqlDatasetRepository
 from app.datasets.service import DatasetService
@@ -32,6 +34,70 @@ from tests.integration.dataset_test_support import (
 )
 
 pytestmark = pytest.mark.mysql
+
+
+def test_display_name_change_preserves_identity_and_supports_replay_and_conflicts(
+    clean_catalog_scope: DatasetIntegrationCase,
+) -> None:
+    case = clean_catalog_scope
+    engine = case.runtime_engine()
+    try:
+        service = CatalogScopeService(
+            MySqlCatalogScopeRepository(engine), clock=lambda: NOW
+        )
+        context = _context(engine, _principal(case.admin_user_id, "admin"))
+        original = service.confirm(context, _command(context))
+        context = _context(engine, _principal(case.admin_user_id, "admin"))
+        assert original.report_source_scope_id is not None
+        command = RenameScopeCommand(
+            uuid4(), original.report_source_scope_id, 0, "广州店", "修正显示名称"
+        )
+        result = service.rename(context, command)
+        assert result["display_name"] == "广州店"
+        assert result["revision"] > 0
+        assert service.rename(context, command) == result
+        assert service.status(context).seller_account_display_name == "广州店"
+        with engine.connect() as connection:
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT seller_account_display_name "
+                        "FROM report_source_scopes WHERE site_id=1"
+                    )
+                )
+                == original.seller_account_display_name
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM catalog_audit_events "
+                        "WHERE event_kind='catalog.source_scope_renamed'"
+                    )
+                )
+                == 1
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT current_config_version_id "
+                        "FROM site_current_configs WHERE site_id=1"
+                    )
+                )
+                == context.site_config_version_id
+            )
+        with pytest.raises(ScopeRevisionConflict):
+            service.rename(
+                context,
+                replace(command, operation_token=uuid4(), display_name="过期名称"),
+            )
+        with pytest.raises(ScopeIdempotencyConflict):
+            service.rename(context, replace(command, display_name="冲突名称"))
+        with pytest.raises(CatalogScopePermissionDenied):
+            service.rename(
+                replace(context, principal_roles=frozenset({"viewer"})), command
+            )
+    finally:
+        engine.dispose()
 
 
 def _principal(user_id: int, *roles: str) -> Principal:
@@ -255,5 +321,22 @@ def test_scope_confirmation_is_admin_only_idempotent_and_irreversible(
                 "WHERE site_id = 1"
             )
         )
+        # The normal runtime identity can take the mutex without gaining write
+        # access to immutable source scopes; another connection must still wait.
+        assert confirmed.report_source_scope_id is not None
+        competing_runtime = case.runtime_engine()
+        try:
+            with runtime.begin() as owner, competing_runtime.connect() as contender:
+                lock_platform_scopes(owner, 1, [confirmed.report_source_scope_id])
+                contender.execute(sa.text("SET SESSION innodb_lock_wait_timeout=1"))
+                with pytest.raises(sa.exc.OperationalError) as locked:
+                    lock_platform_scopes(
+                        contender, 1, [confirmed.report_source_scope_id]
+                    )
+                assert locked.value.orig is not None
+                assert locked.value.orig.args[0] == 1205
+                contender.rollback()
+        finally:
+            competing_runtime.dispose()
     finally:
         runtime.dispose()

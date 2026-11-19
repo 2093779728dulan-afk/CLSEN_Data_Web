@@ -60,6 +60,7 @@ import type {
 } from "./workflowTypes";
 
 type Props = {
+  embedded?:boolean;onGuardChange?:(guard:{dirty:boolean;busy:boolean;unknown:boolean})=>void;
   canFinalizePublishedMove?: boolean;
   canForceRebuild?: boolean;
   initialDraft?: DraftReviewContext;
@@ -153,7 +154,7 @@ function existingStageLabel(stage: string | undefined) {
   return stage ? labels[stage] ?? stage : "待继续处理";
 }
 
-export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceRebuild = false, initialBatchId, initialDraft, initialReportType, initialVersionId, onBatchReviewCreated, onPublished, onReportDateChanged, operator, reportDate, siteId = 0, userId = 0 }: Props) {
+export function ImportReviewFlow({ embedded, onGuardChange, canFinalizePublishedMove = false, canForceRebuild = false, initialBatchId, initialDraft, initialReportType, initialVersionId, onBatchReviewCreated, onPublished, onReportDateChanged, operator, reportDate, siteId = 0, userId = 0 }: Props) {
   const recoveryIdentity = useMemo(() => ({ reportDate, siteId, userId }), [reportDate, siteId, userId]);
   const [restoredFlow] = useState(() => initialBatchId ? undefined : loadReviewRecovery(recoveryIdentity));
   const [reviewState, dispatchReview] = useReducer(
@@ -191,6 +192,8 @@ export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceReb
   });
   const [busyAction, setBusyAction] = useState<string>();
   const [error, setError] = useState<string>();
+  const [reviewGuard,setReviewGuard]=useState({dirty:false,busy:false,unknown:false});
+  useEffect(()=>onGuardChange?.({dirty:reviewGuard.dirty,busy:!!busyAction||reviewGuard.busy,unknown:reviewGuard.unknown}),[busyAction,reviewGuard,onGuardChange]);
   const [notice, setNotice] = useState<string>();
   const operationKeys = useRef(new StableOperationKeyStore()).current;
   const pendingMaterialize = useRef<PendingMaterializeCommand | undefined>(undefined);
@@ -272,9 +275,8 @@ export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceReb
   useEffect(() => {
     if (!queueBatchFingerprint) return;
     const controller = new AbortController();
-    void Promise.all(importQueue.map(async (item) => {
-      if (!item.upload) return { id: item.id, status: 404 };
-      const response = await fetch(`/api/imports/${item.upload.upload.batch_id}/raw-file`, {
+    void Promise.all(importQueue.filter(item => item.upload).map(async (item) => {
+      const response = await fetch(`/api/imports/${item.upload!.upload.batch_id}/raw-file`, {
         credentials: "same-origin",
         method: "HEAD",
         signal: controller.signal,
@@ -623,7 +625,9 @@ export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceReb
         body,
       );
       if (!isSuccessfulParse(response.result)) {
-        setError(`解析失败：${response.result.error_code}。原始文件和本次失败尝试已保留，可以修正识别选择后重新解析。`);
+        setError(response.result.error_code === "header_mismatch"
+          ? "文件表头与所选报表类型不匹配，请核对报表类型，或点击“改用其他文件”上传平台原始日报。原始文件和本次失败尝试已保留。"
+          : `解析失败：${response.result.error_code}。原始文件和本次失败尝试已保留，可以修正识别选择后重新解析。`);
         return;
       }
       clearMaterializePreview();
@@ -860,6 +864,26 @@ export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceReb
     setNotice("本次批量队列已处理完成，可以选择下一批文件。");
   };
 
+  const handOffBatchReview = (runId: number) => {
+    const batchIds = new Set(batchReviewBatchIds);
+    const action = {
+      type: "remove-items" as const,
+      ids: importQueue.filter(item => item.upload && batchIds.has(item.upload.upload.batch_id)).map(item => item.id),
+    };
+    const nextState = importReviewReducer(reviewState, action);
+    const remainingNotes = noteBatchIds.filter(batchId => !batchIds.has(batchId));
+    // Persist before navigation unmounts this flow. The server task owns these batches now.
+    if (nextState.importQueue.length) {
+      saveReviewRecovery(recoveryIdentity, { materializeReason, noteBatchIds: remainingNotes, reviewState: nextState });
+    } else {
+      removeReviewRecovery(recoveryIdentity);
+    }
+    dispatchReview(action);
+    setNoteBatchIds(remainingNotes);
+    setNotice(undefined);
+    onBatchReviewCreated?.(runId);
+  };
+
   return <ImportIntakeView
     activeStage={activeStage}
     reachedSteps={reachedSteps}
@@ -905,8 +929,8 @@ export function ImportReviewFlow({ canFinalizePublishedMove = false, canForceReb
     confirmMaterializeDecision={confirmMaterializeDecision}
     sourcePreview={upload && inspection && !draft && !published ? <SourceFilePreview batchId={upload.upload.batch_id} encoding={encoding} fileName={upload.fileName} key={`${upload.upload.batch_id}:${encoding}`} /> : undefined}
     mergeMatrix={parsed && materializePreview && (materializePreview.activeDraft || materializePreview.publication) ? <MergeDecisionMatrix disabled={busyAction === "materialize"} onStateChange={setMaterializeMerge} operator={operator} sourceId={parsed.parse_baseline_id} sourceKind="parse_baseline" targetVersionId={(materializePreview.activeDraft ?? materializePreview.publication)!.version_id} /> : undefined}
-    draftWorkspace={draft ? <div className={surfaceCss["review-workspace-shell"]}><div className={surfaceCss["review-workspace-shell__main"]}><DraftReviewGate canFinalizePublishedMove={canFinalizePublishedMove} context={draft} onDiscarded={leaveDiscardedDraft} onPublished={(result) => { setPublished(true); onPublished(result); }} onReparseSource={resumeSourceForReparse} onReportDateChanged={onReportDateChanged} operator={operator} /></div><aside aria-label="导入证据与备注" className={surfaceCss["review-workspace-shell__evidence"]}><p className="section-kicker">证据与备注</p><h3>原始批次</h3><p>备注和来源文件独立保留，不干扰总表审核。</p>{noteBatchIds.map((batchId) => <BatchNotePanel batchId={batchId} key={batchId} />)}</aside></div> : undefined}
+    draftWorkspace={draft ? <div className={surfaceCss["review-workspace-shell"]}><div className={surfaceCss["review-workspace-shell__main"]}><DraftReviewGate embedded={embedded} onGuardChange={setReviewGuard} canFinalizePublishedMove={canFinalizePublishedMove} context={draft} onDiscarded={leaveDiscardedDraft} onPublished={(result) => { setPublished(true); onPublished(result); }} onReparseSource={resumeSourceForReparse} onReportDateChanged={onReportDateChanged} operator={operator} /></div><aside aria-label="导入证据与备注" className={surfaceCss["review-workspace-shell__evidence"]}><p className="section-kicker">证据与备注</p><h3>原始批次</h3><p>备注和来源文件独立保留，不干扰总表审核。</p>{noteBatchIds.map((batchId) => <BatchNotePanel batchId={batchId} key={batchId} />)}</aside></div> : undefined}
     notes={noteBatchIds.length > 0 ? <aside aria-label="导入证据与备注" className={surfaceCss["review-evidence-drawer"]}><p className="section-kicker">证据与备注</p>{noteBatchIds.map((batchId) => <BatchNotePanel batchId={batchId} key={batchId} />)}</aside> : undefined}
-    batchEntry={<BatchReviewEntry batchIds={batchReviewBatchIds} onCreated={onBatchReviewCreated} />}
+    batchEntry={<BatchReviewEntry batchIds={batchReviewBatchIds} onCreated={onBatchReviewCreated ? handOffBatchReview : undefined} />}
   />;
 }

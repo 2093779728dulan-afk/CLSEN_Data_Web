@@ -137,7 +137,7 @@ def test_all_full_profiles_and_cleanup_are_required() -> None:
     module = bridge()
     run, jobs = run_payload(module)
     module.validate_run(run, jobs)
-    assert len(jobs) == 16
+    assert len(jobs) == 17
     assert {
         f"Frontend {gate} shard {shard}/4 / Node 24 / pnpm 11"
         for gate in ("a11y", "visual")
@@ -478,3 +478,21 @@ def test_api_does_not_retry_invalid_json(monkeypatch: pytest.MonkeyPatch) -> Non
     with pytest.raises(ValueError, match="Duplicate JSON object key"):
         module.PublicApi(False).get("actions/runs")
     assert len(calls) == 1
+
+
+def test_java_source_is_checked_but_built_jars_are_not_published() -> None:
+    module = bridge()
+    assert module.safe_path("backend-java/src/main/java/example/Main.java")
+    assert not module.safe_path("backend-java/target/production.jar")
+    assert "Java production / JDK 21" in module.REQUIRED_JOBS
+
+
+def test_java_cleanup_is_required_for_public_evidence() -> None:
+    module = bridge()
+    run, jobs = run_payload(module)
+    java = next(job for job in jobs if job["name"] == "Java production / JDK 21")
+    next(step for step in java["steps"] if "Clean this job" in step["name"])[
+        "conclusion"
+    ] = "skipped"
+    with pytest.raises(ValueError):
+        module.validate_run(run, jobs)

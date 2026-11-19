@@ -67,6 +67,9 @@ _ENTRYPOINT_IDS = [
     "live-worker",
 ]
 _ROUTE_KINDS = {
+    "/home": "feature-gated",
+    "/production/*": "feature-gated",
+    "/catalog/production-sources": "feature-gated",
     "/": "business",
     "/ledger/published-details": "business",
     "/products": "feature-gated",
@@ -88,6 +91,7 @@ _ROUTE_KINDS = {
     "*": "redirect",
 }
 _ROUTE_ROLES = {
+    "/catalog/production-sources": ["admin", "data_manager"],
     "/catalog/imports/:import_id": ["admin", "data_manager"],
     "/catalog/unmatched": ["admin", "data_manager"],
     "/catalog/maintenance": ["admin", "data_manager"],
@@ -360,10 +364,11 @@ _OWNER_ROLES = {
     "rollback": "change_author",
 }
 _ENTRYPOINTS_DIGEST = "0162b9a1d8126ecc81b1d72a9dc4e9965e1266499fe3684cb484706d417f31f6"
-_ROUTES_DIGEST = "80fb99a8581602f9d43c6a02f11d559f7aaedd9e543e9520d15da8e921899196"
+# B includes the approved inventory home; earlier source snapshots retain their contract.
+_ROUTES_DIGEST = "5a0d8de6a8b84b78e8367e2d114df64924c7c3df82bb93385f90b602eda3b714"
 _QUEUES_DIGEST = "6931ccac3e30bacf0816eb28322a2dd3ec20dbbf309b2c052105da71796934dc"
 _MYSQL_HOSTED_EXCLUSIONS_DIGEST = (
-    "314f60ddea98947d15b6a154ef877493a799693be7eb04bcd7bfa743bd369d67"
+    "928035e81f91f712a334915a5527580f8e9aabb934337058019d406523bb77fe"
 )
 
 
@@ -431,7 +436,7 @@ def _validate_entrypoints(entries: object, repository_root: Path) -> None:
 
 def _validate_routes(routes: object) -> None:
     rows = _as_list(routes, "routes must be a list")
-    _require(len(rows) == len(_ROUTE_KINDS), "routes must contain 19 unique identities")
+    _require(len(rows) == len(_ROUTE_KINDS), "routes must contain 22 unique identities")
     paths: list[str] = []
     base_keys = {
         "path",

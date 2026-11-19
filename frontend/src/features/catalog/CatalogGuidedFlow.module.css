@@ -1,0 +1,57 @@
+.entry { display:flex; flex-wrap:wrap; gap:8px; margin:0; }
+.dialog { width:min(960px,calc(100vw - 48px)); max-width:960px; height:min(720px,calc(100dvh - 48px)); overflow:clip; border-radius:24px; background:var(--color-surface); }
+.dialog > header { align-items:center; padding:12px 20px 8px; background:var(--color-surface); border-bottom:0; }
+.dialog > header h2 { font-size:20px; line-height:1.4; font-weight:600; }
+.dialog > div:last-child { display:flex; flex:1; min-height:0; overflow:clip; }
+.workflow { display:flex; flex-direction:column; width:100%; min-height:0; min-width:0; }
+.modeSwitch { display:flex; align-self:flex-start; margin:0 20px 12px; padding:4px; gap:4px; border-radius:28px; background:var(--color-surface-muted); }
+.modeSwitch button { border-radius:24px; padding-inline:20px; }
+.modeSwitch button[aria-pressed=true] { background:var(--color-primary-soft,var(--color-info-bg)); color:var(--color-primary-strong); box-shadow:none; }
+.steps { display:flex; flex:0 0 auto; gap:8px; align-items:center; list-style:none; padding:0 20px 10px; margin:0; border-bottom:1px solid var(--color-border-subtle); }
+.steps li { display:flex; align-items:center; gap:8px; min-width:0; color:var(--color-text-muted); font-size:13px; line-height:1.5; }
+.steps li:not(:last-child)::after { content:'›'; margin-left:4px; color:var(--color-text-muted); font-size:16px; font-weight:400; }
+.stepNumber { display:grid; flex:0 0 22px; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--color-surface-muted); color:var(--color-text-muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.stepLabel { white-space:nowrap; }
+.steps [aria-current=step] { color:var(--color-primary-strong); font-weight:600; }
+.steps [aria-current=step] .stepNumber { background:var(--color-primary); color:var(--color-on-primary,#fff); }
+.content { flex:1; min-height:0; min-width:0; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; padding:16px 20px; }
+.sourceContent { display:flex; flex-direction:column; justify-content:center; gap:20px; }
+.stepHeading { margin:0; font-size:20px; font-weight:600; }
+.sourceContent > section { border:0; padding:0; background:transparent; }
+.sourceContent :global(.ui-status--success) { border:1px solid var(--color-border-subtle); border-radius:16px; padding:20px; background:var(--color-surface-muted); color:var(--color-text); }
+.sourceContent :global(.ui-status--success) strong { font-weight:500; font-size:16px; }
+.actions { display:flex; align-items:end; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.footer { flex:0 0 auto; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:12px 20px; border-top:1px solid var(--color-border-subtle); background:var(--color-surface); }
+.footer button { padding-inline:20px; }
+.stepCount { margin-right:auto; color:var(--color-text-muted); font-size:13px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.complete { display:grid; justify-items:center; align-content:center; min-height:240px; gap:16px; }
+.complete > svg { width:48px; height:48px; padding:12px; border-radius:50%; color:var(--color-success); background:var(--color-success-bg,var(--color-surface-muted)); }
+.complete h3 { margin:0; font-size:22px; font-weight:600; }
+.workflow > :global(.ui-status), .workflow > [role=alert] { margin:12px 20px 0; }
+.workflow > [role=alert] { padding:16px; background:var(--color-warning-bg); border-radius:12px; }
+.content :global(.section-kicker), .content [data-field-hint] { display:none; }
+@media(max-width:700px) {
+ .dialog { width:calc(100vw - 24px); height:calc(100dvh - 32px); border-radius:20px; }
+ .dialog > header { padding:10px 16px 8px; }
+ .modeSwitch { margin-inline:16px; margin-bottom:10px; }
+ .modeSwitch button { padding-inline:12px; }
+ .steps { padding:0 16px 10px; gap:8px; }
+ .steps li { gap:6px; }
+ .steps li:not(:last-child)::after { margin-left:2px; }
+ .steps li:not([aria-current=step]) .stepLabel { display:none; }
+ .content { padding:12px 16px; }
+ .footer { padding:12px 16px; flex-wrap:wrap; gap:8px; }
+ .footer button { padding-inline:14px; }
+ .stepCount { flex-basis:100%; }
+ .workflow > :global(.ui-status), .workflow > [role=alert] { margin-inline:16px; }
+}
+
+.dialog.startDialog { height:min(480px,calc(100dvh - 48px)); }
+
+.content [data-report-content] :is(div, section, fieldset, label) { min-width:0; }
+.content [data-report-content] input[type=file] { width:100%; min-width:0; }
+.content [data-report-content] input[type=date] { max-width:100%; min-width:0; }
+.entry button, .workflow button:not([aria-label="关闭对话框"]), .workflow a[class*="_button_"] {
+ border-radius:var(--radius-control); min-height:var(--control-height-large);
+}
+.content:focus { outline:none; }

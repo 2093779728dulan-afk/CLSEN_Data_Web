@@ -1,0 +1,143 @@
+# B extension: always combine with docker-compose.yml. A keeps its original entry.
+x-production-environment: &production-environment
+  PRODUCTION_DATABASE_NAME: ${PRODUCTION_DATABASE_NAME:-clsen_production}
+  PRODUCTION_CATALOG_SCHEMA: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+  PRODUCTION_CATALOG_ALLOWED_SKUS: approved_catalog
+  PRODUCTION_AUTHORITY_MODE: catalog_transactional
+  PRODUCTION_WRITES_ENABLED: "false"
+  PRODUCTION_ORDER_SHIPMENT_WRITES_ENABLED: "true"
+  PRODUCTION_INVENTORY_WRITES_ENABLED: "true"
+  PRODUCTION_FBA_ENABLED: "true"
+  PRODUCTION_OPENING_ENABLED: "false"
+  PRODUCTION_IDENTITY_REBIND_ENABLED: "false"
+
+services:
+  mysql:
+    environment:
+      MYSQL_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+
+  migrate:
+    environment:
+      APP_DEPLOYMENT_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+
+  production-storage-init:
+    image: alpine:3.22
+    command: [sh, -ec, "mkdir -p /output/inventory /output/manual-tables && chown -R 10001:10001 /output"]
+    volumes: [production_data:/output]
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+
+  production-bootstrap:
+    profiles: [operations]
+    build: {context: .., dockerfile: backend/Dockerfile}
+    entrypoint: [python, -m, app.deployment.production]
+    environment:
+      APP_DEPLOYMENT_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+      PRODUCTION_DATABASE_NAME: ${PRODUCTION_DATABASE_NAME:-clsen_production}
+    secrets: [mysql_root_password, mysql_ca_certificate, production_app_password, production_migrator_password, production_backup_password]
+    depends_on: {mysql: {condition: service_healthy}}
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp:size=64m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  production-migrate:
+    profiles: [operations]
+    build: {context: .., dockerfile: backend-java/Dockerfile}
+    command: [--migrate]
+    environment: *production-environment
+    secrets: [mysql_ca_certificate, production_migrator_password]
+    depends_on: {mysql: {condition: service_healthy}}
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp:size=128m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  production:
+    build: {context: .., dockerfile: backend-java/Dockerfile}
+    environment: *production-environment
+    secrets: [mysql_ca_certificate, production_app_password, production_service_token]
+    depends_on: {mysql: {condition: service_healthy}}
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp:size=128m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, /app/entrypoint.sh, --healthcheck]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    environment:
+      APP_DEPLOYMENT_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+      APP_PRODUCTION_SERVICE_URL: http://production:23011
+      APP_PRODUCTION_DEMO_MODE: "false"
+      APP_PRODUCTION_QA_CATALOG_MODE: "false"
+      APP_CATALOG_PRODUCTION_SOURCES_ENABLED: "true"
+      APP_PRODUCTION_INVENTORY_SOURCE_ROOT: /var/lib/clsen/production/inventory
+      APP_PRODUCTION_INVENTORY_REVIEW_WRITES_ENABLED: "true"
+      APP_MANUAL_TABLES_ENABLED: "true"
+      APP_MANUAL_TABLES_ROOT: /var/lib/clsen/production/manual-tables
+    secrets: [production_service_token]
+    volumes: [production_data:/var/lib/clsen/production]
+    depends_on:
+      production: {condition: service_healthy}
+      production-storage-init: {condition: service_completed_successfully}
+
+  worker:
+    environment:
+      APP_DEPLOYMENT_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+      APP_PRODUCTION_SERVICE_URL: http://production:23011
+    secrets: [production_service_token]
+
+  frontend:
+    build:
+      args:
+        VITE_PRODUCTION_ENABLED: "true"
+        VITE_PRODUCTION_CATALOG_ENABLED: "true"
+        VITE_MANUAL_TABLES_ENABLED: "true"
+
+  production-maintenance:
+    profiles: [maintenance]
+    build: {context: .., dockerfile: backend/Dockerfile}
+    entrypoint: [python, -m, app.maintenance.production_backup]
+    environment:
+      APP_DEPLOYMENT_DATABASE: ${APP_DEPLOYMENT_DATABASE:-clsen_data}
+      PRODUCTION_DATABASE_NAME: ${PRODUCTION_DATABASE_NAME:-clsen_production}
+    secrets: [mysql_ca_certificate, production_backup_password]
+    networks: [data]
+    volumes:
+      - raw_data:/var/lib/clsen/raw:ro
+      - production_data:/var/lib/clsen/production:ro
+      - backup_data:/var/lib/clsen/backups
+      - backup_keyring:/var/lib/clsen/keyring:ro
+    read_only: true
+    tmpfs: [/tmp:size=256m,mode=1777]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  production-restore-verifier:
+    extends: production-maintenance
+    secrets: [mysql_root_password]
+    volumes: [restore_data:/var/lib/clsen/restore-tests]
+    environment:
+      APP_DISPOSABLE_TEST_RUN: ${APP_DISPOSABLE_TEST_RUN:-false}
+
+volumes:
+  production_data:
+
+secrets:
+  production_app_password: {file: ./secrets/production_app_password}
+  production_migrator_password: {file: ./secrets/production_migrator_password}
+  production_backup_password: {file: ./secrets/production_backup_password}
+  production_service_token: {file: ./secrets/production_service_token}

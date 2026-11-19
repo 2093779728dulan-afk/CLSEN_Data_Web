@@ -8,7 +8,7 @@ import controlCss from "../../design-system/Control.module.css";
 import css from "./DraftPublicationDialog.module.css";
 
 export function PublicationDialog({
-  context,
+  inline=false, context,
   head,
   validation,
   onCancel,
@@ -16,7 +16,7 @@ export function PublicationDialog({
   operator,
   publicationProgress,
 }: {
-  context: DraftReviewContext;
+  inline?:boolean;context: DraftReviewContext;
   head: DraftHead;
   validation: ValidationRun;
   onCancel: () => void;
@@ -44,8 +44,8 @@ export function PublicationDialog({
       setBusy(false);
     }
   };
-  return (
-    <Dialog open dismissDisabled={busy} onOpenChange={(open) => { if (!open && !busy) onCancel(); }} closeLabel="返回审核" eyebrow="最终发布闸门" title={isPublishedMove ? "跨日期生效确认" : "发布确认"} description={isPublishedMove ? "生效后，来源与目标日期的发布指针会在同一事务中切换。后续修正必须创建新修订。" : "发布后，查看人员将立即读取这个版本。后续修正必须创建新修订。"}>
+  const content=(<>
+
       <div aria-label="发布确认内容" role="region" tabIndex={busy ? 0 : undefined} aria-busy={busy || undefined} className={css.content}>
         <div className={css.receipt}><div><span>本次校验回执</span><strong>校验 #{validation.validation_run_id}</strong></div><StatusBadge label={validation.result === "passed" ? "校验通过" : "待核对校验"} tone={validation.result === "passed" ? "good" : "warn"} /></div>
         <dl className={css.ledger}>
@@ -73,6 +73,6 @@ export function PublicationDialog({
           </Button>
         </div>
       </div>
-    </Dialog>
-  );
+  </>);
+  return inline?<section aria-label="发布确认">{content}</section>:<Dialog open dismissDisabled={busy} onOpenChange={(open) => { if (!open && !busy) onCancel(); }} closeLabel="返回审核" eyebrow="最终发布闸门" title={isPublishedMove ? "跨日期生效确认" : "发布确认"} description={isPublishedMove ? "生效后，来源与目标日期的发布指针会在同一事务中切换。后续修正必须创建新修订。" : "发布后，查看人员将立即读取这个版本。后续修正必须创建新修订。"}>{content}</Dialog>;
 }

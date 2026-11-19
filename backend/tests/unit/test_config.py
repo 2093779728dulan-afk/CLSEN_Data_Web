@@ -8,6 +8,53 @@ import pytest
 from app.config import Settings, StorageSettings
 
 
+def test_production_adapter_requires_explicit_identity() -> None:
+    with pytest.raises(ValueError, match="token"):
+        Settings(production_service_url="http://127.0.0.1:23011")
+    with pytest.raises(ValueError, match="origin"):
+        Settings(
+            production_service_url="http://127.0.0.1:23011/internal",
+            production_service_token="fictional-service-token-32-characters",
+        )
+
+
+def test_manual_handoff_switch_preserves_existing_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("APP_MANUAL_TABLES_HANDOFF_ENABLED", raising=False)
+    assert Settings().manual_tables_handoff_enabled
+    monkeypatch.setenv("APP_MANUAL_TABLES_HANDOFF_ENABLED", "false")
+    assert not Settings().manual_tables_handoff_enabled
+
+
+def test_inventory_handoff_switch_preserves_existing_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("APP_MANUAL_TABLES_INVENTORY_HANDOFF_ENABLED", raising=False)
+    assert Settings().manual_tables_inventory_handoff_enabled
+    monkeypatch.setenv("APP_MANUAL_TABLES_INVENTORY_HANDOFF_ENABLED", "false")
+    assert not Settings().manual_tables_inventory_handoff_enabled
+
+
+def test_production_demo_is_not_a_server_mode() -> None:
+    with pytest.raises(ValueError, match="demo mode"):
+        Settings(
+            environment="production",
+            session_secret="fictional-session-secret-at-least-32-characters",
+            production_demo_mode=True,
+        )
+
+
+def test_production_service_credential_is_not_in_diagnostics() -> None:
+    credential = "fictional-service-token-32-characters"
+    assert credential not in repr(
+        Settings(
+            production_service_url="http://127.0.0.1:23011",
+            production_service_token=credential,
+        )
+    )
+
+
 @pytest.mark.parametrize(
     "origin",
     [
@@ -147,3 +194,16 @@ def test_storage_settings_reject_unsafe_values(
 
     with pytest.raises((TypeError, ValueError), match=message):
         StorageSettings(**values)  # type: ignore[arg-type]
+
+
+def test_server_inventory_import_uses_explicit_persistent_root(tmp_path: Path) -> None:
+    settings = Settings(
+        environment="server",
+        session_secret="fictional-server-session-secret-at-least-32-characters",
+        production_inventory_source_root=str(tmp_path),
+        production_inventory_review_writes_enabled=True,
+    )
+    assert not settings.production_demo_mode
+    assert settings.production_inventory_source_root == str(tmp_path)
+    with pytest.raises(ValueError, match="absolute inventory root"):
+        Settings(production_inventory_source_root="relative")

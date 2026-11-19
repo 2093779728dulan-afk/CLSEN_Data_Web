@@ -248,8 +248,60 @@ class Settings:
     login_rate_limit_attempts: int = 5
     login_rate_limit_window: timedelta = timedelta(minutes=15)
     bootstrap_csrf_ttl: timedelta = timedelta(minutes=10)
+    production_service_url: str = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_SERVICE_URL", "")
+    )
+    production_service_token: str = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_SERVICE_TOKEN", ""),
+        repr=False,
+    )
+    catalog_production_sources_enabled: bool = field(
+        default_factory=lambda: (
+            os.getenv("APP_CATALOG_PRODUCTION_SOURCES_ENABLED") == "true"
+        )
+    )
+    production_qa_catalog_mode: bool = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_QA_CATALOG_MODE") == "true"
+    )
+    production_demo_mode: bool = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_DEMO_MODE") == "true"
+    )
+    production_order_draft_root: str = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_ORDER_DRAFT_ROOT", ""),
+        repr=False,
+    )
+    production_inventory_source_root: str = field(
+        default_factory=lambda: os.getenv("APP_PRODUCTION_INVENTORY_SOURCE_ROOT", ""),
+        repr=False,
+    )
+    production_inventory_review_writes_enabled: bool = field(
+        default_factory=lambda: (
+            os.getenv("APP_PRODUCTION_INVENTORY_REVIEW_WRITES_ENABLED") == "true"
+        )
+    )
+    manual_tables_enabled: bool = field(
+        default_factory=lambda: os.getenv("APP_MANUAL_TABLES_ENABLED") == "true"
+    )
+    manual_tables_handoff_enabled: bool = field(
+        default_factory=lambda: (
+            os.getenv("APP_MANUAL_TABLES_HANDOFF_ENABLED", "true") == "true"
+        )
+    )
+    manual_tables_inventory_handoff_enabled: bool = field(
+        default_factory=lambda: (
+            os.getenv("APP_MANUAL_TABLES_INVENTORY_HANDOFF_ENABLED", "true") == "true"
+        )
+    )
+    manual_tables_root: str = field(
+        default_factory=lambda: os.getenv("APP_MANUAL_TABLES_ROOT", ""), repr=False
+    )
 
     def __post_init__(self) -> None:
+        if self.manual_tables_enabled and (
+            not self.manual_tables_root
+            or not Path(self.manual_tables_root).is_absolute()
+        ):
+            raise ValueError("Manual tables require an explicit absolute storage root")
         environment = self.environment.strip()
         if not environment:
             raise ValueError("environment must not be empty")
@@ -313,6 +365,51 @@ class Settings:
         object.__setattr__(self, "cors_allowed_origins", origins)
         object.__setattr__(self, "session_secret", session_secret)
         object.__setattr__(self, "session_cookie_secure", session_cookie_secure)
+        if self.production_demo_mode and environment.lower() not in {
+            "development",
+            "test",
+        }:
+            raise ValueError(
+                "Production demo mode is restricted to development and test"
+            )
+        if self.production_order_draft_root and (
+            not self.production_demo_mode
+            or not Path(self.production_order_draft_root).is_absolute()
+        ):
+            raise ValueError("Order source drafts require an explicit local demo root")
+        if self.production_inventory_source_root and (
+            environment.lower() not in {"development", "test", "server", "production"}
+            or not Path(self.production_inventory_source_root).is_absolute()
+        ):
+            raise ValueError(
+                "Inventory source requires an explicit absolute inventory root"
+            )
+        if self.production_inventory_review_writes_enabled and (
+            not self.production_inventory_source_root
+            and (not self.production_demo_mode or not self.production_order_draft_root)
+        ):
+            raise ValueError(
+                "Inventory review writes require an explicit local demo root "
+                "or inventory source"
+            )
+        if self.production_service_url:
+            target = urlsplit(self.production_service_url)
+            if (
+                target.scheme not in {"http", "https"}
+                or not target.hostname
+                or target.username
+                or target.password
+                or target.query
+                or target.fragment
+                or target.path not in {"", "/"}
+            ):
+                raise ValueError(
+                    "Production service URL must be an explicit service origin"
+                )
+            if len(self.production_service_token) < 32:
+                raise ValueError(
+                    "Production service token must have at least 32 characters"
+                )
 
     @property
     def numeric_log_level(self) -> int:

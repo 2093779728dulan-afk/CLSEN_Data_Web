@@ -1,101 +1,73 @@
-# CLSEN Data Web Skill 搭配表
+# CLSEN Data Web Skill 与 Agent 使用指南
 
-## 用途与边界
+整理：2026-10-10。本文件只回答“本次需要什么指导或专长”，不维护进度、运行记录或发布口令。开始先读[当前执行卡](project-plan-index.md)的所属条目；流程见[开发流程](../operations/development-workflow.md)，检查范围见[验证策略](../operations/development-verification-policy.md)，稳定边界见[AGENTS](../../AGENTS.md)。
 
-2026-09-14状态更新：Stage 4开发和本轮真实数据体验收尾完成，development_complete / user_verified仅限确认范围（42组确认/3组部分确认）；release_validation未开始，V35历史证据不足仍未验证，未整合部署。唯一下一任务为[新主线](../superpowers/plans/2026-09-14-current-release-and-java-evolution-roadmap.md)的发布范围与基线核对（not_started）；Stage5.1/5.2为not_started / scope_pending。原完整5.1设计仅作延期参考；Java/Python详细规划在部署准备完成后，当前不安装Java或微服务Skill、不创建相关骨架。Skill选择及轻量验证规则不变。
+## 1. 选择方式
 
-本表面向 CLSEN Data Web 的 React 前端与 FastAPI/Python 后端。它是项目 `AGENTS.md` 的补充参考，不替代其中的开发效率、验证范围、数据边界和用户体验确认规则。
+1. 明确本次要完成的使用路径及已授权范围。状态查询、简单文案、明确局部修改可不使用Skill。
+2. 需要指导时选择一个主流程Skill；出现具体技术问题才补相应参考。不能把下表当作必跑清单或默认串联。
+3. Skill的下游建议仍受项目范围、数据边界和验证策略约束，不能自动带出工作树、子代理、逐步审批、全量测试或提交。
+4. 本轮交付简短注明实际读取并应用的Skill及用途即可。使用浏览器、Vitest等工具不等于使用同名Skill；不建立使用台账，不追补猜测的历史记录。
+5. 页面内部、局部组件、全局导航与主题分别确认范围。已有选稿直接按选稿实现；不因参考图出现侧栏就重做共享外壳。视觉探索用`anti-ui-slop`，明确的UIZZE参考检索用`uizze-ui-research`，二者不为同一目的叠加；局部修正无需外部参考流程。
 
-每次任务先判断改动类型，只选择最小适用 Skill 集。小型、低风险改动可以直接实施；不能因为安装了 Skill 就自动扩大为完整设计、全量测试或复杂评审流程。
+## 2. 按任务选Skill
 
-默认顺序：明确可用功能 → 集中实现 → 一轮定向验证 → 提供体验入口 → 根据用户反馈修正。完整测试集中到部署准备阶段，在正式上线前完成；另行明确要求的专项验收按指定范围执行。普通开发、提交、合并准备和计划收尾不自动触发完整门禁。
-
-当前执行范围先读[计划索引](project-plan-index.md)及[当前版本交付与Java/Python演进主线](../superpowers/plans/2026-09-14-current-release-and-java-evolution-roadmap.md)。商品主档R/A/B1/B2/C/D、Stage4页面及真实数据试用保留既有交付与确认范围。当前范围核对允许无需Skill；需要整理重大范围时使用writing-plans，按实际缺陷或UI问题再选对应指导，不由技能自动实施旧5.1四批、重开试用或启动完整验收。全局Skill文件保持原样。
-
-## 选择方式与调用链边界
-
-- 先判断是否需要 Skill，再选一条主流程；仅遇到具体技术问题时补充参考。无需为每个任务装配一整套 Skill。
-- 小型文案、样式、配置或明确修改可直接实施；常规代码修改遵循现有实现与最小 diff，`karpathy-guidelines` 按需参考，不附加审批或前后全量测试。
-- 本表对直接调用和下游调用同样有效。原 Skill 的强制措辞不能覆盖项目的测试预算、内联工作、授权和数据边界。
-- 不修改全局 Skill，不因为本项目未使用就卸载。旧计划保留需求和历史验收事实，流程与验证范围按当前项目规则执行；明确有效的阶段前置条件仍须满足。
-
-| 原 Skill 或调用链 | 本项目覆盖规则 |
-| --- | --- |
-| `brainstorming` → `writing-plans` | 仅重大产品选择、架构调整需要完整设计；普通任务不要求设计文档、分节批准或计划自带提交。 |
-| `writing-plans` → 执行 Skill | 计划按完整使用路径组织，不把每个文件修改拆成独立测试、提交和评审任务。 |
-| `executing-plans` → 子代理 / `finishing-a-development-branch` | 当前代理内联执行；完成后交付结果，不自动创建工作树、启用子代理、全量测试、push 或 merge。确有隔离需要时才准备工作树。 |
-| `test-driven-development` → 完成前全量测试 | 只执行本轮目标验证。缺陷需要能识别原问题的复现；关键规则缺少覆盖时补测试，不要求普通修改每一步红绿循环。 |
-| `verification-before-completion` → 当前消息重跑 | 引用仍有效的开发证据并说明版本和范围；变化影响证据有效性时才重跑受影响部分。局部结果不能外推为全量或发布通过。 |
-| `code-review` / `requesting-code-review` → 并行评审 | 默认内联检查相关 diff，复用当前需求上下文；不启用子代理，不因缺少独立 spec 或 issue tracker 而新增配套流程。 |
-| `systematic-debugging` → `diagnosing-bugs` | 普通缺陷从 `systematic-debugging` 开始；仅跨模块、偶发、并发、一致性或难定位的泄漏、性能问题升级到 `diagnosing-bugs`。沿用已有复现、日志和目标测试，不启动第二套排错流程。 |
-| `product-design:audit` → 设计 / 外部参考 / 浏览器工具 | 只审查一条受影响使用路径，默认内联给出证据、问题和建议；不自动串联设计、外部参考、画布或浏览器回归，不新增审计系统或逐步审批。实际缺陷转入既有排错流程。 |
-
-## 开发与部署的验证分工
-
-开发期优先使用已有目标测试，必要时才补缺陷回归或关键规则测试。普通定向检查预算约 3 分钟，MySQL 定向验证约 10 分钟；关键问题未解决不能宣称完成，超过预算也不自动升级为全量。通过后不重复验证，失败后只重跑失败节点及受影响隔离检查。
-
-完整回归、双版本 MySQL、完整 E2E、性能、备份恢复及部署演练留到部署准备阶段。具体命令与待办分别见 [验证策略](../operations/development-verification-policy.md) 和 [开发流程](../operations/development-workflow.md)。当前远端 CI 尚未随本表调整，不能把此策略描述为 CI 已按改动范围执行。
-
-## 默认工作集
-
-| 工作 | 主责 Skill | 何时使用 | 验证边界 |
-| --- | --- | --- | --- |
-| 新的多步骤实现方案 | `writing-plans` | 架构改变、重大产品选择或不可逆操作 | 小任务不自动要求完整计划。 |
-| 执行已批准计划 | `executing-plans` | 已有清晰且批准的计划 | 按当前项目范围内联推进，不继承旧计划的逐步测试和自动收尾流程。 |
-| 常规业务实现 | 无必选 Skill；按需参考 `karpathy-guidelines` | 需求清楚，现有结构可沿用 | 集中实现后运行已有受影响测试。 |
-| 缺陷回归、关键业务规则 | `test-driven-development` | 需要证明原缺陷或补足实质风险覆盖 | 目标测试或最小复现；不以 TDD 作为所有后端任务的必经流程。 |
-| Python/FastAPI 测试设计 | `python-testing-patterns` | 已确定需要编写测试且存在 fixture、mock 或 API 测试设计问题 | 只补充所需技术细节，不自动引入 TDD 或扩大覆盖范围。 |
-| 常规故障排查 | `systematic-debugging` | 测试、页面、API、数据库或构建异常 | 先复现并定位，再做最小修复。 |
-| 复杂故障升级 | `diagnosing-bugs` | 跨模块、偶发、并发、一致性、泄漏或复杂性能问题 | 不作为普通报错的默认入口。 |
-| 完成声明 | `verification-before-completion` | 准备标记 `development_complete`、`ready_for_user_review` 或完成时 | 复用仍有效的相关证据，不重跑无关检查。 |
-| 定向代码审查 | `code-review` | 用户要求审查或重大变更需要检查实质风险 | 当前代理内联审查，不因每次提交自动触发；不为风格偏好扩大改动。 |
-
-## 前端工作集
-
-| 工作 | 主责 Skill | 使用限制 |
+| 本次问题 | 主流程 | 需要时才补充的指导与边界 |
 | --- | --- | --- |
-| 简单字段、文案或局部样式修正 | 无必选 Skill | 需求明确且沿用既有组件时直接实施；不因修改前端就装配整套设计工具。 |
-| 新页面、整页或多个区域的信息层级调整；同页反复出现布局反馈 | `frontend-design` | 先评估受影响页面的层级与布局再集中修改，沿用 Stage 3 Token、共享组件及 React/Vite 技术栈；不使用 `vue`，不扩大为全站重设计。 |
-| 步骤过多、入口难找、保存与批准含义不清；同一路径反复出现交互反馈 | `product-design:audit` | 围绕一条受影响路径做简短内联审查，依据用户提供的相关截图或本轮授权页面证据；未观察到的判断标明待验证。不自动上传真实数据、创建 Figma 画布或扩展为完整产品审计。 |
-| 按需页面快检 | `webapp-testing` | 页面缺陷、跨页面或 API 联动需要时，检查一条受影响路径；纯文案和样式不自动触发浏览器回归，不替代用户体验确认。 |
-| 复杂浏览器自动化 | `playwright` | 仅当 `webapp-testing` 不足或任务明确要求浏览器自动化时。 |
-| 需要外部界面参考 | `anti-ui-slop` 或 `uizze-ui-research` | 只有真实外部参考能帮助解决当前视觉问题时二选一；作为补充，不与 `frontend-design` 并列主责，不把业务数据用于外部检索。 |
+| 查询进度、同步小段文档、明确的小改 | 无必选Skill | 直接处理所属条目，不因查询而启动检查或读全部历史 |
+| 重大产品／架构选择尚不明确 | `brainstorming` | 明确影响结果的取舍；需要形成多步骤实施方案时用`writing-plans`，不要求普通小任务分节批准 |
+| 编写有依赖的完整实施方案 | `writing-plans` | 按可用结果组织任务；计划交付不等于代码、真实数据接入或发布获授权 |
+| 执行已批准的书面计划 | `executing-plans` | 当前代理内联推进；不继承旧计划中失效的逐文件测试、自动提交或收尾口令 |
+| 常规功能实现 | 无必选Skill | 沿用现有架构和组件，集中完成授权内完整路径 |
+| 报错、构建／测试失败、行为不符合约定 | `systematic-debugging` | 先复现和定位；仅跨模块、偶发、并发、一致性、泄漏或复杂性能问题升级`diagnosing-bugs`，不启动第二套排错 |
+| GitHub Actions／PR门禁失败 | `gh-fix-ci` | 核对失败job和具体SHA；只修失败及直接影响，不把包装层exit1当根因 |
+| 页面布局、层级、重复文字裁切 | `frontend-design` | 沿[前端设计与依赖规范](frontend-development-standard.md)复用现有tokens、可控组件源码及默认选型；核对准确API、依赖及许可，按需接入并限制重复依赖，不虚构组件属性或换框架 |
+| 保存、撤销、批准含义不清，操作路径过长 | `product-design:audit` | 只审查受影响路径；实际缺陷转排错，不自动扩展为全产品审计或上传真实数据 |
+| 本次需要浏览器功能验证 | `webapp-testing` | 走目标路径的入口、前置、操作、刷新及适用失败恢复；复杂自动化才补`playwright`，代理操作不能替代用户确认 |
+| 视觉方向未定，或明确需要外部参考 | 按缺口选`anti-ui-slop`或`uizze-ui-research` | 前者组织未定设计，后者执行参考检索；已有选稿／局部CSS修正不自动触发。不上传私有资料，不默认加载两项、安装插件或创建Figma画布 |
+| 关键规则缺少覆盖、明确缺陷需要回归 | `test-driven-development` | 目标测试应能识别原问题；不把所有静态或低风险改动强制拆成RED/GREEN |
+| Python fixture／mock／API测试设计难点 | `python-testing-patterns` | 仅在已确定需要该测试时补技术细节，不自动扩大覆盖 |
+| 用户要求审查，或变更有具体实质风险 | `code-review` | 默认当前代理内联审查相关diff；`requesting-code-review`仅安排已要求的独立审查，不凭加载Skill组队 |
+| 用户明确要求安全审查／安全设计 | `security-best-practices` | 按支持语言与目标边界使用；普通权限改动仍有必要边界检查，不自动生成全仓安全报告 |
+| 大幅整理流程、说明及计划文档 | `documentation-writer` | 保留批准事实与历史，核对链接和规则归属；纯文档不启动业务测试 |
+| 授权表格样本制作／检查，或Word排版 | `spreadsheets:Spreadsheets`或`documents:documents` | 只处理目标资料；解析器代码走普通实现流程，真实原件不扩大读取，Word改版才做必要渲染检查 |
+| 准备完成声明 | 按需`verification-before-completion` | 核对来源、范围及仍有效证据，不因新消息再跑一轮测试；局部通过不外推为发布通过 |
+| 用户要求分支整合／PR／清理 | `finishing-a-development-branch` | 保护dirty与历史，按具体提交/推送/合并/删除授权执行；普通开发交付不自动调用 |
 
-按问题选择主流程：布局与视觉层级用 `frontend-design`，操作顺序与理解成本用 `product-design:audit`，报错或行为不符合约定用排错流程。混合问题先处理阻塞使用的部分，只在另一类问题确实存在时补充 Skill；不默认串联全部前端工作集。截图、DOM、测试各自只支持其观察到的结论，不能仅凭截图宣称完整无障碍检查通过。
+工程取舍单独按问题选：出现过度抽象、防护或无依据重复验证时用`stop-that-shit`；需求理解／局部修改需要帮助时用`karpathy-guidelines`；明确的代码简化用`ponytail`。三项不串为固定流程；少量重复可以保留，权限、事务、并发、兼容及完整交付不能缩水。
 
-## 后端、数据与安全工作集
+## 3. Agent 与角色怎么用
 
-| 工作 | 主责 Skill | 使用限制 |
+默认由当前代理完成实现和局部审查。下表是专长参考，不表示已加载角色、创建子代理或建立团队；角色模板中的能力不能变成额外任务。只有用户或适用项目规则明确要求委派且存在独立职责时，才在对应范围使用子代理。明确要求的独立审查不能用局部自审代替；本表本身不新增该要求。
+
+| 工作内容 | 可参考的角色专长 | 触发边界 |
 | --- | --- | --- |
-| FastAPI、Python 业务逻辑 | 无必选 Skill | 优先沿用现有结构和目标测试；明确缺陷或关键规则需要时才使用 TDD。 |
-| MySQL、权限、公共接口或并发改动 | `systematic-debugging`（发生异常时） | 先执行目标测试，再按项目规则扩大到必要集成验证；仅使用可抛弃的任务专用 MySQL 容器。 |
-| 实际表格样本的制作、检查或分析 | `spreadsheets:Spreadsheets` | 只处理授权或合成样本；解析器、字段映射、导出接口代码按普通后端流程，不引入表格制作运行时；禁止触碰 `data/`。 |
-| 安全审查或安全设计指导 | `security-best-practices` | 用户明确要求安全审查或安全设计时使用；普通鉴权、上传等改动仍须定向检查安全边界，不自动扩展成全仓安全报告。 |
-| 需要设计独立的数据工作流 | 暂不创建项目专属 Skill | 先通过真实任务证明重复的流程与失败模式。 |
+| 普通局部实现 | `Minimal Change Engineer` | 完成完整结果，避免顺手重构，不追求最少文件或删保护 |
+| 页面与前端交互 | `Frontend Developer` | 当前页面、共享组件和实际消费者，不自动重做全站 |
+| Java/Python领域边界与接口 | `Backend Architect`或`Software Architect` | 已授权且需要架构取舍；不预建微服务或平台 |
+| 有证据的数据库查询瓶颈 | `Database Optimizer` | 明确查询和真实收益；不自行连接业务库或扩大数据范围 |
+| 自动化测试的编写／维护 | `Test Automation Engineer` | 已确定需要该自动化，不代替业务实现或强制全套测试 |
+| 定向审查 | `Code Reviewer`、安全问题按需`Application Security Engineer` | 具体触发、影响和依据；风格偏好或单一实现不是缺陷 |
+| 明确的集成／发布就绪评估 | `Reality Checker` | 按项目证据区分缺陷、缺证据与已达成范围，不重复测试或自动发布 |
 
-## 交付与用户体验状态
+即使需要多种知识，当前代理也可连续内联处理。真实委派须明确责任文件/模块、共享工作保护与交付范围；不能因为有多个角色名称就自动派发。项目文档整理不修改全局Skill、Agent配置或安装插件。
 
-技能验证不能替代用户体验确认。项目状态应分开记录：
+## 4. 未来Java／Redis的技术路由
 
-```text
-development_complete
-ready_for_user_review
-user_verified
-release_validation
-accepted
-```
+后续顺序由[总主计划](../superpowers/plans/2026-09-14-current-release-and-java-evolution-roadmap.md)决定，不由Skill表开工。
 
-可体验功能交付时，提供已核实的访问入口、必要前置条件、3–5 步操作和预期结果。用户明确体验通过前，不得把 `ready_for_user_review` 表示为 `user_verified` 或 `accepted`。
+| 计划位置 | 需要的指导 | 本期业务及边界 |
+| --- | --- | --- |
+| 5：准备与领域边界 | 按需`writing-plans` | 确认选定源码、JDK/Spring/构建器、隔离存储及必要输入；以MVP字段规则为准，不为补齐搭配预装Skill |
+| 6a：首个闭环与表格 | 无必选Java专属Skill；具体难点查适用官方资料 | **预计订单→分批实际出货→订单／SKU差额汇总**，手工保存先可用，再补两类表格；不把完工/入库/库存恢复为首版前置 |
+| 6b：独立可用交付 | 按目标问题选前端／验证指导 | 入口、样例、操作和结果齐备，用户确认单独记；MVP不增加专项测试阶段或平台 |
+| 6c：Redis读取优化 | 查询或性能出现具体问题时按需技术指导 | 6b之后按总主计划选择高频读取，保留数据版本、权限、更新及故障回退；不提前安装Redis或转移写入权威 |
+| 7：明确授权后的关联 | 商品身份约定及必要边界核对 | 稳定ID、scope、粒度、唯一写入方、事务与兼容；只读授权不自动变成写入、过账或迁移 |
 
-在现有批次交付说明中用一行记录实际使用的 Skill 及用途，例如“Skill：`frontend-design`（商品详情信息层级调整）”；没有使用则写“本批无需 Skill”。只记录本批实际读取并应用的指导，运行 Vitest、浏览器或截图工具不等于使用了对应 Skill；不追补推测的历史使用记录，不建立独立台账。
+当前React/FastAPI路径继续沿用；不能把Python工具外推为Java测试入口。CLSEN RAG/Alpha的Skill、数据、collection、验收样例和阶段授权不迁入本项目。
 
-## 不应迁入的 RAG 规则
+## 5. 验证与历史入口
 
-下列内容只属于 CLSEN RAG，不能作为 Data Web 默认 Skill 或规则：
+所有路由只使用[同一验证策略](../operations/development-verification-policy.md)：先走通本次完整功能，必要构建/前置/缺陷复现可先做；随后做匹配风险的检查，复用仍有效结果。正式门禁保留原合同，Skill与角色都不能把开发通过改为accepted或已部署。状态定义只维护[开发流程](../operations/development-workflow.md#delivery-states)。
 
-- `rag-ingestion-metadata`
-- 30 SKU 的 Top-3、正确图片与文档 chunk 验收
-- Qdrant、BGE-M3 与 VirtualBox VM 服务检查
-- RAG 的 `source_version`、`chunk_id` 与 collection 约束
-
-只有真实任务反复出现可复用的操作步骤或失败模式时，才考虑项目专属 Skill；先用简短说明试用，确认有效再固化，不预先建设生命周期和审批体系。
+[整理前原文](skill-stack.history-2026-10-10.md)保留旧官方版本核对、安装记录和细分搭配。旧“本次已安装／当前阶段”是当时记录，本轮未重新检查上游最新版本、安装或升级全局Skill。

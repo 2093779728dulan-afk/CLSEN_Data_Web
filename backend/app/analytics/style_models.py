@@ -366,6 +366,7 @@ class StyleLedgerRow(_StrictModel):
 
 
 class StyleLedgerResponse(_StrictModel):
+    platform_identity_review: dict[str, object] | None = None
     # Search-filtered, before pagination; null when unavailable.
     filtered_sales_total: str | None = None
     rows: list[StyleLedgerRow]
@@ -414,7 +415,7 @@ class StyleVariant(_StrictModel):
     sku_id: str
     standard_color: str
     standard_size: str
-    internal_display_sku: str
+    internal_display_sku: str | None
     status: Literal["enabled", "disabled"]
     seller_sku_aliases: list[SafeSourceRef]
     metrics: MetricValues
@@ -435,6 +436,7 @@ class TrendSeries(_StrictModel):
 
 
 class StyleCardResponse(_StrictModel):
+    platform_identity_review: dict[str, object] | None = None
     style: StyleIdentity
     summary: StyleSummary
     available_series: list[AvailableSeries]

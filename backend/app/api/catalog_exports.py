@@ -184,7 +184,10 @@ def get_latest_catalog_export(
     try:
         with engine.connect() as connection:
             export_id = connection.scalar(
-                sa.text("SELECT MAX(id) FROM catalog_exports WHERE site_id = :site_id"),
+                sa.text(
+                    "SELECT MAX(id) FROM catalog_exports WHERE site_id = :site_id "
+                    "AND fact_snapshot_tuple_id IS NOT NULL"
+                ),
                 {"site_id": context.site_id},
             )
         return catalog_json(

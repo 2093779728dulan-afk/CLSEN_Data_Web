@@ -558,7 +558,9 @@ class MySqlCatalogSnapshotCoordinator:
             return_dedup_decision_digest=decision_digest,
         )
         existing = self._existing_decisions(
-            connection, base_catalog_version_id=base_catalog_version_id
+            connection,
+            base_catalog_version_id=base_catalog_version_id,
+            scope_id=scope_id,
         )
         ordered_observations = tuple(
             sorted(
@@ -817,7 +819,7 @@ class MySqlCatalogSnapshotCoordinator:
 
     @staticmethod
     def _existing_decisions(
-        connection: Connection, *, base_catalog_version_id: int | None
+        connection: Connection, *, base_catalog_version_id: int | None, scope_id: int
     ) -> tuple[ExistingCatalogDecision, ...]:
         if base_catalog_version_id is None:
             return ()
@@ -829,15 +831,17 @@ class MySqlCatalogSnapshotCoordinator:
                            sku_id AS target_sku_id, NULL AS exclusion_reason
                     FROM product_catalog_mappings
                     WHERE catalog_version_id = :catalog_version_id
+                      AND report_source_scope_id = :scope_id
                     UNION ALL
                     SELECT seller_sku_match_bytes, 'excluded' AS action,
                            NULL AS target_sku_id, reason AS exclusion_reason
                     FROM product_catalog_exclusions
                     WHERE catalog_version_id = :catalog_version_id
+                      AND report_source_scope_id = :scope_id
                     ORDER BY seller_sku_match_bytes, action
                     """
                 ),
-                {"catalog_version_id": base_catalog_version_id},
+                {"catalog_version_id": base_catalog_version_id, "scope_id": scope_id},
             )
             .mappings()
             .all()

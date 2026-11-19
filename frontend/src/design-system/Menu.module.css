@@ -10,6 +10,8 @@
 }
 
 .item {
+  color: inherit;
+  text-decoration: none;
   display: flex;
   min-height: 34px;
   padding: 7px var(--space-2);

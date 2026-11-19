@@ -114,10 +114,52 @@ class MySqlCatalogUnmatchedRepository:
             returns = MySqlCatalogSnapshotCoordinator._return_rows(
                 connection, version_ids["return_report"]
             )
+            excluded_raw_digests = {
+                item.seller_sku_ref.sha256 for item in frozen.candidates.exclusions
+            }
+            from app.catalog.inventory import load_catalog_identity_inventory
+            from app.catalog.platform_evidence import catalog_platform_review
+
+            inventory = load_catalog_identity_inventory(
+                connection,
+                site_id=site_id,
+                catalog_version_id=frozen.base_catalog_version_id,
+            )
+            active_styles = {
+                row["style_id"]
+                for row in inventory.styles
+                if row["status"] == "enabled"
+            }
+            active_skus = {
+                row["sku_id"]
+                for row in inventory.skus
+                if row["status"] == "enabled" and row["style_id"] in active_styles
+            }
+            review = (
+                catalog_platform_review(
+                    connection,
+                    site_id=site_id,
+                    catalog_version_id=frozen.base_catalog_version_id,
+                    scope_id=frozen.fact_tuple.report_source_scope_id,
+                )
+                if frozen.base_catalog_version_id
+                else {"conflicts": []}
+            )
+            blocked = {item["seller_sku"] for item in review["conflicts"]}
+            blocked_digests = {
+                "sha256:" + hashlib.sha256(item.seller_sku.encode("utf-8")).hexdigest()
+                for item in frozen.observations
+                if seller_sku_match_v1(item.seller_sku).utf8.decode() in blocked
+            }
             unresolved_raw_digests = {
                 item.seller_sku_ref.sha256
                 for item in frozen.candidates.mappings
-                if item.target_sku_id is None
+                if (
+                    item.target_sku_id is None
+                    or item.target_sku_id not in active_skus
+                    or item.seller_sku_ref.sha256 in blocked_digests
+                )
+                and item.seller_sku_ref.sha256 not in excluded_raw_digests
             }
 
             groups: dict[bytes, dict[str, Any]] = {}
@@ -204,7 +246,10 @@ class MySqlCatalogUnmatchedRepository:
                     group["return_quantity"] += return_projection.quantity or 0
 
             candidate_status = self._candidate_status(
-                connection, site_id=site_id, groups=groups
+                connection,
+                site_id=site_id,
+                scope_id=frozen.fact_tuple.report_source_scope_id,
+                groups=groups,
             )
             ordered = sorted(
                 groups.values(),
@@ -395,7 +440,11 @@ class MySqlCatalogUnmatchedRepository:
 
     @staticmethod
     def _candidate_status(
-        connection: Connection, *, site_id: int, groups: dict[bytes, dict[str, Any]]
+        connection: Connection,
+        *,
+        site_id: int,
+        scope_id: int,
+        groups: dict[bytes, dict[str, Any]],
     ) -> dict[bytes, dict[str, object]]:
         if not groups:
             return {}
@@ -409,23 +458,70 @@ class MySqlCatalogUnmatchedRepository:
                 INNER JOIN report_source_keys AS source_keys ON source_keys.id=evidence.source_key_id
                 INNER JOIN catalog_source_refs AS refs ON refs.id=evidence.seller_sku_ref_id AND refs.resource_kind='export'
                 INNER JOIN catalog_imports AS imports ON imports.export_id=refs.resource_id AND imports.site_id=:site_id
-                WHERE evidence.site_id=:site_id AND source_keys.seller_sku_match_bytes IN :match_bytes
+                WHERE evidence.site_id=:site_id AND source_keys.report_source_scope_id=:scope AND source_keys.seller_sku_match_bytes IN :match_bytes
                 """
                 ).bindparams(sa.bindparam("match_bytes", expanding=True)),
-                {"site_id": site_id, "match_bytes": list(groups)},
+                {"site_id": site_id, "scope": scope_id, "match_bytes": list(groups)},
             )
             .mappings()
             .all()
         )
-        return {
-            bytes(row["seller_sku_match_bytes"]): {
-                "status": _candidate_state(str(row["status"])),
-                "workflow_status": str(row["status"]),
-                "review_path": f"/catalog/imports/{int(row['id'])}",
+        by_match: dict[bytes, dict[int, dict[str, Any]]] = {}
+        for row in rows:
+            by_match.setdefault(bytes(row["seller_sku_match_bytes"]), {})[
+                int(row["id"])
+            ] = dict(row)
+        hashes = {item["safe"].sha256: key for key, item in groups.items()}
+        # Production/report/listing candidates have no generated fact-export
+        # source refs. Their current mapping projection is still an exact source
+        # reference; do not label these saved candidates as "not generated".
+        extra = connection.execute(
+            sa.text("""
+            SELECT DISTINCT i.id,i.status,i.updated_at,
+                JSON_UNQUOTE(JSON_EXTRACT(r.payload_json,'$.seller_sku_sha256')) AS raw_sha
+            FROM catalog_import_rows r JOIN catalog_imports i ON i.id=r.import_id AND i.site_id=r.site_id
+            WHERE r.site_id=:site AND r.section='mappings'
+            AND r.workflow_revision=(SELECT MAX(p.workflow_revision) FROM catalog_import_rows p
+                WHERE p.import_id=r.import_id AND p.section=r.section AND p.workflow_revision<=i.workflow_revision)
+            AND JSON_UNQUOTE(JSON_EXTRACT(r.payload_json,'$.seller_account'))=:scope
+            AND JSON_UNQUOTE(JSON_EXTRACT(r.payload_json,'$.seller_sku_sha256')) IN :hashes
+        """).bindparams(sa.bindparam("hashes", expanding=True)),
+            {"site": site_id, "scope": str(scope_id), "hashes": list(hashes)},
+        ).mappings()
+        for row in extra:
+            by_match.setdefault(hashes[row["raw_sha"]], {})[int(row["id"])] = dict(row)
+        result = {}
+        for key, related in by_match.items():
+            ordered = sorted(
+                related.values(),
+                key=lambda r: (
+                    r["status"]
+                    in {
+                        "needs_attention",
+                        "validated",
+                        "ready_for_approval",
+                        "rejected",
+                    },
+                    r["updated_at"],
+                    r["id"],
+                ),
+                reverse=True,
+            )
+            first = ordered[0]
+            result[key] = {
+                "status": _candidate_state(first["status"]),
+                "workflow_status": first["status"],
+                "review_path": f"/catalog/imports/{first['id']}",
+                "related": [
+                    {
+                        "import_id": r["id"],
+                        "status": r["status"],
+                        "review_path": f"/catalog/imports/{r['id']}",
+                    }
+                    for r in ordered
+                ],
             }
-            for row in rows
-            if int(row["item_rank"]) == 1
-        }
+        return result
 
 
 __all__ = ("CatalogUnmatchedRangeInvalid", "MySqlCatalogUnmatchedRepository")

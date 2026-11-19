@@ -282,6 +282,9 @@ def _build_app(
     from app.api.catalog_dedup import router as catalog_dedup_router
     from app.api.catalog_exports import router as catalog_exports_router
     from app.api.catalog_imports import router as catalog_imports_router
+    from app.api.catalog_production_sources import (
+        router as catalog_production_sources_router,
+    )
     from app.api.catalog_queries import router as catalog_queries_router
     from app.api.dashboard import router as dashboard_router
     from app.api.data_calendar import router as data_calendar_router
@@ -289,6 +292,8 @@ def _build_app(
     from app.api.drafts import router as drafts_router
     from app.api.imports import router as imports_router
     from app.api.maintenance import router as maintenance_router
+    from app.api.manual_tables import router as manual_tables_router
+    from app.api.production import router as production_router
     from app.api.publications import router as publications_router
     from app.api.published_details import router as published_details_router
     from app.api.raw_files import router as raw_files_router
@@ -300,12 +305,18 @@ def _build_app(
     from app.api.workbench import router as workbench_router
 
     application.include_router(auth_router)
+    application.include_router(production_router)
+    application.include_router(manual_tables_router)
     application.include_router(batch_reviews_router)
     application.include_router(catalog_admin_router)
     application.include_router(catalog_changes_router)
     application.include_router(catalog_dedup_router)
     application.include_router(catalog_exports_router)
     application.include_router(catalog_imports_router)
+    application.include_router(catalog_production_sources_router)
+    from app.api.catalog_listing_sources import router as catalog_listing_sources_router
+
+    application.include_router(catalog_listing_sources_router)
     application.include_router(catalog_queries_router)
     application.include_router(admin_router)
     application.include_router(admin_management_router)
@@ -387,6 +398,7 @@ def create_runtime_app(settings: Settings | None = None) -> FastAPI:
             assert_schema_compatible(
                 engine,
                 database_identity=database_settings.safe_url,
+                allow_manual_tables_absent=not resolved_settings.manual_tables_enabled,
             )
             application.state.database_engine = engine
             application.state.session_factory = create_session_factory(engine)

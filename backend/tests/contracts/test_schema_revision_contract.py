@@ -51,7 +51,7 @@ def _run_powershell(script: Path, *arguments: str) -> subprocess.CompletedProces
 def test_schema_revision_has_one_literal_runtime_source() -> None:
     module = ast.parse(SCHEMA_REVISION_MODULE.read_text(encoding="utf-8"))
 
-    assert _literal_assignment(module, "CURRENT_SCHEMA_REVISION") == "0030"
+    assert _literal_assignment(module, "CURRENT_SCHEMA_REVISION") == "0037"
     assert _literal_assignment(module, "BACKUP_READER_SCHEMA_REVISIONS") == (
         "0020",
         "0021",
@@ -64,6 +64,13 @@ def test_schema_revision_has_one_literal_runtime_source() -> None:
         "0028",
         "0029",
         "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0035",
+        "0036",
+        "0037",
     )
 
 
@@ -84,7 +91,7 @@ def test_current_revision_matches_the_only_alembic_head() -> None:
         encoding="utf-8",
     )
 
-    assert completed.stdout.strip() == "0030 (head)"
+    assert completed.stdout.strip() == "0037 (head)"
 
 
 def test_backup_writer_and_restore_reader_have_distinct_revision_policies() -> None:
@@ -95,7 +102,7 @@ def test_backup_writer_and_restore_reader_have_distinct_revision_policies() -> N
         encoding="utf-8"
     )
 
-    assert CURRENT_SCHEMA_REVISION == "0030"
+    assert CURRENT_SCHEMA_REVISION == "0037"
     assert BACKUP_READER_SCHEMA_REVISIONS == (
         "0020",
         "0021",
@@ -108,6 +115,13 @@ def test_backup_writer_and_restore_reader_have_distinct_revision_policies() -> N
         "0028",
         "0029",
         "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0035",
+        "0036",
+        "0037",
     )
     assert "schema_revision != CURRENT_SCHEMA_REVISION" in backup_source
     assert "schema_revision not in BACKUP_READER_SCHEMA_REVISIONS" in restore_source

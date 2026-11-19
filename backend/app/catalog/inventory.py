@@ -48,6 +48,7 @@ def load_catalog_identity_inventory(
                 """
                 SELECT revisions.sku_id, revisions.style_id, styles.style_code,
                        revisions.internal_display_sku,
+                           revisions.code_status, revisions.code_evidence,
                        revisions.standard_color, revisions.standard_size,
                        revisions.status
                 FROM product_catalog_sku_members AS members

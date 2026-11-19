@@ -54,7 +54,7 @@ export function ImportIntakeView({ activeStage, reachedSteps, assignedDate, repo
 
       {importQueue.length > 0 && (
         <section aria-label="批量导入队列" className={entryCss["import-queue"]}>
-          <header><div><p className="section-kicker">批量导入队列</p><h2>{importQueue.length} 份文件 · 上传结果</h2></div><div className={entryCss["import-queue__header-actions"]}><p>清空只会移除当前页面队列，不会删除服务器上的原始文件或导入批次。</p><Button variant="quiet" disabled={busyAction !== undefined} onClick={reset} type="button">清空页面队列</Button></div></header>
+          <header><div><p className="section-kicker">批量导入队列</p><h2>{importQueue.length} 份文件 · 上传结果</h2></div><div className={entryCss["import-queue__header-actions"]}><p hidden>清空只会移除当前页面队列，不会删除服务器上的原始文件或导入批次。</p><Button variant="quiet" disabled={busyAction !== undefined} onClick={reset} type="button">清空页面队列</Button></div></header>
           <ol>
             {importQueue.map((item, index) => {
               const active = item.id === activeQueueId;
@@ -70,7 +70,7 @@ export function ImportIntakeView({ activeStage, reachedSteps, assignedDate, repo
 
       {!upload && !draft && busyAction !== "resume" && busyAction !== "reparse" && (
         <form className={entryCss["intake-panel"]} onSubmit={(event) => { void uploadAndInspect(event); }}>
-          <div className={entryCss["intake-panel__copy"]}><p className="section-kicker">新建导入批次</p><h2>批量文件逐份识别，再进入各自工作日</h2><p>批量上传会从每个文件识别报告日期并放入对应日期队列；识别不到日期时才使用下方日期作为待确认归属。文件不会直接进入业务数据。</p></div>
+          <div className={entryCss["intake-panel__copy"]}><p className="section-kicker">新建导入批次</p><h2>选择报表文件</h2><p hidden>批量上传会从每个文件识别报告日期并放入对应日期队列；识别不到日期时才使用下方日期作为待确认归属。文件不会直接进入业务数据。</p></div>
           <div className={entryCss["intake-panel__fields"]}>
             <label className="field-stack">识别不到日期时的归属日<Input onChange={(event) => changeAssignedDate(event.target.value)} required type="date" value={assignedDate} /></label>
             <label className={entryCss["file-drop"]}>CSV 文件（可多选）<input ref={fileInputRef} disabled={busyAction === "upload"} accept=".csv,text/csv" aria-label="CSV 文件" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} type="file" /><span>{files.length === 1 ? files[0]?.name : files.length > 1 ? `已选择 ${files.length} 份 CSV` : "选择一份或多份 CSV"}</span></label>
@@ -85,7 +85,7 @@ export function ImportIntakeView({ activeStage, reachedSteps, assignedDate, repo
       {published && !draft && (
         <section className={entryCss["baseline-panel"]} role="status">
           <span className={entryCss["baseline-panel__mark"]}>发</span>
-          <div><p className="section-kicker">发布已完成</p><h2>这份文件已经进入当前发布版本</h2><p>刷新没有重新打开已完成的解析基线。可以继续审核队列中的下一份文件。</p></div>
+          <div><p className="section-kicker">发布已完成</p><h2>这份文件已经进入当前发布版本</h2><p hidden>刷新没有重新打开已完成的解析基线。可以继续审核队列中的下一份文件。</p></div>
         </section>
       )}
 

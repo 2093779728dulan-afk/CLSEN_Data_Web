@@ -1,7 +1,8 @@
 import { useId } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { Button, LinkButton, Skeleton, StatusBadge } from "../../design-system";
+import { catalogNameDisplay } from "../catalog/catalogTypes";
+import { Button, LinkButton, Skeleton, StatusBadge, StatusMessage } from "../../design-system";
 import { AnalyticsErrorState } from "./AnalyticsErrorState";
 import type { AnalyticsFailure } from "./analyticsError";
 import { MetricValueView, type MetricKind } from "./MetricValueView";
@@ -42,14 +43,16 @@ export function ProductDetailAnalysisView({ view, displayedView, canonical, styl
   return <main className={css.workspace} id="main-content">
     <nav className={css["analytics-breadcrumb"]} aria-label="面包屑"><LinkButton icon={<ArrowLeft />} state={{restoreFocus:focusId}} to={listTarget}>产品总表</LinkButton><span>/</span><span>款式详情</span></nav>
     {loading&&!response&&<section aria-busy="true" aria-label="正在读取产品详情"><Skeleton lines={3} /></section>}
-    <p aria-live="polite" className={css["analytics-live"]}>{loading?"正在更新筛选结果。":error??(response?`已读取 ${response.style.standard_name}`:"")}</p>
+    <p aria-live="polite" className={css["analytics-live"]}>{loading?"正在更新筛选结果。":error??(response?`已读取 ${catalogNameDisplay(response.style.standard_name)}`:"")}</p>
     {failure&&<AnalyticsErrorState title="产品详情读取失败" failure={failure} onRetry={onRetry} />}
     {response&&<>
-      <header className={css["product-detail__header"]}><div><p className={css["analytics-eyebrow"]}>STYLE {response.style.style_code}</p><h1>{response.style.standard_name}</h1><p>{response.style.sku_count} 个实际 SKU · {response.style.color_count} 色 · {response.style.size_count} 码</p></div>
+      <header className={css["product-detail__header"]}><div><p className={css["analytics-eyebrow"]}>STYLE {response.style.style_code}</p><h1>{catalogNameDisplay(response.style.standard_name)}</h1><p>{response.style.sku_count} 个实际 SKU · {response.style.color_count} 色 · {response.style.size_count} 码</p></div>
         <dl className={css["analytics-provenance"]}><div><dt>目录版本</dt><dd>{response.provenance.catalog_version}</dd></div><div><dt>事实口径</dt><dd>{response.provenance.fact_basis === "current" ? "当前事实" : "目录快照"}</dd></div><div><dt>退货口径</dt><dd>{response.effective_return_basis === "event_date" ? "事件日期" : "报表日期"}</dd></div><div><dt>贡献报表</dt><dd>{response.source_report_coverage.contributing_report_date_from??"无"} → {response.source_report_coverage.contributing_report_date_to??"无"}</dd></div><div><dt>一致时间</dt><dd>{response.provenance.consistent_as_of}</dd></div></dl>
       </header>
+      {response.platform_identity_review && <StatusMessage kind={response.platform_identity_review.state === "pending" ? "warning" : "info"} title="平台身份核对">{response.platform_identity_review.message}{response.platform_identity_review.pending_metrics && <p>关联待核：经营{response.platform_identity_review.pending_metrics.business_rows}行／{response.platform_identity_review.pending_metrics.units}件，退货{response.platform_identity_review.pending_metrics.return_rows}行／{response.platform_identity_review.pending_metrics.returns}件。待核数量已包含在未匹配总量中，请勿重复相加。</p>}</StatusMessage>}
       <p className={css["analytics-range"]}>分析范围：{displayedView.from} 至 {displayedView.to}</p>
       {response.permissions.can_manage_catalog && <aside className={css["analytics-unmatched-callout"]}><div><strong>发现商品数据与源报表不一致？</strong><span>新发布 Seller SKU 在正式归属前不会计入本商品。可按当前日期与退货口径核对待归属清单。</span></div><Link to={`/catalog/unmatched?from=${displayedView.from}&to=${displayedView.to}&return_basis=${displayedView.return_basis}&return_to=${encodeURIComponent(`/products/${styleId}?${canonical}`)}`}>核对待归属来源</Link></aside>}
+      {response.variants.some(item => item.seller_sku_aliases.length === 0) && <p className={css["analytics-range"]}>部分变体尚无已批准的渠道关联。下方数字仅统计已归属报表；0 不代表已确认没有销售或退货。</p>}
       <section className={css["detail-summary"]} aria-label="周期指标摘要">{metrics.map(item=><div key={item.key}><span>{item.label}</span><MetricValueView kind={item.key} metric={response.summary.metrics[item.key]}/></div>)}</section>
       <section className={css.workbench} aria-labelledby="trend-title"><div className={css["analytics-section-heading"]}><div><p className={css["analytics-eyebrow"]}>DAILY SERIES</p><h2 id="trend-title">每日趋势</h2></div><p>图表与下方矩阵来自同一响应；缺失点不插值。</p></div>
         <div className={css["trend-filter-panel"]}>

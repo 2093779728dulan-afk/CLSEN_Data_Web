@@ -32,7 +32,7 @@ class CatalogStyleChangeError(RuntimeError):
 
 def _clean_name(value: str) -> str:
     result = value.strip()
-    if not result or len(result) > 255:
+    if len(result) > 255:
         raise CatalogStyleChangeError()
     return result
 
@@ -512,6 +512,14 @@ class MySqlCatalogStyleChangeService:
                     "INSERT INTO product_catalog_exclusions (catalog_version_id,site_id,report_source_scope_id,marketplace_scope_code,seller_sku_match_sha256,seller_sku_match_bytes,reason,actor_user_id,evidence_digest) SELECT :new_id,site_id,report_source_scope_id,marketplace_scope_code,seller_sku_match_sha256,seller_sku_match_bytes,reason,actor_user_id,evidence_digest FROM product_catalog_exclusions WHERE catalog_version_id=:base_id"
                 ),
                 {"new_id": version_id, "base_id": base_id},
+            )
+            from app.catalog.shop_membership import copy_shop_memberships
+
+            copy_shop_memberships(
+                connection,
+                site_id=site_id,
+                source_version=base_id,
+                version_id=version_id,
             )
             next_publication = expected_catalog_publication_revision + 1
             updated_pointer = connection.execute(

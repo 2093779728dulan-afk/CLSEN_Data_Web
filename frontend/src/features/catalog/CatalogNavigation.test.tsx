@@ -1,3 +1,7 @@
+vi.mock("../../api/client", async importOriginal => {
+  const original = await importOriginal<typeof import("../../api/client")>();
+  return { ...original, requestApi: (path:string, options?: Parameters<typeof original.requestApi>[1]) => path.endsWith("/capabilities") ? Promise.resolve({scopes:[]}) : original.requestApi(path, options) };
+});
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
@@ -7,10 +11,11 @@ import { CatalogHomePage } from "./CatalogHomePage";
 import { CatalogLayout } from "./CatalogLayout";
 import { CatalogUnmatchedPage } from "./CatalogUnmatchedPage";
 import { CatalogImportPage } from "./CatalogImportPage";
+import { AuthzGenerationProvider } from "../../app/AuthzGenerationContext";
 
 vi.mock("./CatalogSetup", () => ({ CatalogSetup: () => null }));
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const styles = Array.from({ length: 15 }, (_, i) => ({ style_id: i + 1, style_code: String(100 + i), standard_name: `商品 ${i + 1}`, status: "enabled", source_summary: {}, variant_count: 1, seller_sku_count: 1 }));
 const response = (value: unknown) => Promise.resolve(new Response(JSON.stringify(value), { status: 200 }));
 
@@ -44,31 +49,38 @@ it("retains query, sorting, page and view on return, then clears them at a new i
 });
 
 it("offers four manager destinations but hides management navigation from viewers", () => {
+  vi.stubEnv("VITE_PRODUCTION_CATALOG_ENABLED", "false");
   const result = render(<MemoryRouter><CatalogLayout canManage><p>内容</p></CatalogLayout></MemoryRouter>);
-  expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["商品", "待处理", "目录版本", "批量维护"]);
+  expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["商品", "待归属与审核", "目录版本", "批量维护"]);
   result.rerender(<MemoryRouter><CatalogLayout canManage={false}><p>内容</p></CatalogLayout></MemoryRouter>);
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["商品"]);
 });
 
-it("reuses authorized pending summaries and preserves the old import deep link with a return path", async () => {
+it("opens authorized saved review tasks through the old import link and restores task filters", async () => {
   vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (url.endsWith("/styles")) return response({ catalog: { styles: styles.slice(0, 2) } });
-    if (url.includes("/api/catalog/unmatched")) return response({
-      page: 1, page_size: 25, total_items: 0, items: [],
-      range: { from_date: "2026-08-01", to_date: "2026-08-06", return_basis: "event_date" },
-      baseline: { catalog_version_id: 1, consistent_as_of: "2026-09-11T00:00:00Z", publication_refs: [] },
-      impact: { business_fact_rows: 0, return_fact_rows: 0, units: 0, return_quantity: 0, unresolved_return_rows: 0, sales_by_currency: [] },
+    if (url.startsWith("/api/catalog/tasks?")) return response({
+      page: 1, total_items: 1, has_next: false, complete: true,
+      baseline: { catalog_publication_revision: 1 },
+      items: [{ task_id: "catalog:2", import_id: 2, source_name: "100 · 商品 1", record_kind: "catalog_review", source_kind: "online", status: "needs_attention", actor: "fictional.admin", updated_at: "2026-09-11T00:00:00Z", workflow_revision: 1, review_path: "/catalog/imports/2", scope_ids: [1] }],
     });
-    if (url.endsWith("/pending-items")) return response({ permissions: { can_review: !url.includes("/styles/2/") }, items: [{ import_id: 2, review_path: "/catalog/imports/2", status: "needs_attention", variant_count: 1, seller_sku_count: 1, seller_sku_previews: [] }] });
+    if (url.endsWith("/capabilities")) return response({ scopes: [] });
     if (url.includes("/rows/")) return response({ rows: [] });
     return response({ import_id: 2, status: "needs_attention", permissions: {}, workflow_revision: 1 });
   }));
-  render(<MemoryRouter initialEntries={["/catalog/unmatched"]}><CatalogNavigationProvider><Routes><Route path="/catalog/unmatched" element={<CatalogUnmatchedPage />} /><Route path="/catalog/imports/:import_id" element={<CatalogImportPage />} /></Routes></CatalogNavigationProvider></MemoryRouter>);
-  expect(await screen.findByRole("link", { name: "100 · 商品 1" })).toBeVisible();
-  expect(screen.queryByRole("link", { name: "101 · 商品 2" })).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("link", { name: "进入审核" }));
+  const taskPath = "/catalog/unmatched?tab=review&task_q=商品";
+  render(<AuthzGenerationProvider boundary={{ principalId: 1, roles: ["admin"], siteConfigVersionId: 1, siteId: 1 }} onRevoked={() => undefined}><MemoryRouter initialEntries={[taskPath]}><CatalogNavigationProvider><Routes><Route path="/catalog/unmatched" element={<CatalogUnmatchedPage />} /><Route path="/catalog/imports/:import_id" element={<CatalogImportPage />} /></Routes></CatalogNavigationProvider></MemoryRouter></AuthzGenerationProvider>);
+  const reviewLink = await screen.findByRole("link", { name: "100 · 商品 1 · 批次 2" });
+  expect(reviewLink).toHaveAttribute("href", `/catalog/imports/2?return_to=${encodeURIComponent(taskPath)}`);
+  await userEvent.click(reviewLink);
   expect(await screen.findByRole("heading", { name: "商品主档审核" })).toBeVisible();
-  await userEvent.click(screen.getByRole("link", { name: "返回来源页面" }));
-  expect(await screen.findByRole("heading", { name: "已有审核候选" })).toBeVisible();
+  await userEvent.click(screen.getByRole("link", { name: "返回待归属与审核" }));
+  expect(await screen.findByRole("heading", { name: "待审核候选" })).toBeVisible();
+  expect(screen.getByLabelText("查找任务")).toHaveValue("商品");
+});
+
+it('merges enabled product intake and maintenance into one catalog destination',()=>{
+ vi.stubEnv('VITE_PRODUCTION_CATALOG_ENABLED','true');render(<MemoryRouter initialEntries={['/catalog/maintenance']}><CatalogLayout canManage><p>内容</p></CatalogLayout></MemoryRouter>);
+ expect(screen.getAllByRole('link').map(link=>link.textContent)).toEqual(['商品','建档与维护','待归属与审核','目录版本']);
+ expect(screen.getByRole('link',{name:'建档与维护'})).toHaveAttribute('aria-current','page');expect(screen.queryByRole('link',{name:'商品建档'})).not.toBeInTheDocument();
 });

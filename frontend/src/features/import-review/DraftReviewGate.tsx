@@ -1,3 +1,5 @@
+import { PublicationStockStatus } from "../production/PublicationStockStatus";
+import { ReportProductMatch } from "./ReportProductMatch";
 import { DraftReviewView } from "./DraftReviewView";
 import { PublicationDialog } from "./DraftPublicationDialog";
 import { errorMessage, validationCounts } from "./draftReviewPresentation";
@@ -57,6 +59,7 @@ import {
 } from "../workbench/workbenchApi";
 
 type Props = {
+  embedded?:boolean;onGuardChange?:(guard:{dirty:boolean;busy:boolean;unknown:boolean})=>void;
   canFinalizePublishedMove?: boolean;
   context: DraftReviewContext;
   onDiscarded?: () => void;
@@ -124,13 +127,14 @@ function workspaceValidation(workspace: ReviewWorkspace): ValidationRun | undefi
   };
 }
 
-export function DraftReviewGate({ canFinalizePublishedMove = false, context: initialContext, onDiscarded, onPublished, onReparseSource, onReportDateChanged, operator }: Props) {
+export function DraftReviewGate({ embedded, onGuardChange, canFinalizePublishedMove = false, context: initialContext, onDiscarded, onPublished, onReparseSource, onReportDateChanged, operator }: Props) {
   const [context, setContext] = useState(initialContext);
   const [head, setHead] = useState(initialContext.head);
   const [validation, setValidation] = useState<ValidationRun>();
   const [workspace, setWorkspace] = useState<ReviewWorkspace>();
   const [busyAction, setBusyAction] = useState<string>();
   const [error, setError] = useState<string>();
+  useEffect(()=>onGuardChange?.({dirty:false,busy:!!busyAction,unknown:false}),[busyAction,onGuardChange]);
   const [notice, setNotice] = useState<string>();
   const [note, setNote] = useState("");
   const [noteVisibility, setNoteVisibility] = useState<"internal" | "viewer_visible">("internal");
@@ -804,11 +808,12 @@ export function DraftReviewGate({ canFinalizePublishedMove = false, context: ini
     onPublished(result);
   };
 
-  return <DraftReviewView
+  return <>{published && import.meta.env.VITE_PRODUCTION_ENABLED === "true" && <PublicationStockStatus reportDate={context.reportDate} reportType={context.reportType} revision={head.version_id} canWrite />}<DraftReviewView
     context={context}
     head={head}
     published={published}
     workspace={workspace}
+    productMatch={embedded && import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" ? <ReportProductMatch versionId={head.version_id} revision={head.data_revision} /> : undefined}
     validation={validation}
     counts={counts}
     busyAction={busyAction}
@@ -847,9 +852,9 @@ export function DraftReviewGate({ canFinalizePublishedMove = false, context: ini
     setShowPublish={setShowPublish}
     resetDiscardOperation={() => operationKeys.reset("discard-draft")}
     onRefresh={() => { setError(undefined); void refreshWorkspace().catch((caught: unknown) => setError(errorMessage(caught))); }}
-    dataTable={workspace ? <ReviewDataTable busy={busyAction !== undefined} onAddCellNote={addCellNote} onAddRow={addRow} onAddRowNote={addRowNote} onChangeRowState={changeRowState} onPageChange={(page) => { void refreshWorkspace(head.version_id, page); }} onRestoreField={restoreField} onReviewIssue={reviewIssue} onReviseNote={reviseNote} onSetField={setField} operator={operator} workspace={workspace} /> : undefined}
+    dataTable={workspace ? <ReviewDataTable inline={embedded} busy={busyAction !== undefined} onAddCellNote={addCellNote} onAddRow={addRow} onAddRowNote={addRowNote} onChangeRowState={changeRowState} onPageChange={(page) => { void refreshWorkspace(head.version_id, page); }} onRestoreField={restoreField} onReviewIssue={reviewIssue} onReviseNote={reviseNote} onSetField={setField} operator={operator} workspace={workspace} /> : undefined}
     versionNotes={workspace?.version_notes.length ? <ul className="version-note-list">{workspace.version_notes.map((item) => <li key={item.note_key}><p>{item.body}</p><span>{item.author_username} · {item.visibility === "internal" ? "仅审核人员" : "查看人员可见"} · 第 {item.revision_number} 版</span><NoteRevisionEditor busy={busyAction !== undefined} note={item} onRevise={reviseNote} /></li>)}</ul> : null}
     mergeMatrix={draftMovePreview && draftMovePreview.kind !== "empty" ? <MergeDecisionMatrix disabled={busyAction === "move"} onStateChange={setDraftMoveMerge} operator={operator} sourceId={head.version_id} sourceKind="dataset_version" targetVersionId={draftMovePreview.kind === "active_draft" ? draftMovePreview.activeDraft.version_id : draftMovePreview.publication.version_id} /> : undefined}
-    publicationDialog={showPublish && validation ? <PublicationDialog context={context} head={head} onCancel={() => setShowPublish(false)} onPublish={publish} operator={operator} publicationProgress={publicationProgress} validation={validation} /> : undefined}
-  />;
+    publicationDialog={showPublish && validation ? <PublicationDialog inline={embedded} context={context} head={head} onCancel={() => setShowPublish(false)} onPublish={publish} operator={operator} publicationProgress={publicationProgress} validation={validation} /> : undefined}
+  /></>;
 }

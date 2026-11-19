@@ -115,11 +115,10 @@
 
 @media (max-width: 600px) {
   .content {
-    width: 100vw;
-    height: 100dvh;
-    max-height: none;
-    border: 0;
-    border-radius: 0;
+    width: calc(100vw - var(--space-4));
+    height: auto;
+    max-height: calc(100dvh - var(--space-4));
+    border-radius: var(--radius-card);
   }
 
   .header { padding: var(--space-4); }
@@ -146,5 +145,5 @@
 .drawer[data-state="closed"] { animation: drawer-out var(--motion-overlay-exit) var(--motion-ease-exit); }
 @keyframes drawer-in { from { opacity: 0; transform: translateX(100%); } }
 @keyframes drawer-out { to { opacity: 0; transform: translateX(100%); } }
-@media (max-width: 600px) { .content.drawer { border-radius: 0; } }
+@media (max-width: 600px) { .content.drawer { border: 0; border-radius: 0; } }
 @media (prefers-reduced-motion: reduce) { .drawer[data-state] { animation: none; } }

@@ -58,7 +58,11 @@ class CatalogWorkflowState:
     risk: str = "normal"
 
     def __post_init__(self) -> None:
-        if self.status not in _STATUSES or self.source_kind not in {"xlsx", "online"}:
+        if self.status not in _STATUSES or self.source_kind not in {
+            "xlsx",
+            "online",
+            "production",
+        }:
             raise ValueError("invalid catalog workflow state")
         if self.risk not in {"normal", "high"}:
             raise ValueError("invalid catalog workflow risk")

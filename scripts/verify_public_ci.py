@@ -26,6 +26,7 @@ PUBLIC_REPOSITORY = "2093779728dulan-afk/CLSEN_Data_Web"
 SOURCE_ROOTS = (
     ".github",
     "backend",
+    "backend-java",
     "frontend",
     "scripts",
     "docs",
@@ -38,12 +39,12 @@ SOURCE_ROOTS = (
 )
 # Reviewed public-only adapters, not trusted merely because a manifest lists them.
 ADAPTER_BLOBS = {
-    ".github/workflows/public-ci.yml": "0d12c6400bd32b8fb3b1da0e8232302bc67fdc9c",
+    ".github/workflows/public-ci.yml": "cca680e864b61365a338797459b8bac0f863ec22",
     "scripts/prepare-public-ci.ps1": "af5eafbe62cd333eaa3cec498eb2733599a319d3",
     "backend/tests/contracts/test_public_ci_workflow.py": (
-        "a1c57084277cc97cf06f7456e74577d8cdbf618f"
+        "ae3640797c39731d8fe079bc9000187c32298eda"
     ),
-    "README.md": "97f10f2636661c8c73a45cd085acf733ec42f503",
+    "README.md": "41949acc2d408bc2399f6b20e458d35f750e5749",
 }
 _COMMON = (
     "Set up job",
@@ -87,6 +88,14 @@ for _gate in ("a11y", "visual"):
             "ubuntu-24.04",
             (*_COMMON, "Run complete Storybook shard"),
         )
+REQUIRED_JOBS["Java production / JDK 21"] = (
+    "ubuntu-24.04",
+    (
+        *_COMMON,
+        "Run Java contracts and Linux image",
+        "Clean this job's Java MySQL resources",
+    ),
+)
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 
 
@@ -107,6 +116,8 @@ def git(root: Path, *args: str) -> str:
 
 def safe_path(path: str) -> bool:
     # Same explicit publication selection as the existing one-way exporter.
+    if path.startswith("backend-java/target/"):
+        return False
     if path.split("/", 1)[0] not in SOURCE_ROOTS:
         return False
     if re.search(

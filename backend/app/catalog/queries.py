@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 import sqlalchemy as sa
-from sqlalchemy.engine import Engine, RowMapping
+from sqlalchemy.engine import Connection, Engine, RowMapping
+
+from app.catalog.normalization import safe_source_projection_v1
+from app.catalog.scope_projection import SCOPES_WITH_DISPLAY_NAMES
 
 
 def _source_event_timestamp(payload: object, report_type: str) -> str | None:
@@ -58,12 +62,14 @@ class CatalogSkuSummary:
     sku_id: int
     style_id: int
     revision: int
-    internal_display_sku: str
+    internal_display_sku: str | None
     standard_color: str
     standard_size: str
     status: str
     seller_sku_count: int
     source_summary: CatalogSourceSummary
+    code_status: str = "legacy"
+    code_evidence: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,8 +158,89 @@ class MySqlCatalogQueries:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
-    def current_catalog(self, *, site_id: int) -> CatalogVersionSummary | None:
+    def name_suggestions(self, *, site_id: int, style_id: int) -> dict[str, object]:
+        """Read titles through current, scoped SKU mappings, without changing names."""
+        items: list[dict[str, str]] = []
+        seen: set[tuple[str, str, int]] = set()
+        limited = False
         with self._engine.connect() as connection:
+            for kind, table, field, label in (
+                ("business_report", "business_report_rows", "title", "经营报告"),
+                ("return_report", "return_report_rows", "product_name", "退货报告"),
+            ):
+                rows = (
+                    connection.execute(
+                        sa.text(f"""
+                        SELECT f.{field} AS name, d.report_date, p.version_id,
+                               k.source_row_id, k.report_source_scope_id,
+                               scopes.seller_account_display_name
+                        FROM product_catalog_publications cp
+                        JOIN product_catalog_sku_members sm
+                          ON sm.catalog_version_id=cp.current_catalog_version_id
+                         AND sm.site_id=cp.site_id AND sm.style_id=:style
+                        JOIN product_catalog_mappings m
+                          ON m.catalog_version_id=sm.catalog_version_id
+                         AND m.site_id=sm.site_id AND m.sku_id=sm.sku_id
+                        JOIN report_source_keys k ON k.site_id=m.site_id
+                         AND k.report_source_scope_id=m.report_source_scope_id
+                         AND k.seller_sku_match_sha256=m.seller_sku_match_sha256
+                         AND k.seller_sku_match_bytes=m.seller_sku_match_bytes
+                        JOIN report_dataset_scope_assignments a
+                          ON a.dataset_id=k.dataset_id AND a.site_id=k.site_id
+                         AND a.report_source_scope_id=k.report_source_scope_id
+                        JOIN report_source_scopes_current scopes
+                          ON scopes.id=k.report_source_scope_id
+                         AND scopes.site_id=k.site_id
+                        JOIN daily_datasets d ON d.id=k.dataset_id
+                         AND d.site_id=k.site_id
+                        JOIN dataset_publications p ON p.dataset_id=d.id
+                         AND p.version_id=k.version_id
+                        JOIN dataset_versions v ON v.id=p.version_id
+                         AND v.status='published'
+                        JOIN version_rows vr ON vr.id=k.source_row_id
+                         AND vr.version_id=k.version_id
+                         AND vr.row_state='active'
+                        JOIN {table} f ON f.version_row_id=vr.id
+                         AND f.version_id=vr.version_id
+                        WHERE cp.site_id=:site AND k.report_type=:kind
+                        ORDER BY d.report_date DESC,k.source_row_id DESC LIMIT 51
+                    """),
+                        {"site": site_id, "style": style_id, "kind": kind},
+                    )
+                    .mappings()
+                    .all()
+                )
+                limited = limited or len(rows) > 50
+                for row in rows[:50]:
+                    name = row["name"]
+                    if not isinstance(name, str) or not name.strip():
+                        continue
+                    safe = safe_source_projection_v1(name)
+                    key = (name, kind, int(row["report_source_scope_id"]))
+                    if safe.preview != name or safe.is_truncated or key in seen:
+                        continue
+                    seen.add(key)
+                    items.append(
+                        {
+                            "name": name,
+                            "source": f"{row['seller_account_display_name']} · {label} "
+                            f"{row['report_date']} · 版本#{row['version_id']} "
+                            f"· 记录#{row['source_row_id']}",
+                        }
+                    )
+        return {"items": items, "limited": limited}
+
+    def current_catalog(
+        self,
+        *,
+        site_id: int,
+        connection: Connection | None = None,
+        report_source_scope_id: int | None = None,
+    ) -> CatalogVersionSummary | None:
+        scope = (
+            self._engine.connect() if connection is None else nullcontext(connection)
+        )
+        with scope as connection:
             version = (
                 connection.execute(
                     sa.text(
@@ -193,7 +280,7 @@ class MySqlCatalogQueries:
                     ORDER BY revisions.style_id
                     """
                     ),
-                    {"version_id": version_id},
+                    {"version_id": version_id, "scope_id": report_source_scope_id},
                 )
                 .mappings()
                 .all()
@@ -204,16 +291,25 @@ class MySqlCatalogQueries:
                         """
                     SELECT revisions.sku_id, revisions.style_id,
                            revisions.revision, revisions.internal_display_sku,
+                           revisions.code_status, revisions.code_evidence,
                            revisions.standard_color, revisions.standard_size,
                            revisions.status
                     FROM product_catalog_sku_members AS members
                     INNER JOIN product_sku_revisions AS revisions
                       ON revisions.id = members.sku_revision_id
                     WHERE members.catalog_version_id = :version_id
+                      AND (:scope_id IS NULL OR EXISTS (
+                        SELECT 1 FROM product_catalog_shop_memberships scope_mapping
+                        WHERE scope_mapping.site_id=members.site_id
+                          AND scope_mapping.catalog_version_id
+                              = members.catalog_version_id
+                          AND scope_mapping.sku_id=members.sku_id
+                          AND scope_mapping.report_source_scope_id=:scope_id
+                      ))
                     ORDER BY revisions.sku_id
                     """
                     ),
-                    {"version_id": version_id},
+                    {"version_id": version_id, "scope_id": report_source_scope_id},
                 )
                 .mappings()
                 .all()
@@ -244,10 +340,12 @@ class MySqlCatalogQueries:
                         LEFT JOIN catalog_source_evidence AS evidence
                           ON evidence.source_key_id = source_keys.id
                         WHERE mappings.catalog_version_id = :version_id
+                          AND (:scope_id IS NULL
+                               OR mappings.report_source_scope_id=:scope_id)
                         GROUP BY mappings.sku_id
                         """
                     ),
-                    {"version_id": version_id},
+                    {"version_id": version_id, "scope_id": report_source_scope_id},
                 )
                 .mappings()
                 .all()
@@ -284,10 +382,12 @@ class MySqlCatalogQueries:
                         LEFT JOIN catalog_source_evidence AS evidence
                           ON evidence.source_key_id = source_keys.id
                         WHERE sku_members.catalog_version_id = :version_id
+                          AND (:scope_id IS NULL
+                               OR mappings.report_source_scope_id=:scope_id)
                         GROUP BY sku_members.style_id
                         """
                     ),
-                    {"version_id": version_id},
+                    {"version_id": version_id, "scope_id": report_source_scope_id},
                 )
                 .mappings()
                 .all()
@@ -298,6 +398,7 @@ class MySqlCatalogQueries:
                 "observation_count": 0,
                 "source_report_count": 0,
             }
+            scoped_style_ids = {int(sku["style_id"]) for sku in sku_rows}
             styles = tuple(
                 CatalogStyleSummary(
                     style_id=int(row["style_id"]),
@@ -333,13 +434,15 @@ class MySqlCatalogQueries:
                     ),
                 )
                 for row in style_rows
+                if report_source_scope_id is None
+                or int(row["style_id"]) in scoped_style_ids
             )
             skus = tuple(
                 CatalogSkuSummary(
                     int(row["sku_id"]),
                     int(row["style_id"]),
                     int(row["revision"]),
-                    str(row["internal_display_sku"]),
+                    row["internal_display_sku"],
                     str(row["standard_color"]),
                     str(row["standard_size"]),
                     str(row["status"]),
@@ -349,6 +452,8 @@ class MySqlCatalogQueries:
                         )
                     ),
                     _source_summary(sku_stats.get(int(row["sku_id"]), empty_summary)),
+                    str(row["code_status"]),
+                    row["code_evidence"],
                 )
                 for row in sku_rows
             )
@@ -381,10 +486,9 @@ class MySqlCatalogQueries:
                             'needs_attention', 'validated', 'ready_for_approval'
                           )
                         ORDER BY updated_at DESC, id DESC
-                        LIMIT :limit
                         """
                     ),
-                    {"site_id": site_id, "limit": limit},
+                    {"site_id": site_id},
                 )
                 .mappings()
                 .all()
@@ -484,7 +588,7 @@ class MySqlCatalogQueries:
                         "review_path": f"/catalog/imports/{import_id}",
                     }
                 )
-            return tuple(result)
+            return tuple(result[:limit])
 
     @staticmethod
     def _current_version_id(connection: Any, *, site_id: int) -> int | None:
@@ -539,9 +643,10 @@ class MySqlCatalogQueries:
             rows = (
                 connection.execute(
                     sa.text(
-                        """
+                        f"""
                         SELECT mappings.id AS mapping_id,
                                mappings.seller_sku_match_sha256,
+                               mappings.seller_sku_match_bytes,
                                scopes.seller_account_display_name,
                                mappings.marketplace_scope_code,
                                MIN(refs.safe_preview) AS seller_sku_preview,
@@ -555,7 +660,7 @@ class MySqlCatalogQueries:
                                COUNT(DISTINCT evidence.published_version_id)
                                    AS source_report_count
                         FROM product_catalog_mappings AS mappings
-                        INNER JOIN report_source_scopes AS scopes
+                        INNER JOIN {SCOPES_WITH_DISPLAY_NAMES} AS scopes
                           ON scopes.id = mappings.report_source_scope_id
                          AND scopes.site_id = mappings.site_id
                         LEFT JOIN report_source_keys AS source_keys
@@ -575,6 +680,7 @@ class MySqlCatalogQueries:
                           AND mappings.sku_id = :sku_id
                         GROUP BY mappings.id,
                                  mappings.seller_sku_match_sha256,
+                               mappings.seller_sku_match_bytes,
                                  scopes.seller_account_display_name,
                                  mappings.marketplace_scope_code
                         ORDER BY mappings.id
@@ -595,13 +701,7 @@ class MySqlCatalogQueries:
         items = tuple(
             CatalogSellerSkuAlias(
                 mapping_id=int(row["mapping_id"]),
-                seller_sku={
-                    "source_ref_id": f"mapping:{int(row['mapping_id'])}",
-                    "preview": str(row["seller_sku_preview"] or "来源值不可用"),
-                    "digest": "sha256:" + bytes(row["seller_sku_match_sha256"]).hex(),
-                    "is_unsafe": bool(row["seller_sku_unsafe"]),
-                    "is_truncated": bool(row["seller_sku_truncated"]),
-                },
+                seller_sku=_alias_source(row),
                 seller_account=str(row["seller_account_display_name"]),
                 marketplace=str(row["marketplace_scope_code"]),
                 mapping_status="mapped",
@@ -759,3 +859,22 @@ __all__ = (
     "CatalogVersionSummary",
     "MySqlCatalogQueries",
 )
+
+
+def _alias_source(row: RowMapping) -> dict[str, object]:
+    """Production mappings may predate reports; render their match key safely."""
+    projection = safe_source_projection_v1(
+        bytes(row["seller_sku_match_bytes"]).decode("utf-8")
+    )
+    has_report = row["seller_sku_preview"] is not None
+    return {
+        "source_ref_id": f"mapping:{int(row['mapping_id'])}",
+        "preview": str(row["seller_sku_preview"]) if has_report else projection.preview,
+        "digest": "sha256:" + bytes(row["seller_sku_match_sha256"]).hex(),
+        "is_unsafe": bool(row["seller_sku_unsafe"])
+        if has_report
+        else projection.is_unsafe,
+        "is_truncated": bool(row["seller_sku_truncated"])
+        if has_report
+        else projection.is_truncated,
+    }

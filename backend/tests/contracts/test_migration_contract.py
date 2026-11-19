@@ -41,6 +41,13 @@ EXPECTED_MIGRATIONS = (
     ("0028", "0027", "0028_category_hierarchy.py"),
     ("0029", "0028", "0029_source_scope_correction.py"),
     ("0030", "0029", "0030_return_initialization.py"),
+    ("0031", "0030", "0031_inventory_reviews.py"),
+    ("0032", "0031", "0032_production_catalog_sources.py"),
+    ("0033", "0032", "0033_catalog_formal_sku.py"),
+    ("0034", "0033", "0034_catalog_platform_checks.py"),
+    ("0035", "0034", "0035_manual_table_preparation.py"),
+    ("0036", "0035", "0036_catalog_shop_memberships.py"),
+    ("0037", "0036", "0037_catalog_shop_membership_lineage.py"),
 )
 
 

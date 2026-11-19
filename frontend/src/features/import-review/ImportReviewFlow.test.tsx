@@ -6,7 +6,8 @@ import { setSessionCsrfToken } from "../../api/client";
 import type { DraftHead, ReviewWorkspace, ValidationRun, VersionSummary } from "../../api/types";
 import { ImportReviewFlow } from "./ImportReviewFlow";
 import { initialImportReviewState } from "./importReviewReducer";
-import { reviewRecoveryKey, saveReviewRecovery } from "./reviewRecovery";
+import { loadReviewRecovery, reviewRecoveryKey, saveReviewRecovery } from "./reviewRecovery";
+import type { ImportQueueItem } from "./workflowTypes";
 
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -576,12 +577,64 @@ describe("ImportReviewFlow", () => {
       const path = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       return path.endsWith("/confirm-parse");
     })).toBe(false);
-    await user.click(screen.getByRole("button", { name: "批量审核" }));
-    await waitFor(() => expect(onBatchReviewCreated).toHaveBeenCalledWith(77));
-
     await user.click(screen.getByRole("button", { name: "开始审核" }));
     expect(screen.getByText(/7月2日经营\.csv · SHA-256/)).toBeVisible();
     expect(screen.getByLabelText("所属报告日")).toHaveValue("2026-07-02");
+
+    await user.click(screen.getByRole("button", { name: "批量审核" }));
+    await waitFor(() => expect(onBatchReviewCreated).toHaveBeenCalledWith(77));
+    expect(screen.queryByRole("region", { name: "批量导入队列" })).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem(reviewRecoveryKey({ reportDate: "2026-07-05", siteId: 0, userId: 0 }))).toBeNull();
+  });
+
+  it("retains failed uploads when handing server batches to batch review", async () => {
+    const identity = { reportDate: "2026-07-05", siteId: 0, userId: 0 };
+    const importQueue: ImportQueueItem[] = [11, 12].map(batchId => ({
+      id: `file-${batchId}`,
+      assignedDate: identity.reportDate,
+      encoding: "utf-8-sig",
+      reportType: "business_report",
+      status: "ready",
+      upload: { fileName: `${batchId}.csv`, upload: { batch_id: batchId } },
+      inspection: {
+        status: "recognized", report_type: "business_report", report_date: identity.reportDate,
+        encoding: "utf-8-sig", ruleset_version: "test", issue_codes: [],
+      },
+    }));
+    importQueue.push({
+      id: "failed-upload", assignedDate: identity.reportDate, encoding: "utf-8-sig",
+      reportType: "business_report", status: "failed", error: "上传未完成",
+    });
+    saveReviewRecovery(identity, {
+      materializeReason: "",
+      noteBatchIds: [11],
+      reviewState: {
+        ...initialImportReviewState(identity.reportDate),
+        activeQueueId: "file-11",
+        importQueue,
+      },
+    });
+    let rejectPreflight = true;
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      if (pathOf(input) === "/api/imports/batch-reviews/preflight") {
+        return Promise.resolve(rejectPreflight
+          ? jsonResponse({ error: { code: "preflight_failed", message: "预检未完成" } }, 409)
+          : jsonResponse({ id: 77, items: [] }, 201));
+      }
+      return Promise.resolve(jsonResponse({ columns: [], rows: [], total_rows: 0, total_pages: 0, page: 1, page_size: 30 }));
+    }));
+    const onCreated = vi.fn();
+    const user = userEvent.setup();
+    render(<ImportReviewFlow onBatchReviewCreated={onCreated} onPublished={vi.fn()} reportDate={identity.reportDate} />);
+    await user.click(screen.getByRole("button", { name: "批量审核" }));
+    await screen.findByText("预检未完成");
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(loadReviewRecovery(identity)?.reviewState.importQueue).toHaveLength(3);
+    rejectPreflight = false;
+    await user.click(screen.getByRole("button", { name: "批量审核" }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(77));
+    expect(loadReviewRecovery(identity)?.reviewState.importQueue.map(item => item.id)).toEqual(["failed-upload"]);
+    expect(screen.getByText("上传未完成")).toBeVisible();
   });
 
   it("keeps successful batch uploads when another queue item fails inspection", async () => {
@@ -706,11 +759,15 @@ describe("ImportReviewFlow", () => {
     expect(screen.getByText(/服务器阶段：已上传/)).toBeVisible();
     expect(screen.getByRole("button", { name: "继续审核" })).toBeVisible();
     expect(screen.getByRole("button", { name: "清空页面队列" })).toBeVisible();
-    expect(screen.getByText(/不会删除服务器上的原始文件或导入批次/)).toBeVisible();
+    expect(screen.getByText(/不会删除服务器上的原始文件或导入批次/)).not.toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "继续审核" }));
     expect(await screen.findByRole("heading", { name: "人工确认识别结果" })).toBeVisible();
     expect(screen.getByLabelText("所属报告日")).toHaveValue("2026-07-05");
+    const requestCount = fetchMock.mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "改用其他文件" }));
+    expect(screen.getByLabelText("CSV 文件")).toBeEnabled();
+    expect(fetchMock.mock.calls).toHaveLength(requestCount);
   });
 
   it("completes upload, human parse confirmation, draft validation and publication", async () => {
@@ -1414,4 +1471,25 @@ describe("ImportReviewFlow", () => {
     expect(parseBodies[2]).toMatchObject({ encoding: "utf-8" });
     expect(nonIdempotentKeys).toEqual([null, null]);
   });
+
+  it("explains a mismatched daily report header and keeps its original file available", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+      const path = pathOf(input);
+      if (path === "/api/imports/3/inspect") return Promise.resolve(jsonResponse({
+        status: "confirmation_required", report_type: null, report_date: "2026-11-04",
+        encoding: "utf-8-sig", ruleset_version: "unknown", issue_codes: ["header_mismatch"],
+      }));
+      if (path === "/api/imports/3/confirm-parse") return Promise.resolve(jsonResponse({
+        result: { batch_id: 3, parse_attempt_id: 4, confirmation_revision: 1, error_code: "header_mismatch" },
+      }));
+      throw new Error(`Unexpected request ${path}`);
+    }));
+    render(<ImportReviewFlow initialBatchId={3} onPublished={vi.fn()} reportDate="2026-11-04" />);
+    await userEvent.click(await screen.findByRole("button", { name: "确认并解析" }));
+    expect(await screen.findByText(/文件表头与所选报表类型不匹配/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "下载原始 CSV" })).toHaveAttribute("href", "/api/imports/3/raw-file");
+    expect(screen.getByRole("button", { name: "改用其他文件" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "生成审核草稿" })).not.toBeInTheDocument();
+  });
+
 });

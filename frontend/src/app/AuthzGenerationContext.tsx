@@ -12,6 +12,7 @@ import {
 
 import { abortAllRequestGates } from "../api/requestGate";
 import { onSessionRevoked } from "../api/sessionRevocation";
+import { onProductionDataChanged, ProductionReadCache } from "../api/productionReadCache";
 
 export type AuthzBoundary = {
   permissionsFingerprint?: string;
@@ -23,6 +24,8 @@ export type AuthzBoundary = {
 
 type Purge = () => void;
 type AuthzGenerationValue = {
+  productionReads: ProductionReadCache;
+  preferenceScope: string;
   generation: number;
   purgeSensitiveState: () => void;
   registerSensitivePurge: (purge: Purge) => () => void;
@@ -52,11 +55,18 @@ export function AuthzGenerationProvider({
   const [generation, setGeneration] = useState(0);
   const purges = useRef(new Set<Purge>());
   const previous = useRef(fingerprint(boundary));
+  const identity = fingerprint(boundary);
+  const productionReads = useMemo(() => new ProductionReadCache(identity), [identity]);
+  useEffect(() => {
+    const unsubscribe = onProductionDataChanged(() => productionReads.invalidate());
+    return () => { unsubscribe(); productionReads.clear(); };
+  }, [productionReads]);
 
   const purgeSensitiveState = useCallback(() => {
+    productionReads.clear();
     abortAllRequestGates();
     for (const purge of [...purges.current]) purge();
-  }, []);
+  }, [productionReads]);
 
   const registerSensitivePurge = useCallback((purge: Purge) => {
     purges.current.add(purge);
@@ -82,8 +92,8 @@ export function AuthzGenerationProvider({
   );
 
   const value = useMemo(
-    () => ({ generation, purgeSensitiveState, registerSensitivePurge }),
-    [generation, purgeSensitiveState, registerSensitivePurge],
+    () => ({ generation, purgeSensitiveState, registerSensitivePurge, productionReads, preferenceScope: `${boundary.principalId}:${boundary.siteId}` }),
+    [generation, purgeSensitiveState, registerSensitivePurge, productionReads, boundary.principalId, boundary.siteId],
   );
   return <AuthzGenerationContext.Provider value={value}>{children}</AuthzGenerationContext.Provider>;
 }

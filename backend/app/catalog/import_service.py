@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from app.catalog.canonical_json import CanonicalValue, canonical_json_bytes
+from app.catalog.source_formatting import format_identity_field
 from app.catalog.workbook import SHEET_HEADERS, SHEET_HEADERS_V2, CatalogWorkbookData
 
 _SECTION_SHEETS: Final = {
@@ -257,18 +258,45 @@ def validate_draft_rows(rows: tuple[DraftRow, ...]) -> DraftProjection:
     for row in rows:
         if row.projection_state == "audit_only":
             continue
-        if row.section == "styles" and row.payload.get("standard_name") is None:
+        if row.payload.get("reconfirm_required"):
             issues.append(
                 _issue(
                     section=row.section,
                     row_key=row.row_key,
-                    reason_code="required",
+                    reason_code="reconfirm_required",
+                    field="/change_reason",
+                )
+            )
+        name = row.payload.get("standard_name")
+        if (
+            row.section == "styles"
+            and name is not None
+            and (not isinstance(name, str) or len(name.strip()) > 255)
+        ):
+            issues.append(
+                _issue(
+                    section=row.section,
+                    row_key=row.row_key,
+                    reason_code="invalid_standard_name",
                     field="/standard_name",
                 )
             )
         elif row.section == "skus":
+            size = row.payload.get("standard_size")
+            if (
+                isinstance(size, str)
+                and size != "3XL"
+                and format_identity_field(size, "size")[0] == "3XL"
+            ):
+                issues.append(
+                    _issue(
+                        section=row.section,
+                        row_key=row.row_key,
+                        reason_code="noncanonical_standard_size",
+                        field="/standard_size",
+                    )
+                )
             for field in (
-                "internal_display_sku",
                 "standard_color",
                 "standard_size",
             ):
@@ -281,6 +309,52 @@ def validate_draft_rows(rows: tuple[DraftRow, ...]) -> DraftProjection:
                             field=f"/{field}",
                         )
                     )
+            code = row.payload.get("internal_display_sku")
+            state = row.payload.get("code_status", "legacy")
+            evidence = row.payload.get("code_evidence")
+            valid = (
+                state == "pending"
+                and code is None
+                and isinstance(evidence, str)
+                and bool(evidence.strip())
+            ) or (
+                isinstance(code, str)
+                and bool(code.strip())
+                and (
+                    state == "legacy"
+                    or (
+                        state == "confirmed"
+                        and isinstance(evidence, str)
+                        and bool(evidence.strip())
+                    )
+                )
+            )
+            if (
+                "approved_formal_sku" in row.payload
+                and not row.payload.get("system_sku_id")
+                and code is not None
+                and state != "confirmed"
+            ):
+                valid = False
+            if (
+                row.payload.get("source_formal_sku")
+                and code is not None
+                and code
+                not in (
+                    row.payload.get("source_formal_sku"),
+                    row.payload.get("approved_formal_sku"),
+                )
+            ):
+                valid = False
+            if not valid:
+                issues.append(
+                    _issue(
+                        section="skus",
+                        row_key=row.row_key,
+                        reason_code="formal_code_decision_required",
+                        field="/internal_display_sku",
+                    )
+                )
         elif row.section == "mappings" and row.payload.get("identity_decision") is None:
             issues.append(
                 _issue(
@@ -298,10 +372,93 @@ def validate_draft_rows(rows: tuple[DraftRow, ...]) -> DraftProjection:
     )
 
 
+def validate_production_approval_rows(
+    rows: tuple[DraftRow, ...], *, listing_source: bool
+) -> DraftProjection:
+    """Apply production-source rules before preview and final approval."""
+
+    base = validate_draft_rows(rows)
+    issues = list(base.issues)
+    sku_rows = {
+        row.row_key: row
+        for row in rows
+        if row.section == "skus" and row.projection_state == "included"
+    }
+    for row in sku_rows.values():
+        value = row.payload.get("internal_display_sku")
+        if value is not None and value not in {
+            row.payload.get("approved_formal_sku"),
+            row.payload.get("source_formal_sku"),
+        }:
+            issues.append(
+                _issue(
+                    section="skus",
+                    row_key=row.row_key,
+                    reason_code="formal_code_not_from_source",
+                    field="/internal_display_sku",
+                )
+            )
+    for row in rows:
+        if (
+            row.section != "mappings"
+            or row.projection_state != "included"
+            or row.payload.get("identity_decision") != "mapped"
+        ):
+            continue
+        target = sku_rows.get(str(row.payload.get("target_sku_row_key")))
+        if target is None:
+            issues.append(
+                _issue(
+                    section="mappings",
+                    row_key=row.row_key,
+                    reason_code="invalid_reference",
+                    field="/target_sku_row_key",
+                )
+            )
+            continue
+        if target.row_key != row.payload.get("source_target_sku_row_key"):
+            issues.append(
+                _issue(
+                    section="mappings",
+                    row_key=row.row_key,
+                    reason_code="mapping_target_changed",
+                    field="/target_sku_row_key",
+                )
+            )
+            continue
+        if target.payload.get("code_status") != "confirmed":
+            issues.append(
+                _issue(
+                    section="skus",
+                    row_key=target.row_key,
+                    reason_code="mapped_target_formal_code_required",
+                    field="/internal_display_sku",
+                )
+            )
+        elif not listing_source and target.payload.get(
+            "internal_display_sku"
+        ) != row.payload.get("seller_sku_preview"):
+            issues.append(
+                _issue(
+                    section="skus",
+                    row_key=target.row_key,
+                    reason_code="mapped_target_seller_sku_mismatch",
+                    field="/internal_display_sku",
+                )
+            )
+    issues.sort(key=lambda issue: issue.issue_digest)
+    return DraftProjection(
+        rows,
+        tuple(issues),
+        "needs_attention" if issues else "validated",
+    )
+
+
 __all__ = (
     "DraftIssue",
     "DraftProjection",
     "DraftRow",
     "project_catalog_workbook",
     "validate_draft_rows",
+    "validate_production_approval_rows",
 )

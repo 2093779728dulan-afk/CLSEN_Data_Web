@@ -77,11 +77,12 @@ const meta = {
     }
     await canvas.findByRole("option", { name: "衬衫（SHIRT）" });
     if (scenario === "editing") return;
-    await userEvent.clear(canvas.getByRole("textbox", { name: "标准商品名称" }));
-    await userEvent.type(canvas.getByRole("textbox", { name: "标准商品名称" }), "示例浅蓝府绸衬衫");
+    await userEvent.clear(canvas.getByRole("textbox", { name: "标准商品名称（选填）" }));
+    await userEvent.type(canvas.getByRole("textbox", { name: "标准商品名称（选填）" }), "示例浅蓝府绸衬衫");
     await userEvent.click(canvas.getByRole("button", { name: "生成变更预览" }));
     if (["preparing", "prepare-failure"].includes(scenario)) return;
     await canvas.findByRole("table", { name: "变更预览" });
+    await userEvent.type(canvas.getByRole("textbox", { name: "批准原因" }), "虚构商品维护核对");
     if (scenario !== "preview") await userEvent.click(canvas.getByRole("button", { name: "批准并生成新目录版本" }));
   },
 } satisfies Meta<typeof EditorsPage>;

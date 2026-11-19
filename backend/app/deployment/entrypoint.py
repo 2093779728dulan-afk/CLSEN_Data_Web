@@ -31,6 +31,7 @@ _SECRET_NAMES = {
     "migrator": "mysql_migrator_password",
     "root": "mysql_root_password",
     "session": "session_secret",
+    "production": "production_service_token",
 }
 _ACCOUNTS = {
     "app": "clsen_app",
@@ -697,6 +698,8 @@ def main(arguments: list[str] | None = None) -> int:
         accounts=accounts,
         include_test=command == "pytest",
     )
+    if command in {"api", "worker"} and os.getenv("APP_PRODUCTION_SERVICE_URL"):
+        os.environ["APP_PRODUCTION_SERVICE_TOKEN"] = _read_secret("production")
     if command in {"api", "worker"}:
         preflight_exit_code = schema_preflight_main(["--component", command])
         if preflight_exit_code != 0:

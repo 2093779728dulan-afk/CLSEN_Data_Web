@@ -12,7 +12,7 @@ export function PublishedDayView({ currencyCode, reportDate, standalone, returnT
   const Container = standalone ? "main" : "section";
   return <Container id={standalone ? "main-content" : undefined} aria-label="单日只读发布详情" className={css.page}>
     <PageHeader eyebrow="当前发布版本 · 只读" title={reportDate} description="这里只展示当前发布版本，不包含草稿、失败导入或历史版本。" meta={<StatusBadge tone="quiet" label={`报告币种 ${currencyCode}`} />} actions={<nav aria-label="发布数据导航" className={css.links}>
-      {returnTo && <LinkButton icon={<ArrowLeft />} to={returnTo}>返回发布明细</LinkButton>}
+      <LinkButton icon={<ArrowLeft />} to={returnTo ?? "/ledger/published-details"}>返回发布明细</LinkButton>
       <LinkButton icon={<CalendarDays />} to={`/?month=${reportDate.slice(0, 7)}`} variant="quiet">返回每日总表</LinkButton>
       <LinkButton icon={<Table2 />} to={`/ledger/published-details?from=${reportDate}&to=${reportDate}&mode=rows`} variant="primary">查看当日原始明细</LinkButton>
     </nav>} />

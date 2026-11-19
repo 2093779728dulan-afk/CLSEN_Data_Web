@@ -523,6 +523,7 @@ def style_card(
     context: StyleContext,
     engine: CatalogEngine,
     response: Response,
+    contract_version: Annotated[int, Query(ge=1, le=2)] = 1,
     from_value: Annotated[date | None, Query(alias="from")] = None,
     to_value: Annotated[date | None, Query(alias="to")] = None,
     metric: Annotated[MetricName, Query()] = "units",
@@ -553,6 +554,14 @@ def style_card(
         )
     except StyleAnalyticsError as error:
         raise _analytics_error(error) from error
+    if contract_version == 1 and any(
+        v.internal_display_sku is None for v in result.variants
+    ):
+        raise _error(
+            409,
+            "catalog_consumer_upgrade_required",
+            "Use contract_version=2 to read products awaiting a formal SKU.",
+        )
     _identity_headers(response, result)
     return result
 

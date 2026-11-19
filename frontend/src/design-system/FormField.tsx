@@ -34,7 +34,7 @@ export function FormField({ children, className, error, hint, label, required = 
         id: controlId,
       })}
       {descriptionId ? (
-        <p className={error != null ? styles.error : styles.hint} id={descriptionId}>
+        <p data-field-hint={error == null ? true : undefined} className={error != null ? styles.error : styles.hint} id={descriptionId}>
           {error ?? hint}
         </p>
       ) : null}

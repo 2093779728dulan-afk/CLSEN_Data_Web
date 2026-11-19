@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.catalog.canonical_json import canonical_json_bytes
 from app.catalog.normalization import seller_sku_match_v1
+from app.catalog.scope_projection import SCOPES_WITH_DISPLAY_NAMES
 from app.site_context import CurrentSiteContext
 
 _OPERATION_KIND = "confirm_report_source_scope"
@@ -170,12 +171,18 @@ def _effective_scope(
         .mappings()
         .one_or_none()
     )
+    name = connection.scalar(
+        sa.text(
+            f"SELECT seller_account_display_name FROM {SCOPES_WITH_DISPLAY_NAMES} AS current_scopes WHERE site_id=:site AND id=:scope"
+        ),
+        {"site": scope.site_id, "scope": scope.report_source_scope_id},
+    )
     if row is None:
-        return scope
+        return replace(scope, seller_account_display_name=str(name))
     return replace(
         scope,
         seller_account_scope_key=_as_bytes(row["seller_account_scope_key"], length=32),
-        seller_account_display_name=str(row["seller_account_display_name"]),
+        seller_account_display_name=str(name),
     )
 
 
@@ -195,6 +202,9 @@ def ensure_dataset_scope_assignment(
     scope = _scope_for_site(connection, site_id=site_id, lock=True)
     if scope is None:
         return None
+    from app.catalog.platform_evidence import lock_platform_scopes
+
+    lock_platform_scopes(connection, site_id, [scope.report_source_scope_id])
     rows = (
         connection.execute(
             sa.text(
@@ -592,6 +602,122 @@ class MySqlCatalogScopeRepository:
                 _scope_for_site(connection, site_id=context.site_id, lock=False),
             )
 
+    def display_name_status(self, context: CurrentSiteContext) -> dict[str, Any]:
+        with self._engine.connect() as connection:
+            row = (
+                connection.execute(
+                    sa.text(
+                        "SELECT id, seller_account_display_name, display_name_revision "
+                        f"FROM {SCOPES_WITH_DISPLAY_NAMES} AS current_scopes WHERE site_id=:site"
+                    ),
+                    {"site": context.site_id},
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is None:
+                raise ScopeIntegrityError()
+            return {
+                "scope_id": int(row["id"]),
+                "display_name": str(row["seller_account_display_name"]),
+                "revision": int(row["display_name_revision"]),
+                "can_rename": context.is_admin,
+            }
+
+    def rename(
+        self,
+        context: CurrentSiteContext,
+        *,
+        operation_token: UUID,
+        operation_digest: bytes,
+        scope_id: int,
+        expected_revision: int,
+        display_name: str,
+        reason: str,
+        occurred_at: datetime,
+    ) -> dict[str, Any]:
+        operation_kind = "rename_report_source_scope"
+        with self._engine.begin() as connection:
+            replay = self._claim(
+                connection,
+                context=context,
+                operation_token=operation_token,
+                operation_digest=operation_digest,
+                occurred_at=occurred_at,
+                operation_kind=operation_kind,
+            )
+            if replay is not None:
+                revision = connection.scalar(
+                    sa.text(
+                        "SELECT id FROM catalog_audit_events WHERE site_id=:site AND operation_token=:token "
+                        "AND event_kind='catalog.source_scope_renamed'"
+                    ),
+                    {"site": context.site_id, "token": operation_token.bytes},
+                )
+                return {
+                    "scope_id": replay.scope.report_source_scope_id,
+                    "display_name": replay.scope.seller_account_display_name,
+                    "revision": int(revision),
+                    "can_rename": context.is_admin,
+                }
+            pointer = connection.scalar(
+                sa.text(
+                    "SELECT current_config_version_id FROM site_current_configs WHERE site_id=:site FOR UPDATE"
+                ),
+                {"site": context.site_id},
+            )
+            if pointer != context.site_config_version_id:
+                raise ScopeRevisionConflict()
+            scope = _effective_scope(
+                connection,
+                _scope_for_site(connection, site_id=context.site_id, lock=True),
+            )
+            if scope is None or scope.report_source_scope_id != scope_id:
+                raise ScopeRevisionConflict()
+            current_revision = connection.scalar(
+                sa.text(
+                    f"SELECT display_name_revision FROM {SCOPES_WITH_DISPLAY_NAMES} AS current_scopes WHERE site_id=:site AND id=:scope"
+                ),
+                {"site": context.site_id, "scope": scope_id},
+            )
+            if current_revision != expected_revision:
+                raise ScopeRevisionConflict()
+            result = ScopeConfirmationRecord(
+                scope=replace(scope, seller_account_display_name=display_name),
+                site_config_version_id=context.site_config_version_id,
+                site_config_revision=context.site_config_revision,
+            )
+            self._complete(
+                connection,
+                context=context,
+                operation_token=operation_token,
+                operation_digest=operation_digest,
+                result=result,
+                occurred_at=occurred_at,
+                created=False,
+                operation_kind=operation_kind,
+                event_kind="catalog.source_scope_renamed",
+                audit_payload={
+                    "old_display_name": scope.seller_account_display_name,
+                    "new_display_name": display_name,
+                    "reason": reason,
+                    "operation_token": str(operation_token),
+                },
+            )
+            revision = connection.scalar(
+                sa.text(
+                    "SELECT id FROM catalog_audit_events WHERE site_id=:site AND operation_token=:token "
+                    "AND event_kind='catalog.source_scope_renamed'"
+                ),
+                {"site": context.site_id, "token": operation_token.bytes},
+            )
+            return {
+                "scope_id": scope_id,
+                "display_name": display_name,
+                "revision": int(revision),
+                "can_rename": context.is_admin,
+            }
+
     def confirm(
         self,
         context: CurrentSiteContext,
@@ -785,10 +911,11 @@ class MySqlCatalogScopeRepository:
         operation_token: UUID,
         operation_digest: bytes,
         occurred_at: datetime,
+        operation_kind: str = _OPERATION_KIND,
     ) -> ScopeConfirmationRecord | None:
         parameters = {
             "operation_token": operation_token.bytes,
-            "operation_kind": _OPERATION_KIND,
+            "operation_kind": operation_kind,
             "operation_digest": operation_digest,
             "site_id": context.site_id,
             "actor_user_id": context.principal_user_id,
@@ -832,7 +959,7 @@ class MySqlCatalogScopeRepository:
             .one_or_none()
         )
         if claim is None or (
-            str(claim["operation_kind"]) != _OPERATION_KIND
+            str(claim["operation_kind"]) != operation_kind
             or _as_bytes(claim["operation_digest"], length=32) != operation_digest
             or int(claim["site_id"]) != context.site_id
             or int(claim["actor_user_id"]) != context.principal_user_id
@@ -883,6 +1010,9 @@ class MySqlCatalogScopeRepository:
         result: ScopeConfirmationRecord,
         occurred_at: datetime,
         created: bool,
+        operation_kind: str = _OPERATION_KIND,
+        event_kind: str = "catalog.source_scope_confirmed",
+        audit_payload: dict[str, Any] | None = None,
     ) -> None:
         payload: dict[str, Any] = {
             "marketplace_scope_code": result.scope.marketplace_scope_code,
@@ -909,7 +1039,7 @@ class MySqlCatalogScopeRepository:
             ),
             {
                 "operation_token": operation_token.bytes,
-                "operation_kind": _OPERATION_KIND,
+                "operation_kind": operation_kind,
                 "operation_digest": operation_digest,
                 "site_id": context.site_id,
                 "actor_user_id": context.principal_user_id,
@@ -919,10 +1049,14 @@ class MySqlCatalogScopeRepository:
                 "completed_at": _mysql_datetime(occurred_at),
             },
         )
-        audit_payload = {
-            "created": created,
-            "site_config_revision": result.site_config_revision,
-        }
+        audit_payload = (
+            audit_payload
+            if audit_payload is not None
+            else {
+                "created": created,
+                "site_config_revision": result.site_config_revision,
+            }
+        )
         audit_bytes = canonical_json_bytes(audit_payload)
         connection.execute(
             sa.text(
@@ -932,7 +1066,7 @@ class MySqlCatalogScopeRepository:
                     resource_id, operation_token, safe_payload_json,
                     event_digest, created_at
                 ) VALUES (
-                    :site_id, :actor_user_id, 'catalog.source_scope_confirmed',
+                    :site_id, :actor_user_id, :event_kind,
                     'report_source_scope', :scope_id, :operation_token,
                     :safe_payload_json, :event_digest, :created_at
                 )
@@ -942,6 +1076,7 @@ class MySqlCatalogScopeRepository:
                 "site_id": context.site_id,
                 "actor_user_id": context.principal_user_id,
                 "scope_id": result.scope.report_source_scope_id,
+                "event_kind": event_kind,
                 "operation_token": operation_token.bytes,
                 "safe_payload_json": audit_bytes.decode("utf-8"),
                 "event_digest": hashlib.sha256(audit_bytes).digest(),

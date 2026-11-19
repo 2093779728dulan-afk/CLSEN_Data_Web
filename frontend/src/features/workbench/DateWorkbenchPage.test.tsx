@@ -175,6 +175,25 @@ function renderPage({ initialEntry = "/review/2026-08-14?report_type=business_re
 }
 
 describe("DateWorkbenchPage", () => {
+  it("reloads the table after a sibling review publishes its draft", async () => {
+    const published = page("draft");
+    published.source = "published";
+    published.tabs[0]!.source = "published";
+    published.head!.status = "published";
+    published.permissions.can_edit = false;
+    published.permissions.can_publish = false;
+    api.loadWorkbench.mockResolvedValueOnce(page("draft")).mockResolvedValue(published);
+    const workbench = (revision: number) => <MemoryRouter initialEntries={["/review/2026-08-14?report_type=business_report"]}>
+      <DateWorkbenchPage canWrite reportDate="2026-08-14" siteId={9} userId={88} refreshRevision={revision} />
+    </MemoryRouter>;
+    const view = render(workbench(0));
+    await screen.findByRole("button", { name: "经营报告 工作草稿" });
+    view.rerender(workbench(1));
+    expect(await screen.findByRole("button", { name: "经营报告 已发布" })).toBeVisible();
+    expect(api.loadWorkbench).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "前往发布" })).toBeDisabled();
+  });
+
   beforeEach(() => {
     api.confirmWorkbenchImport.mockReset();
     api.createWorkbenchRevision.mockReset();

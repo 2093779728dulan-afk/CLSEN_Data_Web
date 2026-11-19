@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -21,6 +21,7 @@ from app.catalog.scope_repository import MySqlCatalogScopeRepository
 from app.catalog.scope_service import (
     CatalogScopeService,
     ConfirmScopeCommand,
+    RenameScopeCommand,
 )
 
 router = APIRouter(
@@ -51,6 +52,40 @@ class ConfirmCatalogScopeRequest(StrictCatalogModel):
     seller_account_display_name: str = Field(min_length=1, max_length=128)
     marketplace_scope_code: Literal["amazon_us"]
     reason: str = Field(min_length=1, max_length=1000)
+
+
+class RenameCatalogScopeRequest(StrictCatalogModel):
+    operation_token: CatalogWireUuid
+    scope_id: int = Field(ge=1)
+    expected_revision: int = Field(ge=0)
+    display_name: str = Field(min_length=1, max_length=128)
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+@router.get("/source-scope/display-name")
+def get_display_name(
+    context: CatalogReadContext, engine: CatalogEngine
+) -> dict[str, Any]:
+    try:
+        return MySqlCatalogScopeRepository(engine).display_name_status(context)
+    except Exception as error:
+        raise catalog_error(error) from error
+
+
+@router.post("/source-scope/display-name")
+def rename_display_name(
+    request: RenameCatalogScopeRequest,
+    context: CatalogWriteContext,
+    engine: CatalogEngine,
+    idempotency_key: CatalogIdempotencyKey,
+) -> dict[str, Any]:
+    require_matching_token(idempotency_key, request.operation_token)
+    try:
+        return CatalogScopeService(MySqlCatalogScopeRepository(engine)).rename(
+            context, RenameScopeCommand(**request.model_dump())
+        )
+    except Exception as error:
+        raise catalog_error(error) from error
 
 
 def _response(value: object) -> CatalogScopeStatusResponse:

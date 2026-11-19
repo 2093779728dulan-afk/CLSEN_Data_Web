@@ -57,3 +57,12 @@ it("preserves ledger filters and focus after detail normalization and metric cha
   fireEvent.click(screen.getByRole("link",{name:"产品总表"}));
   expect(screen.getByRole("status")).toHaveTextContent(JSON.stringify({search:"?search=J-1&from=2026-08-01&to=2026-08-24",state:{restoreFocus:"style-88"}}));
 });
+
+it("explains zero attributed totals for a product without channel mapping", async () => {
+  const pending = structuredClone(response);
+  pending.variants[0]!.internal_display_sku = null;
+  pending.variants[0]!.seller_sku_aliases = [];
+  loadStyleCard.mockResolvedValue(pending);
+  render(<MemoryRouter initialEntries={["/products/88"]}><Routes><Route path="/products/:style_id" element={<ProductDetailPage today="2026-08-24"/>}/></Routes></MemoryRouter>);
+  expect(await screen.findByText(/0 不代表已确认没有销售或退货/)).toBeVisible();
+});

@@ -23,6 +23,7 @@ from app.catalog.import_service import (
     DraftProjection,
     DraftRow,
     validate_draft_rows,
+    validate_production_approval_rows,
 )
 
 
@@ -128,6 +129,61 @@ def _insert_projection(
     workflow_revision: int,
     projection: DraftProjection,
 ) -> None:
+    from app.catalog.inventory import load_catalog_identity_inventory
+
+    if any(
+        row.section == "skus"
+        and row.payload.get("system_sku_id")
+        and "code_status" not in row.payload
+        for row in projection.rows
+    ):
+        base = connection.scalar(
+            sa.text(
+                "SELECT base_catalog_version_id FROM catalog_imports WHERE id=:id "
+                "AND site_id=:site"
+            ),
+            {"id": import_id, "site": site_id},
+        )
+        inventory = load_catalog_identity_inventory(
+            connection, site_id=site_id, catalog_version_id=base
+        )
+        known = {str(sku["sku_id"]): sku for sku in inventory.skus}
+        enriched = []
+        for row in projection.rows:
+            prior = (
+                known.get(str(row.payload.get("system_sku_id")))
+                if row.section == "skus"
+                else None
+            )
+            if (
+                prior is not None
+                and "code_status" not in row.payload
+                and all(
+                    row.payload.get(field) == prior.get(field)
+                    for field in (
+                        "internal_display_sku",
+                        "standard_color",
+                        "standard_size",
+                    )
+                )
+            ):
+                payload = {
+                    **row.payload,
+                    "code_status": str(prior["code_status"]),
+                    "code_evidence": str(prior["code_evidence"])
+                    if prior["code_evidence"] is not None
+                    else None,
+                }
+                row = DraftRow(
+                    row.section,
+                    row.row_key,
+                    row.row_origin,
+                    row.projection_state,
+                    payload,
+                    hashlib.sha256(canonical_json_bytes(payload)).digest(),
+                )
+            enriched.append(row)
+        projection = validate_draft_rows(tuple(enriched))
     for row in projection.rows:
         connection.execute(
             sa.text(
@@ -195,7 +251,19 @@ def _source_decision_key(
     site_id: int,
     export_id: int,
     raw_sha256_ref: str,
+    scope_ref: str | None = None,
 ) -> tuple[int, bytes, bytes]:
+    from app.catalog.production_code_evidence import production_source_key
+
+    production_key = production_source_key(
+        connection,
+        site_id=site_id,
+        export_id=export_id,
+        raw_sha256_ref=raw_sha256_ref,
+        scope_ref=scope_ref,
+    )
+    if production_key is not None:
+        return production_key
     if not raw_sha256_ref.startswith("sha256:") or len(raw_sha256_ref) != 71:
         raise CatalogImportRepositoryError()
     try:
@@ -316,6 +384,7 @@ def _reconcile_draft_reservations(
             site_id=site_id,
             export_id=export_id,
             raw_sha256_ref=raw_sha,
+            scope_ref=str(row.payload.get("seller_account", "")),
         )
         target_value: CanonicalValue = None
         if decision == "mapped":
@@ -473,6 +542,10 @@ def _locked_import(
     )
     if row is None:
         raise CatalogImportRepositoryError()
+    if row["source_kind"] == "production":
+        from app.catalog.task_queries import require_review_candidate
+
+        require_review_candidate(connection, site_id, import_id)
     return CatalogImportState(
         int(row["id"]),
         int(row["site_id"]),
@@ -1227,6 +1300,10 @@ class MySqlCatalogImportRepository:
                             "internal_display_sku": mutation.payload.get(
                                 "internal_display_sku"
                             ),
+                            "code_status": mutation.payload.get(
+                                "code_status", "legacy"
+                            ),
+                            "code_evidence": mutation.payload.get("code_evidence"),
                             "standard_color": mutation.payload.get("standard_color"),
                             "standard_size": mutation.payload.get("standard_size"),
                             "status": mutation.payload.get("status", "enabled"),
@@ -1247,6 +1324,22 @@ class MySqlCatalogImportRepository:
                     previous = rows.get((section, row_key))
                     if previous is None:
                         raise CatalogImportRepositoryError()
+                    for field, value in mutation.payload.items():
+                        if field not in {
+                            "style_code",
+                            "standard_name",
+                            "category_action",
+                            "category_code",
+                            "internal_display_sku",
+                            "code_status",
+                            "code_evidence",
+                            "standard_color",
+                            "standard_size",
+                            "status",
+                            "change_reason",
+                            "reconfirm_required",
+                        } and value != previous.payload.get(field):
+                            raise CatalogImportRepositoryError()
                     payload = dict(previous.payload)
                     payload.update(mutation.payload)
                     replace(section, row_key, payload)
@@ -1477,7 +1570,28 @@ class MySqlCatalogImportRepository:
                 import_id=import_id,
                 workflow_revision=state.workflow_revision,
             )
-            projection = validate_draft_rows(rows)
+            source_kind = connection.scalar(
+                sa.text(
+                    "SELECT source_kind FROM catalog_imports "
+                    "WHERE id = :import_id AND site_id = :site_id"
+                ),
+                {"import_id": import_id, "site_id": site_id},
+            )
+            if source_kind == "production":
+                from app.catalog.listing_sources import assert_listing_approval
+
+                listing_source = assert_listing_approval(
+                    connection,
+                    site_id=site_id,
+                    import_id=import_id,
+                    rows=rows,
+                    lock=False,
+                )
+                projection = validate_production_approval_rows(
+                    rows, listing_source=listing_source
+                )
+            else:
+                projection = validate_draft_rows(rows)
             next_revision = state.workflow_revision + 1
             _insert_projection(
                 connection,
@@ -1901,9 +2015,7 @@ class MySqlCatalogImportRepository:
                         "validation_run_id": state.validation_run_id,
                         "base_catalog_version_id": bindings["base_catalog_version_id"],
                         "catalog_publication_revision": int(publication_revision),
-                        "fact_snapshot_tuple_id": int(
-                            bindings["fact_snapshot_tuple_id"]
-                        ),
+                        "fact_snapshot_tuple_id": bindings["fact_snapshot_tuple_id"],
                         "risk": risk,
                         "diff_digest": diff_digest.hex(),
                     }
@@ -1936,7 +2048,7 @@ class MySqlCatalogImportRepository:
                     "validation_run_id": state.validation_run_id,
                     "base_catalog_version_id": bindings["base_catalog_version_id"],
                     "catalog_publication_revision": int(publication_revision),
-                    "fact_snapshot_tuple_id": int(bindings["fact_snapshot_tuple_id"]),
+                    "fact_snapshot_tuple_id": bindings["fact_snapshot_tuple_id"],
                     "risk": risk,
                     "diff_digest": diff_digest,
                     "projection_digest": projection_digest,
@@ -1955,7 +2067,7 @@ class MySqlCatalogImportRepository:
                 "validation_run_id": state.validation_run_id,
                 "base_catalog_version_id": bindings["base_catalog_version_id"],
                 "catalog_publication_revision": int(publication_revision),
-                "fact_snapshot_tuple_id": int(bindings["fact_snapshot_tuple_id"]),
+                "fact_snapshot_tuple_id": bindings["fact_snapshot_tuple_id"],
                 "risk": risk,
                 "diff_digest": diff_digest.hex(),
                 "created_at": now.astimezone(UTC).isoformat(),
@@ -2044,6 +2156,11 @@ class MySqlCatalogImportRepository:
             )
             if export is None or export["export_status"] != "ready":
                 raise CatalogExportNotReady()
+            if (export["fact_snapshot_tuple_id"] is None) != (
+                state.source_kind == "production"
+            ):
+                raise CatalogImportRepositoryError()
+
             if (
                 current_revision is None
                 or int(current_revision) != expected_catalog_publication_revision
@@ -2061,7 +2178,7 @@ class MySqlCatalogImportRepository:
                         fact_snapshot_tuple_id, normalization_manifest_id,
                         status, workflow_revision, parse_attempt_revision
                     ) VALUES (
-                        :site_id, :token, 'online', :owner_user_id,
+                        :site_id, :token, :source_kind, :owner_user_id,
                         :export_id, NULL, NULL, NULL, :base_id,
                         :tuple_id, :manifest_id, :status, 0, 0
                     )
@@ -2071,9 +2188,12 @@ class MySqlCatalogImportRepository:
                     "site_id": site_id,
                     "token": operation_token.bytes,
                     "owner_user_id": state.owner_user_id,
+                    "source_kind": "production"
+                    if state.source_kind == "production"
+                    else "online",
                     "export_id": replacement_export_id,
                     "base_id": export["base_catalog_version_id"],
-                    "tuple_id": int(export["fact_snapshot_tuple_id"]),
+                    "tuple_id": export["fact_snapshot_tuple_id"],
                     "manifest_id": export["normalization_manifest_id"],
                     "status": projection.initial_status,
                 },
@@ -2155,7 +2275,7 @@ class MySqlCatalogImportRepository:
             imported = (
                 connection.execute(
                     sa.text(
-                        "SELECT workflow_revision, parse_attempt_revision "
+                        "SELECT workflow_revision, parse_attempt_revision, source_kind "
                         "FROM catalog_imports WHERE id = :id AND site_id = :site_id"
                     ),
                     {"id": import_id, "site_id": site_id},
@@ -2216,6 +2336,15 @@ class MySqlCatalogImportRepository:
                     "offset": (page - 1) * page_size,
                 },
             ).mappings()
+            sku_choices: dict[str, dict[str, object]] = {}
+            if section == "skus" and imported["source_kind"] == "production":
+                from app.catalog.production_sources import production_sku_choices
+
+                sku_choices = production_sku_choices(
+                    _load_projection_rows(
+                        connection, import_id=import_id, workflow_revision=revision
+                    )
+                )
             rows = []
             for row in result:
                 payload = row["payload_json"]
@@ -2227,6 +2356,11 @@ class MySqlCatalogImportRepository:
                         "row_origin": row["row_origin"],
                         "projection_state": row["projection_state"],
                         "payload": payload,
+                        **(
+                            {"display_sku_choice": sku_choices[str(row["row_key"])]}
+                            if str(row["row_key"]) in sku_choices
+                            else {}
+                        ),
                     }
                 )
             return CatalogImportPage(

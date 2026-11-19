@@ -1,3 +1,4 @@
+import { onProductionDataChanged } from "./productionReadCache";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -129,4 +130,19 @@ describe("idempotent API command keys", () => {
     expect(requests[0]?.get("Idempotency-Key")).toBe(operationKey);
     expect(requests[1]?.get("Idempotency-Key")).toBeNull();
   });
+});
+
+
+it("invalidates production views only after successful business writes", async () => {
+  const changed = vi.fn(); const unsubscribe = onProductionDataChanged(changed);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(null, {status:204}))
+    .mockResolvedValueOnce(new Response('{}', {status:200}))
+    .mockResolvedValueOnce(new Response('{"error":{"code":"conflict"}}', {status:409})));
+  try {
+    await requestApi("/api/production/orders/1/confirm", {method:"POST"});
+    expect(changed).toHaveBeenCalledTimes(1);
+    await requestApi("/api/production/orders/table/preview", {method:"POST"});
+    await expect(requestApi("/api/catalog/changes/1/approve", {method:"POST"})).rejects.toBeInstanceOf(ApiRequestError);
+    expect(changed).toHaveBeenCalledTimes(1);
+  } finally { unsubscribe(); vi.unstubAllGlobals(); }
 });

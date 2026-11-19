@@ -104,6 +104,30 @@ def test_compatibility_has_stable_fail_closed_required_jobs() -> None:
         assert "-MySqlVersion 8.4" in execution["run"]
 
 
+def test_java_gate_covers_all_production_tests_in_the_disposable_schema() -> None:
+    jobs = _load_workflow(PUBLIC_PROFILES)["jobs"]
+    job = jobs["java-production"]
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert "java-production" in jobs["public-required"]["needs"]
+    source = (REPOSITORY_ROOT / "scripts/run-production-ci.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"verify"' in source
+    assert "-Dtest=" not in source and "skipTests" not in source
+    assert "clsen_orders_b_v1_1_0_test" in source
+    for prefix in ("P2_TEST", "P4_TEST", "FBA_TEST"):
+        assert prefix in source
+    assert "REQUIRE SSL" in source and "sslMode=VERIFY_IDENTITY" in source
+    assert "PRODUCTION_MIGRATION_USER" in source
+    assert "PRODUCTION_DATABASE_USER" in source
+    cleanup = next(
+        step
+        for step in job["steps"]
+        if step.get("name") == "Clean this job's Java MySQL resources"
+    )
+    assert cleanup["if"] == "always()" and "--cleanup-only" in cleanup["run"]
+
+
 def test_compatibility_jobs_only_select_canonical_profiles() -> None:
     workflow = _load_workflow(PUBLIC_PROFILES)
     jobs = workflow["jobs"]
@@ -123,7 +147,7 @@ def test_compatibility_jobs_only_select_canonical_profiles() -> None:
     assert "tests/integration/test_" not in whole_source
 
 
-def test_public_frontend_keeps_full_coverage_budget_and_failure_artifacts() -> None:
+def test_frontend_split_requires_every_stage_and_all_eight_shards() -> None:
     jobs = _load_workflow(PUBLIC_PROFILES)["jobs"]
     frontend = jobs["frontend"]
     assert frontend["name"] == "Frontend full / Node 24 / pnpm 11"
@@ -654,12 +678,12 @@ def test_windows_smoke_path_boundary_is_exact() -> None:
         for node in nodes
         if "/test_project_optimization_baseline_runner.py::" not in node
     ]
-    assert len(non_stage0_nodes) == 445
-    assert len(set(non_stage0_nodes)) == 445
-    assert len({node.casefold() for node in non_stage0_nodes}) == 444
-    assert len(nodes) == 459
-    assert len(set(nodes)) == 459
-    assert len({node.casefold() for node in nodes}) == 458
+    assert len(non_stage0_nodes) == 458
+    assert len(set(non_stage0_nodes)) == 458
+    assert len({node.casefold() for node in non_stage0_nodes}) == 457
+    assert len(nodes) == 472
+    assert len(set(nodes)) == 472
+    assert len({node.casefold() for node in nodes}) == 471
     runner = PROFILE_RUNNER.read_text(encoding="utf-8")
     assert "[StringComparer]::Ordinal" in runner
     assert "Sort-Object -Unique" not in runner

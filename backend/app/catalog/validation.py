@@ -103,9 +103,9 @@ def evaluate_approval_rows(
                 )
             )
             continue
-        if display is None or color is None or size is None:
+        if color is None or size is None:
             continue
-        display_key = catalog_identity_key_v1(display).utf8
+        display_key = catalog_identity_key_v1(display).utf8 if display else None
         variant_key = (
             catalog_identity_key_v1(
                 _value(style_rows[style_key], "style_code") or ""
@@ -113,7 +113,7 @@ def evaluate_approval_rows(
             catalog_identity_key_v1(color).utf8,
             catalog_identity_key_v1(size).utf8,
         )
-        if display_key in display_keys:
+        if display_key is not None and display_key in display_keys:
             issues.append(
                 CatalogValidationIssue(
                     "skus", row.row_key, "/internal_display_sku", "duplicate_identity"
@@ -125,7 +125,8 @@ def evaluate_approval_rows(
                     "skus", row.row_key, "/standard_color", "duplicate_variant"
                 )
             )
-        display_keys[display_key] = row.row_key
+        if display_key is not None:
+            display_keys[display_key] = row.row_key
         variant_keys[variant_key] = row.row_key
 
     for row in reachability.rows:

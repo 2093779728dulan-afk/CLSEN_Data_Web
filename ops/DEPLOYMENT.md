@@ -179,3 +179,93 @@ pwsh .\ops\verify-deployment.ps1
 - 轮换边缘证书不会改变数据库密码。数据库密码轮换必须在维护窗口内同时更新 Docker secrets 并运行迁移容器同步账号。
 - 密钥环轮换后必须保留所有仍有备份引用的旧 key，并立即验证异地密钥副本可恢复。
 - 停止服务但保留数据使用 `docker compose stop`；删除容器但保留卷可使用不带 `-v` 的 `docker compose down`。
+
+
+## B 1.1.0 的独立发布扩展
+
+A 继续使用原 docker-compose.yml。B 使用同一固定来源中的两个文件：
+docker-compose.yml 与 docker-compose.production.yml。
+下面是准备好的操作入口，生产迁移、停写和切换仍需相应授权；
+不得把 .12/.13 模拟库、虚构订单或本机体验启动脚本复制到生产。
+
+B 的最小服务组成是原 Python API、worker、前端、MySQL，加内部 Java 订单库存服务。
+Java 不发布主机端口，只在 data 内网提供服务；API/worker 使用单独的服务凭据。
+Python 保持商品主档唯一写入方，Java 对已批准目录及期初核对表仅有 SELECT 权限。
+正式配对固定为 clsen_data / clsen_production；
+隔离演练配对固定为 clsen_data_test_<同一后缀> / clsen_production_test_<同一后缀>。
+其他库名、不同后缀及用测试目录配正式库存库均拒绝。
+
+### 构建和启动顺序
+
+1. 先固定完整来源，包括未跟踪实现、Alembic 迁移、Flyway V1—V20、
+   frontend 锁文件、Java pom 和本扩展；准备快照不能代替正式 Git SHA/CI。
+2. 用现有 JDK21/Maven 构建 backend-java/target/dataweb-production-1.1.0-SNAPSHOT.jar。
+   Dockerfile 只复制这个明确制品，不下载 Maven 依赖或挑选其他历史 JAR。
+   Java 镜像使用 eclipse-temurin:21-jre-jammy，正式镜像构建后记录实际 digest；
+   本机无该镜像时，已有宿主 JDK 检查不能冒充 Linux 镜像验证。
+3. 复用原私有 secrets 目录及原 TLS/会话凭据。首次空目录先走原 bootstrap-secrets.ps1；
+   然后运行 bootstrap-production-secrets.ps1，只补四个 B 凭据，不覆盖原凭据。
+   不使用 -Force 重建原密钥。B 的运行容器不挂载 root、迁移或备份密码。
+4. 仅在已明确的隔离项目/上线窗口，按以下顺序执行，不把 operations profile 并入普通 up：
+
+~~~powershell
+# $ProjectName / $EnvFile 必须属于当次获准目标；从仓库根目录执行。
+$compose = @('compose', '--project-name', $ProjectName, '--env-file', $EnvFile,
+  '-f', 'ops/docker-compose.yml', '-f', 'ops/docker-compose.production.yml')
+docker @compose config --quiet
+docker @compose build backend worker frontend production production-migrate production-bootstrap
+docker @compose up -d mysql
+docker @compose --profile operations run --rm migrate
+docker @compose --profile operations run --rm production-bootstrap
+docker @compose --profile operations run --rm production-migrate
+docker @compose up -d
+docker @compose ps
+~~~
+
+每条命令必须检查退出码；失败即停止，不继续下一步。原 migrate 负责 Python 迁移、
+原权限同步和触发器合同，production-bootstrap 负责配对订单库及独立角色，
+production-migrate 仅使用迁移凭据执行 Flyway。Java 普通启动先 validate，
+运行账户不执行 migrate；CA/主机身份校验保留。
+原 MySQL log_bin_trust_function_creators 前置保持，不给 migrator 增加 SUPER。
+
+B 构建启用生产页、生产建档和人工表格入口；API 配置内部服务及持久化根目录。
+演示模式/QA目录模式明确关闭。来源文件、待核草稿和人工整理文件写入 production_data，
+平台日报原件仍写 raw_data。普通 up 不导入本机资料、初始化库存或复制模拟流水。
+正式店铺范围、稳定ID、期初日期、未结订单/在途与盘点覆盖必须在切换前另行核对。
+历史151件在途仍按期初保留，不能为了补链路制造FBA货件或验收。
+
+### 双库、来源文件备份与隔离恢复
+
+沿用既有备份 keyring 和 AES-256-GCM 分块加密；密钥继续独立加密保存，不随备份包传播。
+B 备份是新格式 clsen-production-backup-v1，旧单库维护入口保留；
+B 新增内容必须使用本节双库入口。
+
+~~~powershell
+pwsh ops/backup-production.ps1 -ProjectName $ProjectName -EnvFile $EnvFile -KeyringFile keyring.json
+~~~
+
+脚本记录原先运行的 backend/worker/production，只停止这三项并核实已停，
+再以备份角色导出两个数据库及 raw_data / production_data。
+manifest 保存两库全部基础表的行数/CHECKSUM和全部来源文件SHA256；
+同一次停写期内保存，不能把不同时点的独立备份拼成一份。
+密文验证完成且 catalog.json 落盘后才报告成功。
+无论备份成功与否，仅恢复原先运行的三项；启动恢复失败继续报错。
+
+恢复验证只能在归属明确、可抛弃的 MySQL 项目执行。该项目的环境必须包含：
+APP_DEPLOYMENT_DATABASE=clsen_data_test_<后缀>、
+PRODUCTION_DATABASE_NAME=clsen_production_test_<同一后缀>、
+APP_DISPOSABLE_TEST_RUN=true。默认正式库配置在连接前拒绝 restore-test。
+将备份包和 keyring 分别放入该任务隔离卷后：
+
+~~~powershell
+docker @compose --profile maintenance run --rm --no-deps production-restore-verifier restore-test --directory /var/lib/clsen/backups/<备份ID> --keyring /var/lib/clsen/keyring/keyring.json
+~~~
+
+该操作只创建本轮随机 clsen_data_test_restore_* / clsen_production_test_restore_*，
+逐库导入后核对全部基础表行数/CHECKSUM，解密后核对全部来源文件摘要。
+无论结果如何，清理仅限本轮创建的随机测试库和已解析、限定在临时根下的解密目录；
+不覆盖源库、生产库、体验库或既有目录。保留密文/密钥受保护副本和脱敏结果。
+
+B 上线前仍需在固定发布来源上完成完整兼容CI与适用正式门禁，
+并完成目标环境、正式数据增量、停写窗口、双库/附件恢复及回退兼容确认。
+若B上线后已写入新订单/收发数据，不能仅回退旧A镜像或恢复旧单库备份。

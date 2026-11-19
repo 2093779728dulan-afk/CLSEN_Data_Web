@@ -93,3 +93,11 @@
 @media (max-width: 900px) { .controls .exceptionTable tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .controls .exceptionTable tbody tr { grid-template-columns: minmax(0, 1fr); } .controls .exceptionTable tbody td:last-child { justify-content: flex-start; } }
 @media (forced-colors: active) { .controls .cellLabel .control:focus-visible { outline-color: Highlight; } .controls .cellLabel .control[aria-invalid="true"] { outline-color: Mark; } }
+
+.suggestions { padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface-muted); margin-bottom:16px; }
+.suggestions summary { cursor:pointer; font-weight:600; }
+.suggestions p { color:var(--color-text-muted); font-size:13px; }
+.suggestions ul { list-style:none; padding:0; max-height:260px; overflow:auto; }
+.suggestions li { border-top:1px solid var(--color-border-subtle); padding:10px 0; }
+.suggestions label { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+.suggestions li span { flex-basis:100%; padding-left:24px; }

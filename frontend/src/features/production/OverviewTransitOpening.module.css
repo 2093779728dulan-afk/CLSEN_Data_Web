@@ -1,0 +1,13 @@
+.opening { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.opening summary { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 16px; cursor: pointer; color: var(--color-text); }
+.opening summary::before { content: "›"; color: var(--color-text-muted); }
+.opening details[open] > summary::before { transform: rotate(90deg); }
+.opening summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.opening h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.opening summary strong { color: var(--color-primary); font-size: 15px; }
+.opening summary span, .opening time { font-size: 12px; color: var(--color-text-muted); }
+.opening time { margin-left: auto; }
+.body { max-height: 320px; overflow: auto; padding: 0 16px 12px; }
+.body h3 { margin: 0 0 8px; font-size: 13px; font-weight: 500; }
+.body :is(th,td) { padding: 5px 8px; font-size: 13px; }
+@media (max-width: 600px) { .opening summary { gap: 8px; padding: 10px 12px; } .body { padding: 0 10px 10px; } }

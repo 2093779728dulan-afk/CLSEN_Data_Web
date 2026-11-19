@@ -10,9 +10,11 @@ import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from app.api.dependencies import (
     get_database_engine,
+    get_database_session,
     require_roles,
     require_write_roles,
 )
@@ -63,6 +65,24 @@ _ManagerWrite = Annotated[
     Depends(require_write_roles("admin", "data_manager")),
 ]
 _Engine = Annotated[Engine, Depends(get_database_engine)]
+
+
+def _advance_principal(
+    principal: _ManagerWrite,
+    database_session: Annotated[
+        Session, Depends(get_database_session, scope="function")
+    ],
+    engine: _Engine,
+) -> Principal:
+    # Authentication touches last_seen_at. Release that row lock before a long
+    # advance so this session can still read, pause, or retry its running task.
+    _site_id(engine)
+    database_session.commit()
+    database_session.close()
+    return principal
+
+
+_AdvanceWrite = Annotated[Principal, Depends(_advance_principal)]
 _IdempotencyKey = Annotated[UUID, Header(alias="Idempotency-Key")]
 _PositivePathId = Annotated[int, Path(ge=1)]
 _SITE_CODE = "amazon_us"
@@ -375,7 +395,7 @@ def confirm_batch_review(
 def advance_batch_review_item(
     run_id: _PositivePathId,
     item_id: _PositivePathId,
-    principal: _ManagerWrite,
+    principal: _AdvanceWrite,
     engine: _Engine,
     operation_token: _IdempotencyKey,
 ) -> BatchReviewItemResponse:

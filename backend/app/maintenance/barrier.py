@@ -17,7 +17,13 @@ _LOGGER = logging.getLogger("app.maintenance.barrier")
 _LOCK_HELD_INFO_KEY = "clsen_maintenance_write_lock_held"
 _WRITER_LOCK_STATE = "writer"
 _MAINTENANCE_LOCK_STATE = "maintenance"
-_LOCK_NAME_SQL = "CONCAT('clsen:maintenance-write:', DATABASE())"
+# Preserve existing lock identities; MySQL permits at most 64 characters.
+MAINTENANCE_LOCK_NAME_SQL = (
+    "CASE WHEN CHAR_LENGTH(CONCAT('clsen:maintenance-write:', DATABASE())) <= 64 "
+    "THEN CONCAT('clsen:maintenance-write:', DATABASE()) "
+    "ELSE CONCAT('clsen:maintenance-write:', "
+    "LEFT(SHA2(DATABASE(), 256), 64 - CHAR_LENGTH('clsen:maintenance-write:'))) END"
+)
 _BARRIER_ROW_SQL = "SELECT id FROM maintenance_write_barrier WHERE id = 1"
 MAINTENANCE_WRITE_LOCK_TIMEOUT_OPTION = "clsen_maintenance_write_lock_timeout_seconds"
 _WRITE_PREFIX = re.compile(
@@ -183,7 +189,7 @@ def _release_on_checkin(dbapi_connection: Any, connection_record: Any) -> None:
 
     cursor = dbapi_connection.cursor()
     try:
-        cursor.execute(f"SELECT RELEASE_LOCK({_LOCK_NAME_SQL})")
+        cursor.execute(f"SELECT RELEASE_LOCK({MAINTENANCE_LOCK_NAME_SQL})")
         row = cursor.fetchone()
         if row is None or row[0] != 1:
             raise MaintenanceBarrierError(
@@ -244,7 +250,9 @@ def hold_maintenance_write_barrier(
     with engine.connect() as connection:
         try:
             acquired = connection.scalar(
-                sa.text(f"SELECT GET_LOCK({_LOCK_NAME_SQL}, :timeout_seconds)"),
+                sa.text(
+                    f"SELECT GET_LOCK({MAINTENANCE_LOCK_NAME_SQL}, :timeout_seconds)"
+                ),
                 {"timeout_seconds": timeout_seconds},
             )
             connection.commit()
@@ -275,7 +283,7 @@ def hold_maintenance_write_barrier(
             if not connection.invalidated:
                 try:
                     released = connection.scalar(
-                        sa.text(f"SELECT RELEASE_LOCK({_LOCK_NAME_SQL})")
+                        sa.text(f"SELECT RELEASE_LOCK({MAINTENANCE_LOCK_NAME_SQL})")
                     )
                     connection.commit()
                 except BaseException:

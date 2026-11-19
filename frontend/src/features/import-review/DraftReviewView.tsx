@@ -20,10 +20,10 @@ export type DraftReviewViewProps = {
   saveNote: () => Promise<void> | void; runValidation: () => Promise<void> | void; markReady: () => Promise<void> | void;
   inspectDraftMoveTarget: () => Promise<void> | void; confirmDraftMoveDecision: () => Promise<void> | void;
   discardDraft: (reparse: boolean) => Promise<void> | void; resetDiscardOperation: () => void; setShowPublish: (v: boolean) => void; onRefresh: () => void;
-  dataTable?: ReactNode; versionNotes?: ReactNode; mergeMatrix?: ReactNode; publicationDialog?: ReactNode;
+  productMatch?: ReactNode; dataTable?: ReactNode; versionNotes?: ReactNode; mergeMatrix?: ReactNode; publicationDialog?: ReactNode;
 };
 
-export function DraftReviewView({ context, head, published, workspace, validation, counts, busyAction, error, notice, operator, note, noteVisibility, readyReason, targetDate, moveReason, draftMovePreview, draftMoveDecision, draftMoveMerge, discardReason, discardConfirmed, reparseBatchId, canFinalizePublishedMove, onDiscarded, onReparseSource, setNote, setNoteVisibility, setReadyReason, changeTargetDate, changeMoveReason, changeDraftMoveDecision, setDiscardReason, setDiscardConfirmed, setReparseBatchId, saveNote, runValidation, markReady, inspectDraftMoveTarget, confirmDraftMoveDecision, discardDraft, resetDiscardOperation, setShowPublish, onRefresh, dataTable, versionNotes, mergeMatrix, publicationDialog }: DraftReviewViewProps) {
+export function DraftReviewView({ context, head, published, workspace, validation, counts, busyAction, error, notice, operator, note, noteVisibility, readyReason, targetDate, moveReason, draftMovePreview, draftMoveDecision, draftMoveMerge, discardReason, discardConfirmed, reparseBatchId, canFinalizePublishedMove, onDiscarded, onReparseSource, setNote, setNoteVisibility, setReadyReason, changeTargetDate, changeMoveReason, changeDraftMoveDecision, setDiscardReason, setDiscardConfirmed, setReparseBatchId, saveNote, runValidation, markReady, inspectDraftMoveTarget, confirmDraftMoveDecision, discardDraft, resetDiscardOperation, setShowPublish, onRefresh, productMatch, dataTable, versionNotes, mergeMatrix, publicationDialog }: DraftReviewViewProps) {
   if (published) {
     return (
       <section aria-live="polite" className={css["publication-receipt"]}>
@@ -44,6 +44,7 @@ export function DraftReviewView({ context, head, published, workspace, validatio
         <StatusBadge label={head.status === "draft" ? "草稿" : "待发布"} tone={head.status === "draft" ? "quiet" : "good"} />
       </header>
 
+      {productMatch}
       {workspace ? dataTable : error ? <ErrorState title="无法读取草稿" description={error} action={<Button onClick={onRefresh}>重新读取草稿</Button>} /> : <div className={css.loading} role="status"><p>正在读取草稿行、差异与校验问题…</p><Skeleton lines={4} /></div>}
 
       <div className={css["review-grid"]}>

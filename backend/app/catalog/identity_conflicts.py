@@ -50,6 +50,7 @@ def identity_owners(
             site_id=site_id,
             export_id=int(imported["export_id"]),
             raw_sha256_ref=payload["seller_sku_sha256"],
+            scope_ref=str(payload.get("seller_account", "")),
         )
         params = {"site": site_id, "scope": scope, "digest": digest, "key": key_bytes}
         predicate = (

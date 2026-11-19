@@ -17,9 +17,9 @@ describe("CatalogStylePage", () => {
     render(<MemoryRouter initialEntries={["/catalog/styles/8"]}><Routes><Route element={<CatalogStylePage />} path="/catalog/styles/:style_id" /></Routes></MemoryRouter>);
     await waitFor(() => expect(screen.getByRole("heading", { name: "标准款" })).toBeVisible());
     expect(within(screen.getByRole("article", { name: "变体 A-BLUE-S" })).getByText("已启用")).toBeVisible();
-    expect(screen.getAllByText("款式编号").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("款号").length).toBeGreaterThan(0);
     expect(screen.getByText("A-BLUE-S")).toBeVisible();
-    expect(screen.getByText("系统身份 SKU #9", { exact: false })).toBeVisible();
+    expect(screen.getByText("系统内部ID #9", { exact: false })).toBeVisible();
   });
 
   it("loads N:1 Seller SKU aliases and source evidence only when requested", async () => {

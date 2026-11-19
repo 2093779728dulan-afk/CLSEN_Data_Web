@@ -1,0 +1,15 @@
+.board { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: 14px; display: grid; gap: 12px; }
+.heading { display: flex; justify-content: space-between; align-items: start; gap: 8px; }.heading h2 { margin: 0; font-size: 17px; }.heading p { margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted); }.heading button { flex-shrink: 0; }
+.note { color: var(--color-text-muted); font-size: 11px; line-height: 1.6; margin: 0; overflow-wrap: anywhere; }
+.filters summary { cursor: pointer; font-size: 12px; padding: 6px 0; }.filters form { display: grid; gap: 10px; padding-top: 8px; }.filters form > div:last-child { display: flex; gap: 6px; flex-wrap: wrap; }.filters select { width: 100%; min-height: 36px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-control); padding: 6px; font: inherit; }
+.cards { display: grid; gap: 10px; }.card { min-width: 0; border-top: 1px solid var(--color-border); padding-top: 10px; }.card p { margin: 5px 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }.card .note { font-size: 11px; }.card .warning { color: var(--color-warning); font-size: 11px; }
+.batchButton { display: flex; width: 100%; justify-content: space-between; gap: 8px; padding: 3px 0; text-align: left; white-space: normal; min-height: 36px; }.batchButton strong { font-size: 13px; overflow-wrap: anywhere; color: var(--color-primary); }.batchButton span { font-size: 11px; }.batchButton[aria-expanded="true"] { background: var(--color-info-bg); }
+.route { font-weight: 500; }.detail { display: grid; gap: 12px; min-width: 0; }.detail p { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }.detail h3 { margin: 0 0 5px; font-size: 17px; }.detail small { display: block; color: var(--color-text-muted); font-size: 11px; }.detail footer { display: flex; flex-wrap: wrap; gap: 8px; }.detail summary { cursor: pointer; padding: 6px 0; }.detail article { border-top: 1px solid var(--color-border); padding: 8px 0; }
+.batchButton > span { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
+.batchButton > span > span { flex-shrink: 0; padding: 2px 6px; border-radius: var(--radius-control); background: var(--color-surface-muted); color: var(--color-text-muted); }
+.board > nav { flex-direction: column; align-items: stretch; gap: 6px; }
+.board > nav > div { justify-content: space-between; gap: 4px; }
+.board > nav button { padding-inline: 5px; white-space: nowrap; }
+.board > nav p { font-size: 12px; }
+.metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 0; }.metrics dt { color: var(--color-text-muted); font-size: 12px; }.metrics dd { margin: 5px 0 0; font-size: 20px; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { .batchButton { min-height: 44px; }.metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }

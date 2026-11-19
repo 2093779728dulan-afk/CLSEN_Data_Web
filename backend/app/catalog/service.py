@@ -20,6 +20,7 @@ from app.catalog.approval import (
     _result_int,
 )
 from app.catalog.import_repository import MySqlCatalogImportRepository
+from app.catalog.import_service import validate_production_approval_rows
 from app.catalog.repository import load_import_rows
 
 
@@ -70,7 +71,8 @@ class CatalogService:
                     sa.text(
                         "SELECT status, workflow_revision, validation_run_id, "
                         "submitted_by_user_id, base_catalog_version_id, "
-                        "fact_snapshot_tuple_id, export_id FROM catalog_imports "
+                        "fact_snapshot_tuple_id, export_id, source_kind "
+                        "FROM catalog_imports "
                         "WHERE id = :id AND site_id = :site_id"
                     ),
                     {"id": import_id, "site_id": site_id},
@@ -137,6 +139,17 @@ class CatalogService:
                 import_id=import_id,
                 workflow_revision=expected_workflow_revision,
             )
+            from app.catalog.listing_sources import assert_listing_approval
+
+            listing_source = assert_listing_approval(
+                connection, site_id=site_id, import_id=import_id, rows=rows, lock=False
+            )
+            if imported["source_kind"] == "production" and (
+                validate_production_approval_rows(
+                    rows, listing_source=listing_source
+                ).issues
+            ):
+                raise CatalogApprovalValidationFailed()
             evaluation = _evaluate_with_database(
                 connection,
                 rows=rows,
@@ -163,7 +176,9 @@ class CatalogService:
             _result_int(value["validation_run_id"]),
             base_id,
             _result_int(value["catalog_publication_revision"]),
-            _result_int(value["fact_snapshot_tuple_id"]),
+            None
+            if value["fact_snapshot_tuple_id"] is None
+            else _result_int(value["fact_snapshot_tuple_id"]),
             str(value["risk"]),
             bytes.fromhex(str(value["diff_digest"])),
             _parse_timestamp(value["created_at"]),

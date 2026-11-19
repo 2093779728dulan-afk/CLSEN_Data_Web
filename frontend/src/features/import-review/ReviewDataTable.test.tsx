@@ -412,3 +412,12 @@ describe("ReviewDataTable", () => {
     expect(screen.getByRole("button", { name: /asin，当前值 B0FIRST/ })).toHaveFocus();
   });
 });
+
+it("keeps embedded field edits inside the current surface",async()=>{
+ const user=userEvent.setup();const setField=vi.fn().mockResolvedValue(undefined);
+ render(<ReviewDataTable inline busy={false} onAddCellNote={vi.fn()} onAddRow={vi.fn()} onAddRowNote={vi.fn()} onChangeRowState={vi.fn()} onPageChange={vi.fn()} onRestoreField={vi.fn()} onReviewIssue={vi.fn()} onReviseNote={vi.fn()} onSetField={setField} workspace={workspace}/>);
+ await user.click(screen.getByRole('button',{name:/sales，当前值 42.50/}));expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+ const panel=within(screen.getByRole('region',{name:'字段对照'}));expect(panel.getByText('源文件值')).toBeInTheDocument();
+ await user.clear(panel.getByLabelText('当前值'));await user.type(panel.getByLabelText('当前值'),'43.00');
+ expect(panel.getByLabelText('当前值')).toHaveValue('43.00');await user.click(panel.getByRole('button',{name:'关闭字段对照'}));expect(screen.queryByRole('region',{name:'字段对照'})).not.toBeInTheDocument();expect(setField).not.toHaveBeenCalled();
+});

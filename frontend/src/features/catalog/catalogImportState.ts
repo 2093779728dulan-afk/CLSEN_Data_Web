@@ -1,6 +1,6 @@
 import type { CatalogImportSummary } from "./catalogTypes";
 
-export function workflowLabel(value: CatalogImportSummary): string {
+export function workflowLabel(value: Pick<CatalogImportSummary, "status">): string {
   return {
     approved: "已批准",
     needs_attention: "需要处理",
@@ -11,5 +11,6 @@ export function workflowLabel(value: CatalogImportSummary): string {
     uploaded: "等待解析",
     validated: "校验通过",
     withdrawn: "已撤回",
+    superseded: "已由新批次替代",
   }[value.status] ?? value.status;
 }

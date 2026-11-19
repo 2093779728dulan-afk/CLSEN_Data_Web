@@ -21,5 +21,5 @@ def test_catalog_domain_errors_map_to_stable_safe_http_codes() -> None:
     unknown_detail = cast(dict[str, str], cast(object, unknown.detail))
     assert unknown_detail == {
         "code": "catalog_internal_error",
-        "message": "The catalog request could not be completed.",
+        "message": "暂时无法完成商品主档操作，请保留输入并稍后重试。",  # noqa: RUF001 -- Public localized message.
     }

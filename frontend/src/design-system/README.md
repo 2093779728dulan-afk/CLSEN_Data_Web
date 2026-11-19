@@ -64,6 +64,8 @@ The published data table is the first consumer of the shared form and pagination
 
 ## Catalog page entrance（2026-10-06）
 
+2026-10-26切换体验更新：`PageTransition`与`ContentReveal`改为`initial=false`，首次内容不再从透明度0开始，也不额外位移；保留现有组件入口、路由key与草稿卸载边界。以下入场动画描述为原实现历史，不是当前默认行为。生产主从工作台另保留列表，仅选中详情换源；同对象刷新保留结果时须明确标注读取状态、禁用操作，权限失效或换对象仍立即清除旧结果。
+
 `PageTransition` 复用现有 Motion 的 initial/animate 入场模式，时长读取 motion-content-enter（180ms），位移读取 space-2（8px）；CSS Module 只组织容器和减少动态效果覆盖。CatalogLayout 以原 pathname key 替换原 Fragment，保留原内容重建和草稿边界，不因搜索参数、筛选、分页、读取或保存状态而重新挂载。商品主档实际子页和现有Reference共用；未推广到其他应用模块。
 
 路由改变后新内容淡入并从下方轻微上移，旧内容按原路由立即卸载，不保留延迟可操作的旧页面。减少动态效果时直接显示；CSS覆盖也能跟随挂载期间系统偏好改变。标题/导航/角色控制保持，已有后台API加载与失败恢复负责真实内容状态；入场动画不声明数据加载成功，也不模拟加载进度。无新增依赖。

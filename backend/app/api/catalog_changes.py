@@ -60,7 +60,7 @@ class StyleChangeDraftRequest(StrictCatalogModel):
     operation_token: CatalogWireUuid
     expected_catalog_publication_revision: int = Field(ge=0)
     expected_style_revision: int = Field(ge=1)
-    standard_name: str = Field(min_length=1, max_length=255)
+    standard_name: str = Field(max_length=255)
     category_action: str
     category_id: int | None = Field(default=None, ge=1)
 

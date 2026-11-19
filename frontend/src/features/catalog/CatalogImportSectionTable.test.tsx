@@ -1,11 +1,61 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { setSessionCsrfToken } from "../../api/client";
+import { ApiRequestError, setSessionCsrfToken } from "../../api/client";
 import type { saveCatalogMutations as SaveCatalogMutations } from "./catalogApi";
-import { CatalogImportSectionTable } from "./CatalogImportSectionTable";
+import { CatalogImportSectionTable, isCatalogRowPending } from "./CatalogImportSectionTable";
 
 describe("CatalogImportSectionTable", () => {
+  it("selects a production display code without manual entry and saves only the payload", async () => {
+    const saveMutations = vi.fn<typeof SaveCatalogMutations>().mockResolvedValue({ workflow_revision: 1 });
+    render(<CatalogImportSectionTable productionSource importId={18} onSaved={vi.fn().mockResolvedValue(undefined)} saveMutations={saveMutations} rows={[{
+      payload: { internal_display_sku: null, standard_color: "Olive", standard_size: "M" },
+      display_sku_choice: { options: [{ value: "QA-Olive-M", label: "使用建议编码 · QA-Olive-M" }], message: "" },
+      projection_state: "included", row_key: "new-sku", row_origin: "user_created", section: "skus",
+    }]} section="skus" workflowRevision={0} />);
+    const select = screen.getByRole("combobox", { name: "new-sku internal_display_sku" });
+    expect(screen.queryByRole("textbox", { name: "new-sku internal_display_sku" })).not.toBeInTheDocument();
+    expect(select).not.toHaveTextContent("手动输入");
+    fireEvent.change(select, { target: { value: "QA-Olive-M" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存此行" }));
+    await waitFor(() => expect(saveMutations).toHaveBeenCalledOnce());
+    expect(saveMutations.mock.calls[0]?.[2][0]?.payload).toEqual({ internal_display_sku: "QA-Olive-M", code_status: "confirmed", code_evidence: undefined, reconfirm_required: null, standard_color: "Olive", standard_size: "M" });
+  });
+
+  it("clears a new code and pauses choices when its specification changes", () => {
+    render(<CatalogImportSectionTable productionSource importId={18} onSaved={vi.fn()} rows={[{
+      payload: { internal_display_sku: "QA-Olive-M", standard_color: "Olive", standard_size: "M" },
+      display_sku_choice: { options: [{ value: "QA-Olive-M", label: "使用建议编码 · QA-Olive-M" }], message: "" },
+      projection_state: "included", row_key: "new-sku", row_origin: "user_created", section: "skus",
+    }]} section="skus" workflowRevision={0} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "new-sku standard_size" }), { target: { value: "L" } });
+    expect(screen.getByRole("combobox", { name: "new-sku internal_display_sku" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "new-sku internal_display_sku" })).toHaveValue("");
+    expect(screen.getByText("规格已修改，请先保存并重新读取候选，再选择编码。")).toBeVisible();
+  });
+
+  it.each([undefined, { options: [], message: "展示编码与其他规格冲突" }])("does not fall back to manual entry for missing or conflicting production choices", (choice) => {
+    render(<CatalogImportSectionTable productionSource importId={18} onSaved={vi.fn()} rows={[{
+      payload: { internal_display_sku: null, standard_color: "Olive", standard_size: "M" },
+      display_sku_choice: choice,
+      projection_state: "included", row_key: "new-sku", row_origin: "user_created", section: "skus",
+    }]} section="skus" workflowRevision={0} />);
+    expect(screen.getByRole("combobox", { name: "new-sku internal_display_sku" })).toBeDisabled();
+    expect(screen.queryByRole("textbox", { name: "new-sku internal_display_sku" })).not.toBeInTheDocument();
+  });
+
+  it.each(["styles", "skus"] as const)("updates persisted user_created %s rows without creating them again", async (section) => {
+    const saveMutations = vi.fn<typeof SaveCatalogMutations>().mockResolvedValue({ workflow_revision: 1 });
+    const field = section === "styles" ? "standard_name" : "internal_display_sku";
+    render(<CatalogImportSectionTable importId={1} onSaved={vi.fn().mockResolvedValue(undefined)} saveMutations={saveMutations} rows={[{
+      payload: { style_code: "QA-NEW", standard_name: null, internal_display_sku: null, standard_color: "Olive", standard_size: "M" },
+      projection_state: "included", row_key: "new-row", row_origin: "user_created", section,
+    }]} section={section} workflowRevision={0} />);
+    fireEvent.change(screen.getByLabelText(`new-row ${field}`), { target: { value: "QA-verified" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存此行" }));
+    await waitFor(() => expect(saveMutations).toHaveBeenCalledOnce());
+    expect(saveMutations.mock.calls[0]?.[2][0]).toMatchObject({ type: section === "styles" ? "update_style" : "update_sku", row_key: "new-row" });
+  });
   it("does not mount row editors until their category is opened", () => {
     const props = { importId: 4, onSaved: vi.fn(), rows: [{ payload: { style_code: "DEMO", standard_name: null, status: "active" }, projection_state: "included" as const, row_key: "demo", row_origin: "system" as const, section: "styles" as const }], section: "styles" as const, workflowRevision: 3 };
     const view = render(<CatalogImportSectionTable {...props} active={false} />);
@@ -143,7 +193,7 @@ describe("CatalogImportSectionTable", () => {
       payload: { internal_display_sku: "100-NAVY-L", standard_color: "NAVY", standard_size: "L", status: "enabled" },
       projection_state: "included", row_key: "sku-row", row_origin: "system", section: "skus",
     }]} section="skus" workflowRevision={3} />);
-    for (const label of ["内部展示 SKU", "标准颜色", "标准尺码", "状态", "修改说明"]) expect(screen.getByText(label, { selector: "span" })).toBeVisible();
+    for (const label of ["正式SKU", "标准颜色", "标准尺码", "状态", "修改说明"]) expect(screen.getByText(label, { selector: "span" })).toBeVisible();
     expect(screen.getByText("启用")).toBeVisible();
     expect(screen.queryByText("enabled")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
@@ -261,4 +311,69 @@ describe("CatalogImportSectionTable", () => {
     expect(screen.getByRole("textbox", { name: "mapping-row target_sku_row_key" })).toBeVisible();
     expect(screen.getByRole("radio", { name: "排除" })).toBeChecked();
   });
+});
+
+it('applies explicitly selected unique-source suggestions as local drafts and saves them together',async()=>{
+ const save=vi.fn().mockResolvedValue({workflow_revision:2});const rows=['A','B'].map((key,index)=>({row_key:key,row_origin:'system' as const,projection_state:'included' as const,section:'skus' as const,payload:{standard_color:'White',standard_size:index?'M':'S',internal_display_sku:null}}));
+ render(<CatalogImportSectionTable importId={1} workflowRevision={1} section="skus" rows={rows} options={{A:{internal_display_sku:[{value:'3104-White-S',label:'原报告'}]},B:{internal_display_sku:[{value:'3104-White-M',label:'原报告'}]}}} onSaved={vi.fn().mockResolvedValue(undefined)} saveMutations={save}/>);
+ fireEvent.click(screen.getByText('可批量核对 2 条明确来源建议'));fireEvent.click(screen.getByLabelText('选择本批建议（最多500条）'));fireEvent.click(screen.getByRole('button',{name:'采用所选建议'}));expect(save).not.toHaveBeenCalled();expect(screen.getByText("修改尚未保存")).toBeVisible();expect(screen.queryByText("草稿保存完成")).not.toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'保存当前分类修改（2行）'}));await waitFor(()=>expect(save).toHaveBeenCalledTimes(1));expect(save.mock.calls[0]?.[2]).toHaveLength(2);
+});
+
+it('shows a filled local decision as awaiting save instead of repeating the old required error',()=>{
+ render(<CatalogImportSectionTable importId={4} workflowRevision={2} section="mappings" rows={[{row_key:'m',row_origin:'system',projection_state:'included',section:'mappings',payload:{seller_sku_preview:'2301-Hot Pink-L',identity_decision:null,target_sku_row_key:'s'}}]} issues={[{row_key:'m',section:'mappings',field:'/identity_decision',severity:'blocking',reason_code:'required'}]} onSaved={vi.fn()}/>);
+ expect(screen.getByText('尚未填写或确认；修改后请重新校验。')).toBeVisible();
+ fireEvent.click(screen.getByRole('radio',{name:'纳入目录'}));
+ expect(screen.queryByText('尚未填写或确认；修改后请重新校验。')).not.toBeInTheDocument();
+ expect(screen.getByText('已修改，保存后自动检查')).toBeVisible();
+});
+
+it('keeps real target conflicts visible and preserves the local decision after a failed save',async()=>{
+ const save=vi.fn().mockRejectedValue(new Error('保存连接失败'));
+ render(<CatalogImportSectionTable importId={4} workflowRevision={2} section="mappings" rows={[{row_key:'m',row_origin:'system',projection_state:'included',section:'mappings',payload:{seller_sku_preview:'2301-Navy-L',identity_decision:null,target_sku_row_key:'s'}}]} issues={[{row_key:'m',section:'mappings',field:'/identity_decision',severity:'blocking',reason_code:'required'},{row_key:'m',section:'mappings',field:'/target_sku_row_key',severity:'blocking',reason_code:'mapping_target_seller_sku_mismatch'}]} onSaved={vi.fn()} saveMutations={save}/>);
+ fireEvent.click(screen.getByRole('radio',{name:'纳入目录'}));
+ expect(screen.getByText('正式SKU与当前Seller SKU不一致；修改后请重新校验。')).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'保存当前分类修改（1行）'}));
+ await screen.findByText('保存连接失败 编辑内容已保留，请核对后再保存。');
+ expect(screen.getByRole('radio',{name:'纳入目录'})).toBeChecked();
+ expect(screen.getByRole('button',{name:'保存当前分类修改（1行）'})).toBeEnabled();
+ fireEvent.click(screen.getByRole('radio',{name:'未决定'}));
+ expect(screen.getByText('尚未填写或确认；修改后请重新校验。')).toBeVisible();
+});
+
+it.each(['catalog_draft_reservation_conflict','catalog_workflow_revision_conflict'] as const)('does not loop or lose edits after %s', async code => {
+ const save=vi.fn().mockRejectedValue(new ApiRequestError(409,code,'通用冲突'));
+ const recover=vi.fn().mockResolvedValue({workflowRevision:3,canEdit:true,unchanged:true});
+ render(<CatalogImportSectionTable importId={4} workflowRevision={2} section="styles" rows={[{row_key:'st',row_origin:'system',projection_state:'included',section:'styles',payload:{style_code:'2301',standard_name:'原名称'}}]} onSaved={vi.fn()} onRecoverConflict={recover} saveMutations={save}/>);
+ fireEvent.change(screen.getByLabelText('st standard_name'),{target:{value:'本地名称'}});
+ fireEvent.click(screen.getByRole('button',{name:'保存当前分类修改（1行）'}));
+ await screen.findByRole('button',{name:'返回修改行'});
+ expect(save).toHaveBeenCalledTimes(code==='catalog_workflow_revision_conflict'?2:1);
+ expect(recover).toHaveBeenCalledTimes(code==='catalog_workflow_revision_conflict'?1:0);
+ expect(screen.getByLabelText('st standard_name')).toHaveValue('本地名称');
+ expect(screen.getByText(code==='catalog_draft_reservation_conflict'?/商品归属与已有审核记录冲突/:/批次仍在变化/)).toBeVisible();
+});
+
+it('keeps input when reading the latest revision fails and does not issue another save', async () => {
+ const save=vi.fn().mockRejectedValue(new ApiRequestError(409,'catalog_workflow_revision_conflict','旧修订'));
+ const recover=vi.fn().mockRejectedValue(new Error('最新明细读取失败'));
+ render(<CatalogImportSectionTable importId={4} workflowRevision={2} section="styles" rows={[{row_key:'st',row_origin:'system',projection_state:'included',section:'styles',payload:{style_code:'2301',standard_name:'原名称'}}]} onSaved={vi.fn()} onRecoverConflict={recover} saveMutations={save}/>);
+ fireEvent.change(screen.getByLabelText('st standard_name'),{target:{value:'本地名称'}});
+ fireEvent.click(screen.getByRole('button',{name:'保存当前分类修改（1行）'}));
+ await screen.findByText(/最新明细读取失败 编辑内容已保留/);
+ expect(save).toHaveBeenCalledTimes(1); expect(screen.getByLabelText('st standard_name')).toHaveValue('本地名称');
+});
+it('does not retry an unknown save result as a revision conflict', async () => {
+ const save=vi.fn().mockRejectedValue(new ApiRequestError(409,'outcome_unknown','未知'));
+ const recover=vi.fn();
+ render(<CatalogImportSectionTable importId={4} workflowRevision={2} section="styles" rows={[{row_key:'st',row_origin:'system',projection_state:'included',section:'styles',payload:{style_code:'2301',standard_name:'原名称'}}]} onSaved={vi.fn()} onRecoverConflict={recover} saveMutations={save}/>);
+ fireEvent.change(screen.getByLabelText('st standard_name'),{target:{value:'本地名称'}});
+ fireEvent.click(screen.getByRole('button',{name:'保存当前分类修改（1行）'}));
+ await screen.findByText(/本次保存结果需要核实/); expect(save).toHaveBeenCalledTimes(1); expect(recover).not.toHaveBeenCalled();
+});
+
+
+it("keeps a nonstandard size in the pending queue until corrected", () => {
+  const row = {section:"skus" as const,row_key:"size-review",row_origin:"user_created" as const,projection_state:"included" as const,payload:{standard_color:"Navy",standard_size:"XXXL",internal_display_sku:"1115-Navy-XXXL",code_status:"legacy"}};
+  for (const size of ["XXXL", "xxxl", " xxxl ", "ｘｘｘｌ", "3xl"]) expect(isCatalogRowPending("skus",{...row,payload:{...row.payload,standard_size:size}})).toBe(true);
+  expect(isCatalogRowPending("skus",{...row,payload:{...row.payload,standard_size:"3XL"}})).toBe(false);
 });

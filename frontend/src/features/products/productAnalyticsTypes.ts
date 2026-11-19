@@ -1,9 +1,10 @@
 import type { components, operations } from "../../api/generated";
 
+export type PlatformIdentityReview = { state: string; message: string; pending_metrics?: { units: number; sales: string; returns: number; business_rows: number; return_rows: number }; ordinary_unmatched_rows?: { business: number; returns: number } };
 export type StyleLedgerResponse =
-  operations["style_ledger_api_dashboard_style_ledger_get"]["responses"][200];
+  operations["style_ledger_api_dashboard_style_ledger_get"]["responses"][200] & { platform_identity_review?: PlatformIdentityReview | null };
 export type StyleCardResponse =
-  operations["style_card_api_dashboard_styles__style_id__card_get"]["responses"][200];
+  operations["style_card_api_dashboard_styles__style_id__card_get"]["responses"][200] & { platform_identity_review?: PlatformIdentityReview | null };
 export type StyleLedgerQuery =
   operations["style_ledger_api_dashboard_style_ledger_get"]["query"];
 export type GeneratedStyleCardQuery =

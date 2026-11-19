@@ -6,6 +6,7 @@ import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from app.catalog.canonical_json import canonical_json_bytes
@@ -40,6 +41,15 @@ class ConfirmScopeCommand:
     seller_account_scope_key: str
     seller_account_display_name: str
     marketplace_scope_code: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class RenameScopeCommand:
+    operation_token: UUID
+    scope_id: int
+    expected_revision: int
+    display_name: str
     reason: str
 
 
@@ -171,6 +181,40 @@ class CatalogScopeService:
             site_config_version_id=result.site_config_version_id,
             site_config_revision=result.site_config_revision,
             permissions=self._permissions(context),
+        )
+
+    def rename(
+        self, context: CurrentSiteContext, command: RenameScopeCommand
+    ) -> dict[str, Any]:
+        if not context.is_admin:
+            raise CatalogScopePermissionDenied()
+        token = _uuid4(command.operation_token)
+        if command.scope_id < 1 or command.expected_revision < 0:
+            raise CatalogScopeCommandInvalid()
+        name = _safe_trimmed_text(command.display_name, maximum=128)
+        reason = _safe_trimmed_text(command.reason, maximum=1000)
+        digest = hashlib.sha256(
+            canonical_json_bytes(
+                {
+                    "route": "catalog.source_scope.rename.v1",
+                    "site_id": context.site_id,
+                    "actor_user_id": context.principal_user_id,
+                    "scope_id": command.scope_id,
+                    "expected_revision": command.expected_revision,
+                    "display_name": name,
+                    "reason": reason,
+                }
+            )
+        ).digest()
+        return self._repository.rename(
+            context,
+            operation_token=token,
+            operation_digest=digest,
+            scope_id=command.scope_id,
+            expected_revision=command.expected_revision,
+            display_name=name,
+            reason=reason,
+            occurred_at=self._clock(),
         )
 
 

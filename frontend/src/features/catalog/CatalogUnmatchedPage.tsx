@@ -1,20 +1,39 @@
+import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
+import { requestApi } from "../../api/client";
 import { CatalogReadError } from "./CatalogReadFailure";
+import { CatalogPlatformStatus } from "./CatalogPlatformStatus";
 import { catalogReadError } from "./catalogReadError";
-import { useEffect, useMemo, useState } from "react";
+import styles from "./CatalogUnmatchedView.module.css";
+import { Button, LinkButton } from "../../design-system";
+import { CatalogSourceSelection } from "./CatalogSourceSelection";
+import { CatalogTaskList } from "./CatalogTaskList";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import {
-  getCurrentCatalog,
-  getCatalogStylePendingItems,
   listCatalogUnmatched,
-  type CatalogUnmatchedResponse,
+  type CatalogUnmatchedResponse, type CatalogUnmatchedItem,
 } from "./catalogApi";
 import { CatalogUnmatchedView, type PendingStyle } from "./CatalogUnmatchedView";
 import { useCatalogNavigation } from "./CatalogNavigationContext";
 
 export function CatalogUnmatchedPage() {
   const { setStyleReturn } = useCatalogNavigation();
+  const { generation, registerSensitivePurge } = useAuthzGeneration();
+
   const [parameters, setParameters] = useSearchParams();
+  const tab = parameters.get("tab") ?? "unmatched";
+  const [selected, setSelected] = useState<CatalogUnmatchedItem>();
+  const closeSelection = useCallback(() => {setSelected(undefined);setAttempt(value=>value+1);}, []);
+  const recheckId = parameters.get("selection_import");
+  useEffect(() => {
+    if (!recheckId) return;
+    let active = true;
+    void requestApi<{source_key: string; scope_id: number; version_ids: number[]}>(`/api/catalog/unmatched/selection-candidates/${Number(recheckId)}/source`).then(request => {
+      if (active && request) setSelected({ source_identity: { seller_sku_match: request.source_key, report_source_scope_id: request.scope_id, seller_sku_sha256: "" }, published_version_ids: request.version_ids.map(String) } as CatalogUnmatchedItem);
+    }).catch(reason => { if (active) setError(catalogReadError(reason, "无法读取此候选来源，请重试。")); });
+    return () => { active = false; };
+  }, [recheckId, generation]);
   const page = Math.max(1, Number(parameters.get("page")) || 1);
   const from = parameters.get("from") ?? undefined;
   const to = parameters.get("to") ?? undefined;
@@ -25,6 +44,7 @@ export function CatalogUnmatchedPage() {
   const [unmatched, setUnmatched] = useState<CatalogUnmatchedResponse>();
   const [error, setError] = useState<ReturnType<typeof catalogReadError>>();
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => registerSensitivePurge(() => { setUnmatched(undefined); setSelected(undefined); setPending(undefined); setError(undefined); setPendingError(undefined); }), [registerSensitivePurge]);
 
   useEffect(() => {
     let active = true;
@@ -41,24 +61,11 @@ export function CatalogUnmatchedPage() {
         if (active) setError(catalogReadError(reason, "无法读取待归属来源，请检查连接后重试。"));
         return;
       }
-      try {
-        const catalog = await getCurrentCatalog();
-      const results: PendingStyle[] = [];
-      const styles = catalog?.styles ?? [];
-      for (let index = 0; index < styles.length && active; index += 4) {
-        const batch = await Promise.all(styles.slice(index, index + 4).map(async (style) => ({ style, summary: await getCatalogStylePendingItems(style.style_id) })));
-        for (const { style, summary } of batch) {
-          if (summary.permissions.can_review && summary.items.length) results.push({ style, items: summary.items });
-        }
-      }
-        if (active) setPending(results);
-      } catch (reason: unknown) {
-        if (active) setPendingError(catalogReadError(reason, "无法读取已有审核候选，请稍后刷新。"));
-      }
+      setPending([]);
     }
-    void load();
+    if (tab === "unmatched") void load();
     return () => { active = false; };
-  }, [attempt, from, page, returnBasis, to]);
+  }, [attempt, from, page, returnBasis, to, tab, generation]);
 
   const maintenancePath = useMemo(() => {
     const query = new URLSearchParams();
@@ -71,8 +78,10 @@ export function CatalogUnmatchedPage() {
     setParameters(query);
   };
 
-  if (error) return <CatalogReadError failure={error} onRetry={() => setAttempt(value => value + 1)} />;
-  return <CatalogUnmatchedView unmatched={unmatched} pending={pending} pendingError={pendingError}
+  const navigation = <nav className={styles.taskTabs} aria-label="待归属与审核任务分类">{[["unmatched", "待归属"], ["review", "待审核"], ["attention", "需处理"]].map(([value, label]) => <Button key={value} variant={tab === value ? "primary" : "quiet"} aria-current={tab === value ? "page" : undefined} onClick={() => { const next = new URLSearchParams(parameters); next.set("tab", value!); next.delete("task_page"); setParameters(next); }}>{label}</Button>)}<LinkButton variant="quiet" to="/catalog/maintenance">全部记录</LinkButton></nav>;
+  if (tab !== "unmatched") return <div className={styles.workspace}>{navigation}{tab === "attention" && <CatalogPlatformStatus compact revision={attempt} />}<CatalogTaskList kind={tab === "review" ? "review" : "attention"} /></div>;
+  if (error) return <div className={styles.workspace}>{navigation}{selected && <CatalogSourceSelection item={selected} onClose={closeSelection} />}{import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" && error.setup && <CatalogPlatformStatus compact revision={attempt} />}<CatalogReadError failure={error} onRetry={() => setAttempt(value => value + 1)} /></div>;
+  return <div className={styles.workspace}>{navigation}{selected && <CatalogSourceSelection item={selected} onClose={closeSelection} />}{import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" && unmatched && <CatalogPlatformStatus compact revision={attempt} />}<CatalogUnmatchedView unmatched={unmatched} pending={pending} pendingError={pendingError}
     onRetry={() => setAttempt(value => value + 1)} onOpenStyle={() => setStyleReturn(`/catalog/unmatched?${parameters.toString()}`)}
-    page={page} returnBasis={returnBasis} returnTo={returnTo} maintenancePath={maintenancePath} changePage={changePage} />;
+    onSelect={setSelected} showPending={false} page={page} returnBasis={returnBasis} returnTo={returnTo} maintenancePath={maintenancePath} changePage={changePage} /></div>;
 }

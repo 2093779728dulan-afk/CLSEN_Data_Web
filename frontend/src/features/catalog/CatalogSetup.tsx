@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { commandApi, requestApi, StableOperationKeyStore } from "../../api/client";
 import { CatalogSetupView } from "./CatalogSetupView";
+import { CatalogScopeNameEditor } from "./CatalogScopeNameEditor";
 import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
 import type { AnalyticsReadiness, CatalogScopeStatusResponse, ReturnInitializationPreview, ReturnDedupStagingResponse } from "../../api/generated";
 
-export function CatalogSetup({ editable = false, onGenerationReady }: { editable?: boolean; onGenerationReady?: (ready: boolean) => void }) {
+export function CatalogSetup({ editable = false, onGenerationReady, mode, refreshKey=0, onStateChange, onGuardChange }: { editable?: boolean; onGenerationReady?: (ready: boolean) => void; mode?: 'source'|'snapshot'; refreshKey?:number; onStateChange?:(state:{scope:CatalogScopeStatusResponse;readiness:AnalyticsReadiness})=>void; onGuardChange?:(guard:{dirty:boolean;busy:boolean;unknown:boolean})=>void }) {
   const { generation } = useAuthzGeneration();
   const [refresh, setRefresh] = useState(0);
   const [state, setState] = useState<{ generation: typeof generation; readiness: AnalyticsReadiness; scope: CatalogScopeStatusResponse }>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [renameGuard,setRenameGuard]=useState({dirty:false,busy:false,unknown:false});
   const [account, setAccount] = useState("");
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
@@ -32,13 +34,14 @@ export function CatalogSetup({ editable = false, onGenerationReady }: { editable
       requestApi<CatalogScopeStatusResponse>("/api/catalog/source-scope", { signal: controller.signal }),
     ]).then(([readiness, scope]) => {
       if (active.current === ticket) {
-        setState({ generation, readiness, scope });
+        setState({ generation, readiness, scope }); onStateChange?.({readiness,scope});
         onGenerationReady?.(scope.status === "confirmed" && readiness.return_snapshot_present && readiness.published_reports > 0);
       }
     }).catch(() => { if (!controller.signal.aborted && active.current === ticket) setError("无法读取初始化状态，请刷新；不会据此生成或批准商品。"); });
     return () => { active.current = ticket + 1; controller.abort(); };
-  }, [generation, refresh, onGenerationReady]);
+  }, [generation, refresh, refreshKey, onGenerationReady, onStateChange]);
   const current = state?.generation === generation ? state : undefined;
+  useEffect(()=>onGuardChange?.({dirty:renameGuard.dirty||!!(account||name||reason||acknowledged)&&current?.scope.status!=='confirmed',busy:busy||renameGuard.busy,unknown:renameGuard.unknown}),[account,name,reason,acknowledged,current?.scope.status,busy,renameGuard,onGuardChange]);
   const confirm = async (event: FormEvent) => {
     event.preventDefault();
     if (!current?.scope.permissions.can_confirm || !acknowledged || busy) return;
@@ -98,8 +101,9 @@ export function CatalogSetup({ editable = false, onGenerationReady }: { editable
     } catch { if (active.current === ticket) { setProgress(undefined); setError("首次快照尚未完成。来源或报表可能发生变化，请刷新核对；相同提交沿用操作编号，不会重复发布日报。"); } }
     finally { if (active.current === ticket) setBusy(false); }
   };
-  return <CatalogSetupView current={current} editable={editable} busy={busy} error={error} progress={progress} preview={preview}
+  return <><CatalogSetupView mode={mode} current={current} editable={editable} busy={busy} error={error} progress={progress} preview={preview}
     fields={{ account, name, reason, acknowledged }}
     onFieldsChange={changes => { if (changes.account !== undefined) setAccount(changes.account); if (changes.name !== undefined) setName(changes.name); if (changes.reason !== undefined) setReason(changes.reason); if (changes.acknowledged !== undefined) setAcknowledged(changes.acknowledged); }}
-    onConfirm={event => void confirm(event)} onPrepare={() => void prepareInitialization()} onInitialize={() => void initialize()} onRefresh={() => setRefresh(value => value + 1)} />;
+    onConfirm={event => void confirm(event)} onPrepare={() => void prepareInitialization()} onInitialize={() => void initialize()} onRefresh={() => setRefresh(value => value + 1)} />
+    {mode!=="snapshot"&&editable&&current?.scope.status==="confirmed"&&current.scope.permissions.can_confirm&&<CatalogScopeNameEditor name={current.scope.seller_account_display_name||""} onGuardChange={setRenameGuard} saved={()=>setRefresh(value=>value+1)}/>}</>;
 }

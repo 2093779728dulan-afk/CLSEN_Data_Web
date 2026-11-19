@@ -2,7 +2,9 @@
   "schema_version": 1,
   "profiles": {
     "ubuntu-full": {
-      "pytest_paths": ["backend/tests"],
+      "pytest_paths": [
+        "backend/tests"
+      ],
       "pytest_marker": "not mysql",
       "pytest_ignores": [
         "backend/tests/performance/test_project_optimization_baseline.py",
@@ -29,8 +31,16 @@
       ]
     },
     "mysql-compatibility": {
-      "versions": ["8.4"],
-      "suites": ["mysql-migrations", "mysql-legacy", "mysql-p0", "mysql-schema-startup", "mysql-worker-observability"],
+      "versions": [
+        "8.4"
+      ],
+      "suites": [
+        "mysql-migrations",
+        "mysql-legacy",
+        "mysql-p0",
+        "mysql-schema-startup",
+        "mysql-worker-observability"
+      ],
       "baseline_fixture": "backend/tests/fixtures/ci/mysql-compatibility-nodeids.txt"
     },
     "release-only": {
@@ -93,7 +103,11 @@
       "backend/tests/integration/test_legacy_product_analytics_compatibility.py",
       "backend/tests/integration/test_product_analytics_cutover.py",
       "backend/tests/integration/test_product_analytics_reconciliation.py",
-      "backend/tests/integration/test_product_catalog_permissions.py"
+      "backend/tests/integration/test_product_catalog_permissions.py",
+      "backend/tests/integration/test_production_formal_reports.py",
+      "backend/tests/integration/test_catalog_shop_membership.py",
+      "backend/tests/integration/test_catalog_shop_membership_backfill.py",
+      "backend/tests/integration/test_fba_daily_import.py"
     ],
     "mysql-schema-startup": [
       "backend/tests/integration/test_schema_compatibility.py",
@@ -118,7 +132,8 @@
     "backend/tests/integration/test_published_detail_queries.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
     "backend/tests/integration/test_published_detail_scope.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
     "backend/tests/integration/test_workbench_import_orchestration.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
-    "backend/tests/integration/test_workbench_snapshots.py": "Not collected by the approved hosted compatibility workflow before this optimization."
+    "backend/tests/integration/test_workbench_snapshots.py": "Not collected by the approved hosted compatibility workflow before this optimization.",
+    "backend/tests/integration/test_inventory_review_task.py": "Requires the explicitly enabled task-owned fictional runtime, named actor and local snapshot fixtures; not portable hosted CI evidence. Existing local results remain separate from release validation."
   },
   "windows_smoke": {
     "paths": [
@@ -148,9 +163,13 @@
     ]
   },
   "release_suites": {
-    "workspace-boundary": {"pytest_paths": []},
+    "workspace-boundary": {
+      "pytest_paths": []
+    },
     "performance": {
-      "pytest_paths": ["backend/tests/performance/test_product_catalog_performance.py"],
+      "pytest_paths": [
+        "backend/tests/performance/test_product_catalog_performance.py"
+      ],
       "runner_paths": [
         "backend/tests/performance/product_catalog_scale_fixture.py",
         "backend/tests/performance/test_product_catalog_performance.py",
@@ -159,18 +178,30 @@
       ]
     },
     "canary": {
-      "pytest_paths": ["backend/tests/integration/test_product_catalog_canary.py"]
+      "pytest_paths": [
+        "backend/tests/integration/test_product_catalog_canary.py"
+      ]
     },
     "restore": {
-      "pytest_paths": ["backend/tests/integration/test_product_catalog_backup_restore.py"]
+      "pytest_paths": [
+        "backend/tests/integration/test_product_catalog_backup_restore.py"
+      ]
     },
-    "live": {"pytest_paths": []},
+    "live": {
+      "pytest_paths": []
+    },
     "deployment": {
-      "pytest_paths": ["backend/tests/integration/test_server_deployment_load.py"]
+      "pytest_paths": [
+        "backend/tests/integration/test_server_deployment_load.py"
+      ]
     },
-    "generated-contract": {"pytest_paths": []},
+    "generated-contract": {
+      "pytest_paths": []
+    },
     "project-optimization-baseline": {
-      "pytest_paths": ["backend/tests/performance/test_project_optimization_baseline.py"],
+      "pytest_paths": [
+        "backend/tests/performance/test_project_optimization_baseline.py"
+      ],
       "runner_paths": [
         "scripts/project-optimization-baseline-manifest.json",
         "tools/project_optimization_baseline.py",

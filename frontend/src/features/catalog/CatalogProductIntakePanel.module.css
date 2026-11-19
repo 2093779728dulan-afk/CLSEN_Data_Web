@@ -1,0 +1,30 @@
+.page { display: grid; gap: var(--space-4); min-width: 0; }
+.header, .source, .footer, .actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.header h2 { margin: 0; }
+.header p, .upload p, .footer p { margin: var(--space-2) 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.steps { display: flex; flex-wrap: wrap; gap: var(--space-5); list-style: none; padding: var(--space-3) 0; margin: 0; border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); }
+.steps [aria-current="step"] { color: var(--color-primary); font-weight: 600; }
+.upload { padding: var(--space-5); border: 1px dashed var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.upload[data-dragging] { border-color: var(--color-primary); background: var(--color-info-bg); }
+.upload[aria-disabled="true"] { opacity: 0.65; }
+.uploadMain { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3); }
+.uploadMain > svg { color: var(--color-primary); flex-shrink: 0; }
+.uploadMain > div { flex: 1 1 240px; min-width: 0; }
+.upload input { max-width: 100%; }
+.scopes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-3); }
+.filters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.filters [aria-pressed="true"] { color: var(--color-primary); background: var(--color-info-bg); }
+.page table { min-width: 760px; }
+.page td p { margin: var(--space-1) 0; }
+.page code { overflow-wrap: anywhere; }
+.footer { border-top: 1px solid var(--color-border); padding-top: var(--space-3); }
+.footer p { flex: 1 1 320px; }
+.dialog { max-width: 620px; }
+.dialog > :last-child { display: grid; gap: var(--space-4); padding: var(--space-4); }
+.spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin: 0; }
+.spec dt { color: var(--color-text-muted); }
+.spec dd { margin: var(--space-2) 0; }
+.actions { justify-content: end; }
+
+/* Keep supplemental copy out of the primary workflow. */
+.page [data-field-hint], .header p, .upload > p { display:none; }

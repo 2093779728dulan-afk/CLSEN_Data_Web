@@ -1,14 +1,34 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from app.api.batch_reviews import (
     CONFIRMATION_STATEMENT_VERSION,
     ConfirmRequest,
     PreflightRequest,
     RevisionRequest,
+    _advance_principal,
     router,
 )
+from app.api.errors import ApiError
 from pydantic import ValidationError
+
+
+def test_inactive_site_does_not_commit_authentication_or_start_advance() -> None:
+    session = MagicMock()
+    engine = MagicMock()
+    principal = MagicMock()
+    with (
+        patch(
+            "app.api.batch_reviews._site_id",
+            side_effect=ApiError(503, "site_unavailable", "Unavailable"),
+        ),
+        pytest.raises(ApiError),
+    ):
+        _advance_principal(principal, session, engine)
+    session.commit.assert_not_called()
+    session.close.assert_not_called()
 
 
 def test_batch_review_router_exposes_all_eight_operations() -> None:

@@ -52,11 +52,19 @@ def _cleanup_catalog(case: PublicationIntegrationCase) -> None:
                 "SET base_catalog_version_id = NULL WHERE site_id = 1"
             )
         )
+        connection.execute(
+            sa.text(
+                "UPDATE catalog_exports SET base_catalog_version_id=NULL "
+                "WHERE site_id=1"
+            )
+        )
         for statement in (
+            "DELETE FROM catalog_approval_projections WHERE site_id = 1",
             "DELETE FROM catalog_audit_events WHERE site_id = 1",
             "DELETE FROM product_catalog_publication_events WHERE site_id = 1",
             "DELETE FROM product_catalog_mappings WHERE site_id = 1",
             "DELETE FROM product_catalog_exclusions WHERE site_id = 1",
+            "DELETE FROM product_catalog_shop_memberships WHERE site_id = 1",
             "DELETE FROM product_catalog_sku_members WHERE site_id = 1",
             "DELETE FROM product_catalog_style_members WHERE site_id = 1",
             "DELETE FROM product_catalog_versions WHERE site_id = 1",

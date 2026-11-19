@@ -93,6 +93,8 @@ def _response_schema(
 
 
 def _route(application: FastAPI, path: str, method: str) -> APIRoute:
+    # Materialize lazy included routes and inherited dependencies.
+    application.openapi()
     pending = list(application.routes)
     while pending:
         route = pending.pop()
@@ -102,6 +104,11 @@ def _route(application: FastAPI, path: str, method: str) -> APIRoute:
             and method.upper() in (route.methods or set())
         ):
             return route
+        for candidate in getattr(route, "_effective_candidates", ()):
+            if getattr(candidate, "path", None) == path and method.upper() in (
+                candidate.methods or set()
+            ):
+                return cast(APIRoute, candidate)
         original_router = getattr(route, "original_router", None)
         if isinstance(original_router, APIRouter):
             pending.extend(original_router.routes)
@@ -121,7 +128,10 @@ def _dependency_calls(route: APIRoute) -> set[Callable[..., object]]:
 
 def _required_role_sets(route: APIRoute) -> set[frozenset[str]]:
     result: set[frozenset[str]] = set()
-    for dependency in route.dependant.dependencies:
+    pending = list(route.dependant.dependencies)
+    while pending:
+        dependency = pending.pop()
+        pending.extend(dependency.dependencies)
         call = dependency.call
         roles = getattr(call, "required_roles", None)
         if isinstance(roles, frozenset) and all(
@@ -279,11 +289,34 @@ def test_undoable_published_move_read_contract_is_complete(
 def test_all_write_operations_expose_csrf_and_expected_idempotency(
     schema: dict[str, Any],
 ) -> None:
-    non_idempotent_writes = {
+    no_idempotency_header = {
         ("/api/auth/login", "post"),
         ("/api/auth/logout", "post"),
         ("/api/imports", "post"),
         ("/api/imports/{batch_id}/inspect", "post"),
+        # These existing source creations deduplicate by content/source digest.
+        ("/api/production/source-drafts/{kind}/upload", "post"),
+        ("/api/production/inventory-reviews", "post"),
+        ("/api/production/fba/mapping-preview", "post"),
+        # Preparation/preview POSTs do not confirm business facts.
+        ("/api/production/inventory-reviews/{review_id}/preview", "post"),
+        ("/api/production/inventory/count-table/preview", "post"),
+        ("/api/production/inventory/opening-table/parse", "post"),
+        ("/api/production/receipt-batches/table/preview", "post"),
+        ("/api/production/shipments/table/preview", "post"),
+        ("/api/production/shipments/table/combine", "post"),
+        ("/api/production/shipments/table/reviews", "post"),
+        ("/api/production/orders/{document_id}/tables/{operation}/preview", "post"),
+        ("/api/production/files/{kind}/preview", "post"),
+        ("/api/production/sources/{kind}/check", "post"),
+        ("/api/manual-tables/batches/{batch_id}/preview", "post"),
+        ("/api/manual-tables/batches/{batch_id}/handoff-preview", "post"),
+        ("/api/manual-tables/compare", "post"),
+        ("/api/catalog/production-sources/parse", "post"),
+        ("/api/catalog/production-sources/preview", "post"),
+        ("/api/catalog/listing-sources/{import_id}/compare", "post"),
+        ("/api/catalog/unmatched/selection-context", "post"),
+        ("/api/catalog/unmatched/selection-preview", "post"),
     }
     write_methods = {"delete", "patch", "post", "put"}
     writes = {
@@ -291,7 +324,7 @@ def test_all_write_operations_expose_csrf_and_expected_idempotency(
         for key, operation in _api_operations(schema).items()
         if key[1] in write_methods
     }
-    assert non_idempotent_writes <= writes.keys()
+    assert no_idempotency_header <= writes.keys()
 
     for (path, method), operation in writes.items():
         csrf = _parameter(operation, "X-CSRF-Token", "header")
@@ -307,9 +340,10 @@ def test_all_write_operations_expose_csrf_and_expected_idempotency(
             for parameter in operation.get("parameters", [])
             if parameter.get("in") == "header"
         }
-        if (path, method) in non_idempotent_writes:
+        if (path, method) in no_idempotency_header:
             assert "Idempotency-Key" not in headers
             continue
+        assert "Idempotency-Key" in headers, (path, method)
         idempotency_key = headers["Idempotency-Key"]
         assert idempotency_key["required"] is True
         assert idempotency_key["schema"]["format"] == "uuid"
@@ -518,6 +552,7 @@ def test_server_side_permission_dependencies_are_part_of_route_contract(
         ("/api/admin/published-moves/{move_command_id}/undo", "post"),
     }
     manager_routes = {
+        ("/api/production/fba/daily/uploads", "post"),
         ("/api/publications/return-initialization", "get"),
         ("/api/publications/return-initialization", "post"),
         ("/api/catalog/return-dedup/groups", "get"),
@@ -644,6 +679,7 @@ def test_style_analytics_openapi_keeps_new_and_legacy_resources_separate(
     ]
     assert [parameter["name"] for parameter in card["parameters"]] == [
         "style_id",
+        "contract_version",
         "from",
         "to",
         "metric",
@@ -654,6 +690,13 @@ def test_style_analytics_openapi_keeps_new_and_legacy_resources_separate(
         "fact_basis",
         "return_basis",
     ]
+    assert _parameter(card, "contract_version", "query")["schema"] == {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2,
+        "default": 1,
+        "title": "Contract Version",
+    }
     assert _response_schema(ledger, "200") == {
         "$ref": "#/components/schemas/StyleLedgerResponse"
     }

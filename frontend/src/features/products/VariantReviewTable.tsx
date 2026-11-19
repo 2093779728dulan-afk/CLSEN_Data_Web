@@ -39,9 +39,9 @@ export function VariantReviewTable({ response }: { response: StyleCardResponse }
     </div>
     <p className={css["ledger-basis"]}>按{sort === "sales" ? "销售额" : "本期退货量"}从高到低排列。占比以本款全部变体销售额为分母，颜色和尺码筛选不改变分母；此处筛选仅影响下表。退货按{response.effective_return_basis === "event_date" ? "事件日期" : "报表日期"}统计，同期退销比不是订单退货率。{response.summary.metrics.sales.is_partial && "销售报告不完整，占比仅反映已发布数据。"}</p>
     <div className={css["analytics-table-scroll"]} role="region" aria-label="实际变体指标" tabIndex={0}>
-      <table className={`${css["analytics-table"]} ${css["variant-table"]}`}><thead><tr><th>展示 SKU</th><th>颜色</th><th>尺码</th><th>销量</th><th>销售额 US$ / 款内占比</th><th>平均单价 US$</th><th>本期退货量{sort === "returns" && " / 同期退销比"}</th><th>会话</th><th>转化率</th><th>来源别名</th></tr></thead>
+      <table className={`${css["analytics-table"]} ${css["variant-table"]}`}><thead><tr><th>正式 SKU</th><th>颜色</th><th>尺码</th><th>销量</th><th>销售额 US$ / 款内占比</th><th>平均单价 US$</th><th>本期退货量{sort === "returns" && " / 同期退销比"}</th><th>会话</th><th>转化率</th><th>来源别名</th></tr></thead>
         <tbody>{rows.map(row => <tr key={row.sku_id}>
-          <th scope="row"><code>{row.internal_display_sku}</code></th><td>{row.standard_color}</td><td>{row.standard_size}</td>
+          <th scope="row">{row.internal_display_sku ? <code>{row.internal_display_sku}</code> : <span>正式SKU待补</span>}</th><td>{row.standard_color}</td><td>{row.standard_size}</td>
           <td><MetricValueView compact kind="units" metric={row.metrics.units} /></td>
           <td><MetricValueView compact kind="sales" metric={row.metrics.sales} /><small>占比 {salesShare(row.metrics.sales, total === null ? null : String(total))}</small></td>
           <td>{averagePrice(row.metrics.sales, row.metrics.units)}{(row.metrics.sales.is_partial || row.metrics.units.is_partial) && <small>部分数据</small>}</td>

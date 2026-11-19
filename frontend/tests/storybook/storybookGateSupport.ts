@@ -70,7 +70,7 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
     await expect(page.getByRole("region", { name: "已有审核批次", exact: true })).toBeVisible();
   }
   if (storyId.startsWith("patterns-catalog-workbook--")) {
-    await expect(page.getByRole("region", { name: "目录工作簿", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "目录维护工作簿", exact: true })).toBeVisible();
   }
   if (storyId.startsWith("patterns-catalog-issue-summary--")) {
     await expect(page.getByRole("complementary", { name: "商品审核问题", exact: true })).toBeVisible();
@@ -258,6 +258,8 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
     await expect(page.getByRole("button", { name: "保存当前分类修改（2行）", exact: true })).toBeEnabled();
   }
   if (storyId.endsWith("catalog-import-review--save-failure") || storyId.endsWith("catalog-import-review--refresh-failure")) {
+    const pendingOnly = page.getByRole("checkbox", { name: "仅看待处理" });
+    if (await pendingOnly.isChecked()) await pendingOnly.click();
     await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("示例审核名称");
     await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
     await expect(page.getByText(storyId.endsWith("--save-failure") ? /编辑内容已保留/ : /草稿已保存，但最新明细读取失败/)).toBeVisible();

@@ -1,8 +1,12 @@
+# ruff: noqa: RUF001 -- Chinese business status messages.
 """Repeatable-read MySQL repository for stable catalog-backed analytics."""
 
 from __future__ import annotations
 
 import hmac
+import json
+import os
+import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -50,6 +54,7 @@ from app.analytics.style_service import (
     rate_text,
     stable_series_key,
 )
+from app.catalog.normalization import safe_source_projection_v1
 from app.catalog.return_dedup_repository import (
     FrozenPublicationMember,
     publication_set_digest,
@@ -320,11 +325,239 @@ def _member_versions(
     )
 
 
+def _platform_execute(
+    connection: Connection, statement: Any, parameters: Any = None
+) -> Any:
+    blocked = connection.info.get("platform_conflicts_json", "[]")
+    if (
+        blocked != "[]"
+        and parameters is not None
+        and not parameters.get("platform_skip_guard")
+        and hasattr(statement, "text")
+    ):
+        sql = re.sub(
+            r"((?:INNER|LEFT) JOIN product_catalog_mappings AS mappings\s+ON)\s+",
+            r"\1 NOT JSON_CONTAINS(:platform_conflicts_json, "
+            r"JSON_QUOTE(CONCAT(CAST(mappings.report_source_scope_id AS CHAR), "
+            r"':', HEX(mappings.seller_sku_match_bytes)))) AND ",
+            statement.text,
+        )
+        if sql != statement.text:
+            statement = sa.text(sql).bindparams(*statement._bindparams.values())
+            parameters = dict(parameters) | {"platform_conflicts_json": blocked}
+    return connection.execute(statement, parameters)
+
+
+def _platform_result(
+    repository: MySqlStyleAnalyticsRepository,
+    connection: Connection,
+    context: _ResolvedContext,
+    review: dict[str, Any],
+    from_date: date,
+    to_date: date,
+    return_basis: ReturnBasis,
+    guarded: _CoverageAndBuckets | None = None,
+) -> dict[str, Any]:
+    result = {key: value for key, value in review.items() if key != "blocked_keys"}
+    if not review.get("blocked_keys"):
+        return result
+    guarded = guarded or repository._coverage_and_buckets(
+        connection,
+        context=context,
+        from_date=from_date,
+        to_date=to_date,
+        return_basis=return_basis,
+    )
+    blocked = connection.info.pop("platform_conflicts_json", "[]")
+    try:
+        before = repository._coverage_and_buckets(
+            connection,
+            context=context,
+            from_date=from_date,
+            to_date=to_date,
+            return_basis=return_basis,
+        )
+    finally:
+        connection.info["platform_conflicts_json"] = blocked
+    pending = {}
+    for name in (
+        "units",
+        "sales",
+        "returns",
+        "sessions",
+        "business_rows",
+        "return_rows",
+    ):
+        pending[name] = getattr(before.buckets["mapped"], name) - getattr(
+            guarded.buckets["mapped"], name
+        )
+    pending["sales"] = format(pending["sales"], ".2f")
+    result["pending_metrics"] = pending
+    # Legacy unmatched includes this subset; they are not disjoint totals.
+    result["unmatched_includes_platform_pending"] = True
+    result["ordinary_unmatched_rows"] = {
+        "business": max(
+            0, guarded.buckets["unmatched"].business_rows - pending["business_rows"]
+        ),
+        "returns": max(
+            0, guarded.buckets["unmatched"].return_rows - pending["return_rows"]
+        ),
+    }
+    return result
+
+
 class MySqlStyleAnalyticsRepository:
     """Run every response inside one read-only consistent MySQL snapshot."""
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
+
+    def inventory_days(
+        self,
+        *,
+        site_id: int,
+        scope: dict[str, Any],
+        from_date: date,
+        to_date: date,
+        fba_state: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """All SKU days and years share one frozen publication/mapping context."""
+        from app.catalog.platform_evidence import catalog_platform_review
+        from app.production.fba_daily import load_reports, report_projection
+
+        with self._begin() as connection:
+            bounds = connection.execute(
+                sa.text("""
+                SELECT MIN(first_day) FROM (
+                  SELECT MIN(d.report_date) first_day
+                  FROM report_dataset_scope_assignments a
+                  JOIN daily_datasets d ON d.id=a.dataset_id AND d.site_id=a.site_id
+                  WHERE a.site_id=:site AND a.report_source_scope_id=:scope
+                  UNION ALL
+                  SELECT MIN(DATE(r.return_date)) first_day
+                  FROM report_dataset_scope_assignments a
+                  JOIN dataset_publications p ON p.dataset_id=a.dataset_id
+                  JOIN return_report_rows r ON r.version_id=p.version_id
+                  WHERE a.site_id=:site AND a.report_source_scope_id=:scope
+                ) bounds
+                """),
+                {"site": site_id, "scope": int(scope["report_source_scope_id"])},
+            ).scalar()
+            start = min(from_date, bounds - timedelta(days=1)) if bounds else from_date
+            context = self._resolve(
+                connection,
+                site_id=site_id,
+                from_date=start,
+                to_date=to_date,
+                catalog_version_id=None,
+                fact_basis="current",
+                return_basis="event_date",
+                report_source_scope_id=int(scope["report_source_scope_id"]),
+            )
+            review = (
+                catalog_platform_review(
+                    connection,
+                    site_id=site_id,
+                    catalog_version_id=context.catalog_version_id,
+                    scope_id=context.report_source_scope_id,
+                )
+                if os.getenv("APP_CATALOG_PRODUCTION_SOURCES_ENABLED") == "true"
+                else {}
+            )
+            connection.info["platform_conflicts_json"] = json.dumps(
+                review.get("blocked_keys", [])
+            )
+            business: list[dict[str, Any]] = []
+            returns: list[dict[str, Any]] = []
+            coverage: list[dict[str, Any]] = []
+            unresolved: list[dict[str, Any]] = []
+            year_start = start
+            while year_start <= to_date:
+                year_end = min(date(year_start.year, 12, 31), to_date)
+                parameters = self._parameters(context, year_start, year_end)
+                business.extend(
+                    dict(row)
+                    for row in _platform_execute(
+                        connection, style_sql.SKU_DAILY_SQL, parameters
+                    ).mappings()
+                )
+                returns.extend(
+                    dict(row)
+                    for row in _platform_execute(
+                        connection, style_sql.SKU_RETURN_DAILY_SQL, parameters
+                    ).mappings()
+                )
+                unresolved.extend(
+                    dict(row)
+                    for row in _platform_execute(
+                        connection, style_sql.SKU_UNRESOLVED_DAILY_SQL, parameters
+                    ).mappings()
+                )
+                facts = self._coverage_and_buckets(
+                    connection,
+                    context=context,
+                    from_date=year_start,
+                    to_date=year_end,
+                    return_basis="event_date",
+                )
+                coverage.append(
+                    {
+                        "from": year_start.isoformat(),
+                        "to": year_end.isoformat(),
+                        "coverage": facts.coverage.model_dump(mode="json"),
+                        "unresolved_mapped_rows": facts.unresolved_mapped_rows,
+                    }
+                )
+                year_start = year_end + timedelta(days=1)
+            projection: dict[str, Any] = {"issues": []}
+            if fba_state is not None:
+                projection = report_projection(
+                    load_reports(connection, site_id, scope),
+                    scope,
+                    fba_state["identities"],
+                    fba_state["actions"],
+                )
+                projection["issues"].extend(projection.pop("sync_issues"))
+            provenance = self._provenance(
+                context,
+                from_date=start,
+                to_date=to_date,
+                return_basis="event_date",
+                contributing_dates=self._contributing_dates(
+                    connection,
+                    context=context,
+                    from_date=start,
+                    to_date=to_date,
+                    return_basis="event_date",
+                ),
+                trend_metric=None,
+            ).model_dump(mode="json")
+            # Wall-clock timestamps are informative, not part of the version identity.
+            provenance.pop("consistent_as_of", None)
+            provenance.pop("fact_cutoff_at", None)
+            return {
+                "state": "ready",
+                "business": business,
+                "returns": returns,
+                "unresolved": unresolved,
+                "provenance": provenance,
+                "coverage": coverage,
+                "members": [m.model_dump(mode="json") for m in context.all_members],
+                "platform": {k: v for k, v in review.items() if k != "blocked_keys"},
+                "blocked_sku_ids": [
+                    str(row["sku_id"]) for row in review.get("conflicts", [])
+                ],
+                "daily": projection,
+                "read_from": min(
+                    [
+                        m.report_date
+                        for m in context.all_members
+                        if m.report_status == "published"
+                    ]
+                    + [row["metric_date"] for row in returns],
+                    default=to_date,
+                ).isoformat(),
+            }
 
     def ledger(
         self,
@@ -361,6 +594,27 @@ class MySqlStyleAnalyticsRepository:
                 fact_basis=fact_basis,
                 return_basis=return_basis,
             )
+            review = {
+                "state": "not_checked",
+                "message": "当前使用原批准映射口径，尚未执行本次平台一致性核对。",
+                "blocked_keys": [],
+            }
+            if (
+                os.getenv("APP_CATALOG_PRODUCTION_SOURCES_ENABLED") == "true"
+                and fact_basis == "current"
+            ):
+                from app.catalog.platform_evidence import catalog_platform_review
+
+                review = catalog_platform_review(
+                    connection,
+                    site_id=site_id,
+                    catalog_version_id=context.catalog_version_id,
+                    scope_id=context.report_source_scope_id,
+                    style_id=None,
+                )
+                connection.info["platform_conflicts_json"] = json.dumps(
+                    review.get("blocked_keys", [])
+                )
             parameters = self._parameters(context, from_date, to_date)
             escaped_search = normalized_search.replace("%", r"\%").replace("_", r"\_")
             parameters.update(
@@ -374,7 +628,8 @@ class MySqlStyleAnalyticsRepository:
                 }
             )
             rows = (
-                connection.execute(
+                _platform_execute(
+                    connection,
                     style_sql.style_page_sql(
                         sort=sort,
                         direction=direction,
@@ -452,8 +707,19 @@ class MySqlStyleAnalyticsRepository:
                 contributing_dates=contributing,
                 trend_metric=None,
             )
+            platform_review = _platform_result(
+                self,
+                connection,
+                context,
+                review,
+                from_date,
+                to_date,
+                return_basis,
+                coverage_and_buckets,
+            )
             connection.commit()
             return StyleLedgerResponse(
+                platform_identity_review=platform_review,
                 filtered_sales_total=(
                     format(rows[0]["filtered_sales_total"], ".2f")
                     if rows and business_coverage.observed_days
@@ -474,6 +740,7 @@ class MySqlStyleAnalyticsRepository:
             connection.rollback()
             raise
         finally:
+            connection.info.pop("platform_conflicts_json", None)
             connection.close()
 
     def card(
@@ -511,23 +778,44 @@ class MySqlStyleAnalyticsRepository:
                 fact_basis=fact_basis,
                 return_basis=return_basis,
             )
+            review = {
+                "state": "not_checked",
+                "message": "当前使用原批准映射口径，尚未执行本次平台一致性核对。",
+                "blocked_keys": [],
+            }
+            if (
+                os.getenv("APP_CATALOG_PRODUCTION_SOURCES_ENABLED") == "true"
+                and fact_basis == "current"
+            ):
+                from app.catalog.platform_evidence import catalog_platform_review
+
+                review = catalog_platform_review(
+                    connection,
+                    site_id=site_id,
+                    catalog_version_id=context.catalog_version_id,
+                    scope_id=context.report_source_scope_id,
+                    style_id=style_id,
+                )
+                connection.info["platform_conflicts_json"] = json.dumps(
+                    review.get("blocked_keys", [])
+                )
             parameters = self._parameters(context, from_date, to_date)
             parameters["style_id"] = style_id
             identity_row = (
-                connection.execute(style_sql.STYLE_IDENTITY_SQL, parameters)
+                _platform_execute(connection, style_sql.STYLE_IDENTITY_SQL, parameters)
                 .mappings()
                 .one_or_none()
             )
             if identity_row is None:
                 raise CatalogStyleNotFound()
             variant_rows = (
-                connection.execute(style_sql.STYLE_VARIANTS_SQL, parameters)
+                _platform_execute(connection, style_sql.STYLE_VARIANTS_SQL, parameters)
                 .mappings()
                 .all()
             )
             aliases = self._aliases(connection, parameters)
             business_rows = (
-                connection.execute(style_sql.STYLE_DAILY_SQL, parameters)
+                _platform_execute(connection, style_sql.STYLE_DAILY_SQL, parameters)
                 .mappings()
                 .all()
             )
@@ -536,7 +824,11 @@ class MySqlStyleAnalyticsRepository:
                 if return_basis == "event_date"
                 else style_sql.STYLE_RETURN_DAILY_REPORT_DATE_SQL
             )
-            return_rows = connection.execute(return_clause, parameters).mappings().all()
+            return_rows = (
+                _platform_execute(connection, return_clause, parameters)
+                .mappings()
+                .all()
+            )
             _unresolved_by_style, unresolved_by_sku = self._style_unresolved(
                 connection,
                 parameters=parameters,
@@ -567,16 +859,31 @@ class MySqlStyleAnalyticsRepository:
                 unresolved_by_sku=unresolved_by_sku,
                 permissions=permissions or _default_permissions(),
             )
+            response = response.model_copy(
+                update={
+                    "platform_identity_review": _platform_result(
+                        self,
+                        connection,
+                        context,
+                        review,
+                        from_date,
+                        to_date,
+                        return_basis,
+                    )
+                }
+            )
             connection.commit()
             return response
         except BaseException:
             connection.rollback()
             raise
         finally:
+            connection.info.pop("platform_conflicts_json", None)
             connection.close()
 
     def _begin(self) -> Connection:
         connection = self._engine.connect()
+        connection.info.pop("platform_conflicts_json", None)
         try:
             connection.exec_driver_sql(
                 "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
@@ -599,6 +906,7 @@ class MySqlStyleAnalyticsRepository:
         catalog_version_id: int | None,
         fact_basis: FactBasis,
         return_basis: ReturnBasis,
+        report_source_scope_id: int | None = None,
     ) -> _ResolvedContext:
         consistent = _utc(connection.scalar(sa.text("SELECT UTC_TIMESTAMP(6)")))
         if fact_basis == "catalog_snapshot" and catalog_version_id is None:
@@ -608,10 +916,17 @@ class MySqlStyleAnalyticsRepository:
             if fact_basis == "current"
             else style_sql.SNAPSHOT_CONTEXT_SQL
         )
+        if report_source_scope_id is not None and fact_basis == "current":
+            clause = sa.text(clause.text + " AND scopes.id = :selected_scope_id")
         row = (
-            connection.execute(
+            _platform_execute(
+                connection,
                 clause,
-                {"site_id": site_id, "catalog_version_id": catalog_version_id},
+                {
+                    "site_id": site_id,
+                    "catalog_version_id": catalog_version_id,
+                    "selected_scope_id": report_source_scope_id,
+                },
             )
             .mappings()
             .one_or_none()
@@ -658,7 +973,8 @@ class MySqlStyleAnalyticsRepository:
             ):
                 raise CatalogSnapshotRangeOutOfBounds()
             member_rows = (
-                connection.execute(
+                _platform_execute(
+                    connection,
                     style_sql.SNAPSHOT_MEMBERS_SQL,
                     {
                         "site_id": site_id,
@@ -679,7 +995,8 @@ class MySqlStyleAnalyticsRepository:
             )
         else:
             member_rows = (
-                connection.execute(
+                _platform_execute(
+                    connection,
                     style_sql.CURRENT_MEMBERS_SQL,
                     {
                         "site_id": site_id,
@@ -698,7 +1015,8 @@ class MySqlStyleAnalyticsRepository:
                 snapshot=False,
             )
             all_return_rows = (
-                connection.execute(
+                _platform_execute(
+                    connection,
                     style_sql.ALL_CURRENT_RETURN_MEMBERS_SQL,
                     {"site_id": site_id, "report_source_scope_id": scope_id},
                 )
@@ -814,7 +1132,7 @@ class MySqlStyleAnalyticsRepository:
     ) -> _CoverageAndBuckets:
         parameters = self._parameters(context, from_date, to_date)
         business_rows = (
-            connection.execute(style_sql.BUSINESS_BUCKETS_SQL, parameters)
+            _platform_execute(connection, style_sql.BUSINESS_BUCKETS_SQL, parameters)
             .mappings()
             .all()
         )
@@ -823,7 +1141,9 @@ class MySqlStyleAnalyticsRepository:
             if return_basis == "event_date"
             else style_sql.RETURN_BUCKETS_REPORT_DATE_SQL
         )
-        return_rows = connection.execute(return_clause, parameters).mappings().all()
+        return_rows = (
+            _platform_execute(connection, return_clause, parameters).mappings().all()
+        )
         buckets = {
             name: _Bucket()
             for name in ("mapped", "unmatched", "excluded", "duplicate", "unresolved")
@@ -978,7 +1298,7 @@ class MySqlStyleAnalyticsRepository:
         )
         by_style: defaultdict[int, int] = defaultdict(int)
         by_sku: dict[int, int] = {}
-        for row in connection.execute(clause, parameters).mappings():
+        for row in _platform_execute(connection, clause, parameters).mappings():
             style_id = int(row["style_id"])
             sku_id = int(row["sku_id"])
             count = int(row["unresolved_rows"])
@@ -1235,8 +1555,27 @@ class MySqlStyleAnalyticsRepository:
         parameters: Mapping[str, object],
     ) -> dict[int, list[SafeSourceRef]]:
         result: dict[int, list[SafeSourceRef]] = defaultdict(list)
-        rows = connection.execute(style_sql.STYLE_ALIASES_SQL, parameters).mappings()
+        rows = _platform_execute(
+            connection,
+            style_sql.STYLE_ALIASES_SQL,
+            dict(parameters) | {"platform_skip_guard": True},
+        ).mappings()
         for row in rows:
+            if row["source_ref_id"] is None:
+                projection = safe_source_projection_v1(
+                    _bytes_any(row["seller_sku_match_bytes"]).decode("utf-8")
+                )
+                result[int(row["sku_id"])].append(
+                    SafeSourceRef(
+                        source_ref_id=f"mapping:{row['mapping_id']}",
+                        preview=projection.preview,
+                        sha256="sha256:"
+                        + _bytes(row["seller_sku_match_sha256"], 32).hex(),
+                        is_unsafe=projection.is_unsafe,
+                        is_truncated=projection.is_truncated,
+                    )
+                )
+                continue
             result[int(row["sku_id"])].append(
                 SafeSourceRef(
                     source_ref_id=str(row["source_ref_id"]),
@@ -1302,7 +1641,11 @@ class MySqlStyleAnalyticsRepository:
                     sku_id=str(sku_id),
                     standard_color=str(row["standard_color"]),
                     standard_size=str(row["standard_size"]),
-                    internal_display_sku=str(row["internal_display_sku"]),
+                    internal_display_sku=(
+                        str(row["internal_display_sku"])
+                        if row["internal_display_sku"] is not None
+                        else None
+                    ),
                     status=cast(Any, status),
                     seller_sku_aliases=list(aliases.get(sku_id, [])),
                     metrics=build_metric_values(
@@ -1520,7 +1863,12 @@ class MySqlStyleAnalyticsRepository:
                 if row["status"] == "enabled" or self._has_facts(sku_totals[sku_id]):
                     group_key = (
                         str(sku_id).encode("ascii"),
-                        str(row["internal_display_sku"]),
+                        str(row["internal_display_sku"])
+                        if row["internal_display_sku"] is not None
+                        else (
+                            f"{row['standard_color']} · {row['standard_size']}"
+                            " · 正式SKU待补"
+                        ),
                     )
                     groups[group_key].append(sku_id)
         elif dimension == "color":

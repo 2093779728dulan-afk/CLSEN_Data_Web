@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { requestApi } from "../../api/client";
 import type { DailyLedgerResponse } from "../../api/generated";
 import { PublishedDayPage } from "./PublishedDayPage";
+import { PublishedDayView } from "./PublishedDayView";
 vi.mock("../../api/client", () => ({ requestApi: vi.fn() }));
 const api = vi.mocked(requestApi);
 const empty: DailyLedgerResponse = { publications: [], site_config_versions: [], range: { from_date: "2026-08-10", to_date: "2026-08-10" }, rows: [] };
@@ -15,6 +16,11 @@ function open(date = "2026-08-10") {
   return render(<MemoryRouter initialEntries={[`/published-details/${date}`]}><Link to="/published-details/2026-08-11">下一日期</Link><Routes><Route path="/published-details/:reportDate" element={<PublishedDayPage currencyCode="USD" />} /></Routes></MemoryRouter>);
 }
 afterEach(() => vi.resetAllMocks());
+it.each([undefined, "/ledger/published-details?from=2026-08-01&to=2026-08-10"])("keeps the published-details return in the fixed navigation for entry %s", returnTo => {
+  render(<MemoryRouter><PublishedDayView currencyCode="USD" reportDate="2026-08-10" standalone returnTo={returnTo} loading onRetry={() => undefined} /></MemoryRouter>);
+  const navigation = screen.getByRole("navigation", { name: "发布数据导航" });
+  expect(within(navigation).getByRole("link", { name: "返回发布明细" })).toHaveAttribute("href", returnTo ?? "/ledger/published-details");
+});
 it("renders empty results instead of an endless loading state", async () => {
   api.mockResolvedValue(empty); open();
   expect(await screen.findByText("这个日期没有发布数据")).toBeInTheDocument();

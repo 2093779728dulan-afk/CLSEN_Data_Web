@@ -61,6 +61,7 @@
       "product_catalog_style_members",
       "product_catalog_sku_members",
       "product_catalog_mappings",
+      "product_catalog_shop_memberships",
       "product_catalog_exclusions",
       "product_catalog_publication_events",
       "catalog_source_refs",
@@ -70,8 +71,11 @@
       "catalog_import_issues",
       "catalog_validation_runs",
       "catalog_approval_projections",
+      "catalog_platform_checks",
       "catalog_command_effects",
-      "catalog_audit_events"
+      "catalog_audit_events",
+      "manual_table_operations",
+      "manual_table_profiles"
     ],
     "mutable_insert": [
       "users",
@@ -110,7 +114,8 @@
       "product_categories",
       "product_category_aliases",
       "catalog_draft_identity_reservations",
-      "catalog_style_change_drafts"
+      "catalog_style_change_drafts",
+      "manual_table_batches"
     ],
     "update": [
       "users",
@@ -139,7 +144,8 @@
       "worker_instances",
       "worker_consumer_states",
       "product_categories",
-      "catalog_style_change_drafts"
+      "catalog_style_change_drafts",
+      "manual_table_batches"
     ],
     "update_columns": {
       "daily_dataset_locks": [

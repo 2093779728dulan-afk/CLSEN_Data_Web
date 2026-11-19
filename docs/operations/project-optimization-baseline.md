@@ -52,9 +52,9 @@ pwsh -NoProfile -File scripts/run-ci-profile.ps1 -Profile ubuntu-full -PythonExe
 pwsh -NoProfile -File scripts/run-ci-profile.ps1 -Profile windows-smoke -PythonExecutable D:\CLSEN_Data_Web\.venv\Scripts\python.exe -ListOnly
 ```
 
-### Hosted MySQL 的 14 个排除项
+### Hosted MySQL 的 15 个排除项
 
-`14 个排除项` 只描述既有 hosted compatibility 工作流未采集的范围，绝不代表通过、跳过批准或可从其他 profile 删除。排除项及理由由 `scripts/ci-suite-manifest.json` 固定：
+`15 个排除项` 包括原有14项和新增的本机专用库存核对任务，只描述 hosted compatibility 工作流未采集的范围，绝不代表通过、跳过批准或可从其他 profile 删除。排除项及理由由 `scripts/ci-suite-manifest.json` 固定：
 
 1. `backend/tests/integration/test_admin_cli.py` — 此优化前未由批准的 hosted workflow 收集。
 2. `backend/tests/integration/test_backup_write_barrier.py` — 由 release backup/restore gate 覆盖。
@@ -70,6 +70,7 @@ pwsh -NoProfile -File scripts/run-ci-profile.ps1 -Profile windows-smoke -PythonE
 12. `backend/tests/integration/test_published_detail_scope.py` — 此优化前未由批准的 hosted workflow 收集。
 13. `backend/tests/integration/test_workbench_import_orchestration.py` — 此优化前未由批准的 hosted workflow 收集。
 14. `backend/tests/integration/test_workbench_snapshots.py` — 此优化前未由批准的 hosted workflow 收集。
+15. `backend/tests/integration/test_inventory_review_task.py` — 依赖显式开启的任务所有虚构运行环境、指定账号和本地快照夹具，不作为可移植 hosted CI 证据；既有本地结果与正式发布验证分开保留。
 
 ## 人工复核与冻结
 

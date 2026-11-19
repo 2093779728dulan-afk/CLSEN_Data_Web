@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
 from starlette.responses import Response
 
@@ -25,8 +25,17 @@ from app.api.catalog_common import (
 )
 from app.api.errors import ApiError
 from app.catalog.models import CatalogWireUuid, StrictCatalogModel
-from app.catalog.queries import MySqlCatalogQueries
+from app.catalog.queries import CatalogVersionSummary, MySqlCatalogQueries
+from app.catalog.report_selection import (
+    ReportSelection,
+    ReportSource,
+    SaveReportSelection,
+    preview_selection,
+    save_selection,
+    selection_context,
+)
 from app.catalog.service import CatalogService
+from app.catalog.task_queries import list_tasks
 from app.catalog.unmatched_repository import MySqlCatalogUnmatchedRepository
 
 router = APIRouter(
@@ -34,6 +43,68 @@ router = APIRouter(
     tags=["catalog"],
     dependencies=[Depends(require_catalog_session)],
 )
+
+
+@router.get("/unmatched/selection-candidates/{import_id}/source")
+def report_selection_recheck_source(
+    import_id: int, context: CatalogReadContext, engine: CatalogEngine
+) -> Response:
+    from app.catalog.report_selection import recheck_source
+
+    require_catalog_manager(context)
+    return catalog_json(recheck_source(engine, context.site_id, import_id))
+
+
+@router.post("/unmatched/selection-context")
+def report_selection_context(
+    body: ReportSource,
+    request: Request,
+    context: CatalogWriteContext,
+    engine: CatalogEngine,
+) -> Response:
+    from app.api.catalog_production_sources import require_enabled
+
+    require_catalog_manager(context)
+    require_enabled(request)
+    return catalog_json(selection_context(engine, context.site_id, body))
+
+
+@router.post("/unmatched/selection-preview")
+def report_selection_preview(
+    body: ReportSelection,
+    request: Request,
+    context: CatalogWriteContext,
+    engine: CatalogEngine,
+) -> Response:
+    from app.api.catalog_production_sources import require_enabled
+
+    require_catalog_manager(context)
+    require_enabled(request)
+    try:
+        return catalog_json(preview_selection(engine, context.site_id, body))
+    except Exception as error:
+        raise_catalog_error(error)
+
+
+@router.post("/unmatched/selection-candidates")
+def report_selection_save(
+    body: SaveReportSelection,
+    request: Request,
+    context: CatalogWriteContext,
+    engine: CatalogEngine,
+    idempotency_key: CatalogIdempotencyKey,
+) -> Response:
+    from app.api.catalog_production_sources import require_enabled
+
+    require_catalog_manager(context)
+    require_enabled(request)
+    require_matching_token(idempotency_key, body.operation_token)
+    try:
+        return catalog_json(
+            save_selection(engine, context.site_id, context.principal_user_id, body)
+        )
+    except Exception as error:
+        raise_catalog_error(error)
 
 
 class SensitiveSourceEncoding(StrictCatalogModel):
@@ -68,26 +139,74 @@ def _current_id(engine: CatalogEngine, site_id: int) -> int | None:
     return None if value is None else int(value)
 
 
-@router.get("/styles")
-def list_catalog_styles(context: CatalogReadContext, engine: CatalogEngine) -> Response:
-    try:
-        return catalog_json(
-            {
-                "catalog": MySqlCatalogQueries(engine).current_catalog(
-                    site_id=context.site_id
-                )
-            }
+def require_supported_catalog(
+    catalog: CatalogVersionSummary | None, version: int
+) -> None:
+    if (
+        catalog is not None
+        and version == 1
+        and any(item.internal_display_sku is None for item in catalog.skus)
+    ):
+        raise ApiError(
+            409,
+            "catalog_client_upgrade_required",
+            "当前客户端不支持待补码商品，请使用新版商品入口。",  # noqa: RUF001
         )
+
+
+@router.get("/styles")
+def list_catalog_styles(
+    context: CatalogReadContext,
+    engine: CatalogEngine,
+    contract_version: int = Query(default=1, ge=1, le=2),
+    report_source_scope_id: int | None = Query(default=None, gt=0),
+) -> Response:
+    try:
+        if report_source_scope_id is not None:
+            with engine.connect() as connection:
+                exists = connection.scalar(
+                    sa.text(
+                        "SELECT id FROM report_source_scopes "
+                        "WHERE id=:scope AND site_id=:site"
+                    ),
+                    {"scope": report_source_scope_id, "site": context.site_id},
+                )
+            if exists is None:
+                raise ApiError(404, "catalog_scope_not_found", "店铺不存在或无权访问。")
+        catalog = MySqlCatalogQueries(engine).current_catalog(
+            site_id=context.site_id, report_source_scope_id=report_source_scope_id
+        )
+        require_supported_catalog(catalog, contract_version)
+        return catalog_json({"catalog": catalog, "contract_version": contract_version})
+    except ApiError:
+        raise
     except Exception as error:
         raise_catalog_error(error)
 
 
 @router.get("/styles/{style_id}")
 def get_catalog_style(
-    style_id: int, context: CatalogReadContext, engine: CatalogEngine
+    style_id: int,
+    context: CatalogReadContext,
+    engine: CatalogEngine,
+    contract_version: int = Query(default=1, ge=1, le=2),
+    report_source_scope_id: int | None = Query(default=None, gt=0),
 ) -> Response:
     try:
-        catalog = MySqlCatalogQueries(engine).current_catalog(site_id=context.site_id)
+        if report_source_scope_id is not None:
+            with engine.connect() as connection:
+                exists = connection.scalar(
+                    sa.text(
+                        "SELECT id FROM report_source_scopes "
+                        "WHERE id=:scope AND site_id=:site"
+                    ),
+                    {"scope": report_source_scope_id, "site": context.site_id},
+                )
+            if exists is None:
+                raise ApiError(404, "catalog_scope_not_found", "店铺不存在或无权访问。")
+        catalog = MySqlCatalogQueries(engine).current_catalog(
+            site_id=context.site_id, report_source_scope_id=report_source_scope_id
+        )
         if catalog is None:
             raise ApiError(404, "catalog_style_not_found", "Style was not found.")
         style = next(
@@ -96,6 +215,14 @@ def get_catalog_style(
         if style is None:
             raise ApiError(404, "catalog_style_not_found", "Style was not found.")
         skus = tuple(item for item in catalog.skus if item.style_id == style_id)
+        if contract_version == 1 and any(
+            item.internal_display_sku is None for item in skus
+        ):
+            raise ApiError(
+                409,
+                "catalog_client_upgrade_required",
+                "当前客户端不支持待补码商品，请使用新版商品入口。",  # noqa: RUF001
+            )
         return catalog_json(
             {
                 "catalog_version_id": catalog.catalog_version_id,
@@ -112,6 +239,20 @@ def get_catalog_style(
         )
     except ApiError:
         raise
+    except Exception as error:
+        raise_catalog_error(error)
+
+
+@router.get("/styles/{style_id}/name-suggestions")
+def list_catalog_name_suggestions(
+    style_id: int, context: CatalogReadContext, engine: CatalogEngine
+) -> Response:
+    try:
+        return catalog_json(
+            MySqlCatalogQueries(engine).name_suggestions(
+                site_id=context.site_id, style_id=style_id
+            )
+        )
     except Exception as error:
         raise_catalog_error(error)
 
@@ -192,6 +333,22 @@ def list_catalog_variant_evidence(
         raise_catalog_error(error)
 
 
+@router.get("/report-matching/{version_id}")
+def report_product_matching(
+    version_id: int, context: CatalogReadContext, engine: CatalogEngine
+) -> Response:
+    from app.catalog.report_matching import match_report
+
+    require_catalog_manager(context)
+    with (
+        engine.connect().execution_options(
+            isolation_level="REPEATABLE READ"
+        ) as connection,
+        connection.begin(),
+    ):
+        return catalog_json(match_report(connection, context.site_id, version_id))
+
+
 @router.get("/unmatched")
 def list_catalog_unmatched(
     context: CatalogReadContext,
@@ -212,6 +369,39 @@ def list_catalog_unmatched(
                 return_basis=return_basis,
                 page=page,
                 page_size=page_size,
+            )
+        )
+    except Exception as error:
+        raise_catalog_error(error)
+
+
+@router.get("/tasks")
+def list_catalog_tasks(
+    context: CatalogReadContext,
+    engine: CatalogEngine,
+    kind: Literal["all", "review", "attention"] = "all",
+    status: str | None = None,
+    scope_id: int | None = Query(default=None, gt=0),
+    q: str = Query(default="", max_length=128),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    updated_from: date | None = None,
+    updated_to: date | None = None,
+) -> Response:
+    require_catalog_manager(context)
+    try:
+        return catalog_json(
+            list_tasks(
+                engine,
+                site_id=context.site_id,
+                kind=kind,
+                status=status,
+                scope_id=scope_id,
+                query=q,
+                page=page,
+                page_size=page_size,
+                updated_from=updated_from,
+                updated_to=updated_to,
             )
         )
     except Exception as error:
@@ -297,12 +487,31 @@ def get_catalog_version_diff(
 def restore_catalog_version(
     version_id: int,
     request: RestoreCatalogVersionRequest,
+    http_request: Request,
     context: CatalogWriteContext,
     engine: CatalogEngine,
     idempotency_key: CatalogIdempotencyKey,
 ) -> Response:
     require_catalog_admin(context)
     require_matching_token(idempotency_key, request.operation_token)
+    if not http_request.app.state.settings.catalog_production_sources_enabled:
+        with engine.connect() as connection:
+            source_kind = connection.scalar(
+                sa.text(
+                    "SELECT imports.source_kind FROM product_catalog_versions versions "
+                    "JOIN catalog_imports imports "
+                    "ON imports.id=versions.source_import_id "
+                    "AND imports.site_id=versions.site_id "
+                    "WHERE versions.id=:id AND versions.site_id=:site"
+                ),
+                {"id": version_id, "site": context.site_id},
+            )
+        if source_kind == "production":
+            raise ApiError(
+                403,
+                "production_catalog_disabled",
+                "Production catalog writes are disabled in this environment.",
+            )
     try:
         return catalog_json(
             CatalogService(engine).restore_version(

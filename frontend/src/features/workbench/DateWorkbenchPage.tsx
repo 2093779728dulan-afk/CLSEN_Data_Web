@@ -1,3 +1,5 @@
+import { PublicationStockStatus } from "../production/PublicationStockStatus";
+import { ReportProductMatch } from "../import-review/ReportProductMatch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -20,6 +22,7 @@ import { DateWorkbenchView, type ImportConfirmation } from "./DateWorkbenchView"
 
 type Props = {
   canWrite: boolean;
+  refreshRevision?: number;
   reportDate: string;
   siteId: number;
   userId: number;
@@ -90,7 +93,7 @@ function typedValue(column: WorkbenchColumn, input: string) {
   return { type: "text" as const, value: input };
 }
 
-export function DateWorkbenchPage({ canWrite, reportDate, siteId, userId }: Props) {
+export function DateWorkbenchPage({ canWrite, refreshRevision = 0, reportDate, siteId, userId }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -234,7 +237,7 @@ export function DateWorkbenchPage({ canWrite, reportDate, siteId, userId }: Prop
         activeLoadRef.current = undefined;
       }
     };
-  }, [releaseBusy, reload, viewContext]);
+  }, [refreshRevision, releaseBusy, reload, viewContext]);
 
   const switchReport = (next: ReportType) => {
     const parameters = new URLSearchParams(searchParams);
@@ -529,6 +532,7 @@ export function DateWorkbenchPage({ canWrite, reportDate, siteId, userId }: Prop
   const requestedReturn = (location.state as { returnTo?: unknown } | null)?.returnTo;
   const returnTo = typeof requestedReturn === "string" && requestedReturn.startsWith("/?") ? requestedReturn : undefined;
   return <DateWorkbenchView canWrite={canWrite} reportDate={reportDate} reportType={reportType} returnTo={returnTo} page={page} busy={busy} error={error} editors={editors} searchParams={searchParams} setSearchParams={setSearchParams}
+    productMatch={<>{page?.source === "published" && page.head && import.meta.env.VITE_PRODUCTION_ENABLED === "true" && <PublicationStockStatus key={`${reportDate}:${reportType}`} reportDate={reportDate} reportType={reportType} revision={`${page.head.version_id}:${refreshRevision}`} canWrite={canWrite} />}{canWrite && page?.head && import.meta.env.VITE_PRODUCTION_CATALOG_ENABLED === "true" && <ReportProductMatch versionId={page.head.version_id} revision={page.head.data_revision} />}</>}
     importResult={importResult} importFileName={importFileName} confirmation={confirmation} setConfirmation={setConfirmation}
     settingsOpen={settingsOpen} setSettingsOpen={setSettingsOpen} layout={layout} sort={sort}
     onRetry={() => void reload(viewContext)} switchReport={switchReport} uploadFile={(file) => void uploadFile(file)} confirmImport={() => void confirmImport()} continueUploadedSource={continueUploadedSource}

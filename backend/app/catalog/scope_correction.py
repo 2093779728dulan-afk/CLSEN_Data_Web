@@ -24,6 +24,10 @@ from sqlalchemy.engine import Engine
 
 from app.catalog.canonical_json import canonical_json_bytes
 
+SUPPORTED_SCHEMA_VERSIONS = frozenset(
+    {"0029", "0030", "0031", "0032", "0033", "0034", "0035"}
+)
+
 
 class CorrectionRejected(ValueError):
     pass
@@ -108,8 +112,12 @@ def execute(
         else:
             cur.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY")
         cur.execute("SELECT version_num FROM alembic_version")
-        if cur.fetchall() not in ((("0029",),), (("0030",),)):
-            raise CorrectionRejected("requires_schema_0029_or_0030")
+        schema_versions = cur.fetchall()
+        if (
+            len(schema_versions) != 1
+            or schema_versions[0][0] not in SUPPORTED_SCHEMA_VERSIONS
+        ):
+            raise CorrectionRejected("requires_schema_0029_or_later")
         cur.execute(
             "SELECT users.id FROM users JOIN user_roles ON user_roles.user_id=users.id JOIN roles ON roles.id=user_roles.role_id WHERE users.username_normalized=%s AND users.status='active' AND roles.code='admin'",
             (command.actor_username,),

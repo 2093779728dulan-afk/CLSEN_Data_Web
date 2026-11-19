@@ -56,7 +56,9 @@ export type CatalogStyleChangePreview = {
 };
 
 export type CatalogSku = {
-  internal_display_sku: string;
+  internal_display_sku: string | null;
+  code_status?: "legacy" | "pending" | "confirmed";
+  code_evidence?: string | null;
   revision: number;
   sku_id: number;
   standard_color: string;
@@ -191,19 +193,18 @@ function resultPayload(value: unknown): CommandResult {
   const payload = record.safe_result;
   return payload && typeof payload === "object" ? payload as CommandResult : record;
 }
-export async function getCurrentCatalog(): Promise<CurrentCatalog | null> {
-  const response = await requestApi<{ catalog: CurrentCatalog | null }>("/api/catalog/styles");
+export async function getCurrentCatalog(scopeId?: number): Promise<CurrentCatalog | null> {
+  const response = await requestApi<{ catalog: CurrentCatalog | null }>(`/api/catalog/styles?contract_version=2${scopeId ? `&report_source_scope_id=${scopeId}` : ""}`);
   return response.catalog;
 }
 
-export function getCatalogStyle(styleId: number) {
+export function getCatalogStyle(styleId: number, scopeId?: number) {
   return requestApi<{ catalog_version_id: number; catalog_publication_revision: number; permissions: { can_edit: boolean; can_manage_categories: boolean }; skus: CatalogSku[]; style: CatalogStyle }>(
-    `/api/catalog/styles/${styleId}`,
+    `/api/catalog/styles/${styleId}?contract_version=2${scopeId ? `&report_source_scope_id=${scopeId}` : ""}`,
   );
 }
 
-export async function createCatalogExport(catalogPublicationRevision: number) {
-  const operationKey = createOperationKey();
+export async function createCatalogExport(catalogPublicationRevision: number, operationKey = createOperationKey()) {
   return commandApi<CatalogExportStatus>(
     "/api/catalog/exports",
     { expected_catalog_publication_revision: catalogPublicationRevision, operation_token: operationKey },
@@ -249,6 +250,10 @@ export function getStyleChangePreview(draftId: number) {
   return requestApi<CatalogStyleChangePreview>(`/api/catalog/style-change-drafts/${draftId}`);
 }
 
+export function getCatalogNameSuggestions(styleId: number) {
+  return requestApi<{ items: { name: string; source: string }[]; limited: boolean }>(`/api/catalog/styles/${styleId}/name-suggestions`);
+}
+
 export async function approveStyleChange(preview: CatalogStyleChangePreview, reason: string) {
   const operationKey = createOperationKey();
   return commandApi<{ catalog_version_id: number; catalog_publication_revision: number }>(`/api/catalog/style-change-drafts/${preview.draft_id}/approve`, {
@@ -282,8 +287,7 @@ export async function getLatestCatalogExport() {
   return response.export ?? undefined;
 }
 
-export async function resumeCatalogExport(exportId: number, expectedJobRevision: number) {
-  const operationKey = createOperationKey();
+export async function resumeCatalogExport(exportId: number, expectedJobRevision: number, operationKey = createOperationKey()) {
   await commandApi<{ export_id: number; job_revision: number; job_status: "queued" }>(
     `/api/catalog/exports/${exportId}/resume`,
     { expected_job_revision: expectedJobRevision, operation_token: operationKey },
@@ -293,8 +297,7 @@ export async function resumeCatalogExport(exportId: number, expectedJobRevision:
   return getCatalogExport(exportId);
 }
 
-export async function createImportFromExport(exportId: number, catalogPublicationRevision: number) {
-  const operationKey = createOperationKey();
+export async function createImportFromExport(exportId: number, catalogPublicationRevision: number, operationKey = createOperationKey()) {
   return commandApi<CatalogImportSummary>(
     "/api/catalog/imports/from-export",
     {
@@ -338,10 +341,10 @@ export async function catalogCommand(
   command: string,
   workflowRevision: number,
   extra: Record<string, unknown> = {},
+  operationKey = createOperationKey(),
 ) {
-  const operationKey = createOperationKey();
   const response = await commandApi<unknown>(
-    `/api/catalog/imports/${importId}/${command}`,
+    command === "production-rebase" ? `/api/catalog/production-sources/${importId}/rebase` : `/api/catalog/imports/${importId}/${command}`,
     {
       expected_workflow_revision: workflowRevision,
       operation_token: operationKey,
