@@ -13,6 +13,7 @@ test("creates a ready export and opens an online catalog review", async ({ page 
     if (url.pathname === "/api/data-calendar/site-context") return route.fulfill({ json: site });
     if (url.pathname === "/api/dashboard/style-readiness") return route.fulfill({ json: { published_reports: 74, published_business_reports: 37, published_return_reports: 37, return_snapshot_present: true, catalog_approved: false, prerequisites_present: true } });
     if (url.pathname === "/api/catalog/source-scope") return route.fulfill({ json: { status: "confirmed", seller_account_display_name: "测试账号", permissions: { can_confirm: false } } });
+    if (url.pathname === "/api/catalog/production-sources/capabilities") return route.fulfill({ json: { scopes: [] } });
     if (url.pathname === "/api/catalog/styles") return route.fulfill({ json: { catalog: null } });
     if (url.pathname === "/api/catalog/imports" && route.request().method() === "GET") return route.fulfill({ json: { has_next: false, items: [] } });
     if (url.pathname === "/api/catalog/exports" && route.request().method() === "POST") return route.fulfill({ json: { attempt_count: 0, base_catalog_version_id: null, capacity_violations: [], catalog_publication_revision: 0, execution_phase: "waiting_for_worker", export_id: 12, export_status: "building", failure_reason_code: null, job_revision: 1, job_status: "queued", max_attempts: 3, next_attempt_at: null, permissions: { can_download: false, can_resume: false }, retry_allowed: false, worker_available: true, workbook_status: null }, status: 202 });
@@ -24,11 +25,12 @@ test("creates a ready export and opens an online catalog review", async ({ page 
   });
   await page.goto("/catalog");
   await expect(page.getByRole("heading", { name: "商品主档尚未初始化" })).toBeVisible();
-  await page.getByRole("link", { name: "进入批量维护" }).click();
+  await page.getByRole("link", { name: "开始初始化商品主档" }).click();
   await expect(page).toHaveURL(/\/catalog\/maintenance$/);
+  await page.getByRole("button", { name: "目录维护", exact: true }).click();
   await page.getByRole("button", { name: "生成候选" }).click();
-  await expect(page.getByRole("link", { name: "下载兼容 XLSX" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "下载目录维护工作簿" })).toBeVisible();
   await page.getByRole("button", { name: "开始在线审核" }).click();
-  await expect(page).toHaveURL(/\/catalog\/imports\/20$/);
+  await expect(page).toHaveURL(/\/catalog\/maintenance$/);
   await expect(page.getByRole("heading", { name: "商品主档审核" })).toBeVisible();
 });

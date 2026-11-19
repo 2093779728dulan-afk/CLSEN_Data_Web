@@ -12,7 +12,7 @@ for (const width of [1280, 390]) {
         expect(req.headers()["x-csrf-token"]).toBe("fictional-workbook-csrf"); const key = req.headers()["idempotency-key"]!; expect(key).toMatch(/^[0-9a-f-]{36}$/); commands.push(path);
         if (path === "/api/catalog/imports") {
           expect(req.headers()["content-type"]).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); expect(decodeURIComponent(req.headers()["x-original-filename"]!)).toBe("fictional-revised.xlsx"); expect(req.postData()).toBe("fictional workbook bytes"); uploadKeys.push(key);
-          if (uploads++ === 0) return route.fulfill({ status: 400, json: { error: { code: "catalog_workbook_unsafe" } } });
+          if (uploads++ === 0) return route.fulfill({ status: 400, json: { error: { code: "catalog_workbook_unsafe", message: "工作簿格式未通过检查" } } });
           return route.fulfill({ json: { catalog_import_id: 43 } });
         }
         const body = req.postDataJSON() as Record<string, unknown>; expect(body.operation_token).toBe(key);
@@ -33,15 +33,16 @@ for (const width of [1280, 390]) {
       if (/^\/api\/catalog\/imports\/(42|43)\/rows\//.test(path)) return route.fulfill({ json: { rows: [], total_rows: 0, workflow_revision: 3 } });
       throw new Error(`Unexpected fictional request: ${path}`);
     });
-    await page.goto("/catalog/maintenance?return_to=%2Fcatalog%2Funmatched"); const panel = page.getByRole("region", { name: "目录工作簿", exact: true });
+    await page.goto("/catalog/maintenance?return_to=%2Fcatalog%2Funmatched"); await page.getByRole("button", { name: "目录维护", exact: true }).click(); const panel = page.getByRole("region", { name: "目录维护工作簿", exact: true });
     await panel.getByRole("button", { name: "生成候选", exact: true }).click(); await expect(panel.getByText("生成失败：fictional_worker_failure", { exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: "恢复生成", exact: true }).click(); await expect(panel.getByRole("link", { name: "下载兼容 XLSX", exact: true })).toHaveAttribute("href", "/api/catalog/exports/8001/file");
+    await panel.getByRole("button", { name: "恢复生成", exact: true }).click(); await expect(panel.getByRole("link", { name: "下载目录维护工作簿", exact: true })).toHaveAttribute("href", "/api/catalog/exports/8001/file");
     await panel.screenshot({ path: testInfo.outputPath(`workbook-${width}.png`) });
-    await panel.getByRole("button", { name: "开始在线审核", exact: true }).click(); await expect(page).toHaveURL(/\/catalog\/imports\/42$/); await expect(page.getByRole("link", { name: "返回来源页面", exact: true })).toHaveAttribute("href", "/catalog/unmatched");
-    await page.goBack(); await expect(panel.getByRole("button", { name: "开始在线审核", exact: true })).toBeEnabled();
-    await panel.getByLabel("上传已修改的兼容 XLSX", { exact: true }).setInputFiles({ name: "fictional-revised.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("fictional workbook bytes") });
+    await panel.getByRole("button", { name: "开始在线审核", exact: true }).click(); await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible(); await expect(page).toHaveURL(/\/catalog\/maintenance\?/);
+    await page.getByRole("button", { name: "返回目录维护", exact: true }).click(); await expect(panel.getByRole("button", { name: "开始在线审核", exact: true })).toBeEnabled();
+    await panel.getByLabel("上传已修改的目录维护工作簿", { exact: true }).setInputFiles({ name: "fictional-revised.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("fictional workbook bytes") });
     await panel.getByRole("button", { name: "上传并进入审核", exact: true }).click(); await expect(panel.getByRole("alert")).toContainText("工作簿格式未通过检查"); await expect(panel.getByText("fictional-revised.xlsx", { exact: true })).toBeVisible();
-    await panel.getByRole("button", { name: "上传并进入审核", exact: true }).click(); await expect(page).toHaveURL(/\/catalog\/imports\/43$/); await expect(page.getByRole("link", { name: "返回来源页面", exact: true })).toHaveAttribute("href", "/catalog/maintenance");
+    await panel.getByRole("button", { name: "上传并进入审核", exact: true }).click(); await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
+    await page.goto("/catalog/imports/43");
     await page.reload(); await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible(); await expect(page.getByText("当前修订 3", { exact: true })).toBeVisible();
     expect(uploadKeys[0]).toBe(uploadKeys[1]); expect(commands).toEqual(["/api/catalog/exports", "/api/catalog/exports/8001/resume", "/api/catalog/imports/from-export", "/api/catalog/imports", "/api/catalog/imports"]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

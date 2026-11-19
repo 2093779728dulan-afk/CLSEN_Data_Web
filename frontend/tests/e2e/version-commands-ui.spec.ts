@@ -57,7 +57,7 @@ for (const width of [1280, 390]) {
     await expect(dialog.getByRole("alert")).toContainText("虚构提交结果暂时无法确认");
     await expect(dialog.getByRole("textbox", { name: "修订原因" })).toHaveValue("虚构修订原因");
     await dialog.getByRole("button", { name: "确认创建修订", exact: true }).click();
-    await expect(page).toHaveURL(/\/review\/2026-09-12/);
+    await expect(page).toHaveURL(/\/review-advanced\/2026-09-12/);
     await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
     // Move creates a review draft, rather than publishing immediately.
     f.state.fail = true; await page.goto(initial); await page.getByRole("button", { name: "移动到其他日期", exact: true }).click();
@@ -66,7 +66,7 @@ for (const width of [1280, 390]) {
     await expect(dialog.getByText("目标日期尚无数据", { exact: true })).toBeVisible(); await dialog.getByRole("textbox", { name: "移动原因" }).fill("虚构移动原因");
     await dialog.getByRole("button", { name: "创建跨日期审核草稿", exact: true }).click(); await expect(dialog.getByRole("alert")).toContainText("虚构提交结果暂时无法确认");
     await dialog.getByRole("button", { name: "创建跨日期审核草稿", exact: true }).click();
-    await expect(page).toHaveURL(/\/review\/2026-09-13/); await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/review-advanced\/2026-09-13/); await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
     // Rollback error must be visible within the dialog; result survives reread and refresh.
     f.state.fail = true; await page.goto(initial); await page.getByRole("button", { name: "回滚到 v1", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "管理员回滚确认", exact: true });

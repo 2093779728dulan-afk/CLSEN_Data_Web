@@ -3,7 +3,7 @@ import type { CatalogUnmatchedResponse } from "../../src/features/catalog/catalo
 
 const style = { style_id: 1001, style_code: "DEMO-01", standard_name: "虚构商品", category_id: null, category_code: null, category_name: null, category_recorded: true, status: "enabled", revision: 3, variant_count: 0, seller_sku_count: 0, source_summary: { first_seen_date: null, latest_seen_date: null, observation_count: 0, source_report_count: 0 } };
 for (const width of [1280, 390]) {
-  test(`actual unmatched queries, partial failure, paging, review and refresh at ${width}px`, async ({ page }, testInfo) => {
+  test(`actual unmatched queries, page failure, review and refresh stay independent of approved-style candidates at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     let pendingFailed = true; let pageFailed = false; let laterEmpty = false; let canReview = true;
     const requests: Array<{ path: string; method: string }> = [];
@@ -31,18 +31,18 @@ for (const width of [1280, 390]) {
       throw new Error(`Unexpected API ${path}`);
     });
     const path = "/catalog/unmatched?from=2026-09-01&to=2026-09-30&return_basis=report_date&return_to=%2Fproducts%3Fmonth%3D2026-09";
-    await page.goto(path); await expect(page.getByRole("alert")).toContainText("无法读取已有审核候选");
+    await page.goto(path); await expect(page.getByRole("region", { name: "来源清单", exact: true })).toBeVisible();
+    expect(requests.some(request => request.path.includes("/pending-items") || request.path === "/api/catalog/styles")).toBe(false);
     const sources = page.getByRole("region", { name: "来源清单", exact: true }); await expect(sources.getByRole("listitem")).toHaveCount(25);
     await expect(page.getByRole("region", { name: "待归属来源核对", exact: true })).toContainText("US$250.00 · EUR 20.00");
-    pendingFailed = false; const retry = page.getByRole("button", { name: "重新读取", exact: true }); await retry.focus(); await retry.press("Enter"); await expect(page.getByText("DEMO-PENDING", { exact: true })).toBeVisible();
+    pendingFailed = false; await expect(page.getByRole("region", { name: "已有审核候选", exact: true })).toHaveCount(0);
     pageFailed = true; await page.getByRole("button", { name: "下一页", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("无法读取待归属来源"); await expect(page).toHaveURL(/page=2/);
     pageFailed = false; await page.getByRole("button", { name: "重新读取", exact: true }).click(); await expect(sources.getByRole("listitem")).toHaveCount(1); await expect(sources).toContainText("DEMO-SOURCE-26"); await expect(sources).toContainText("1 件 · EUR 20.00");
-    await page.getByRole("link", { name: "DEMO-01 · 虚构商品", exact: true }).click(); await expect(page.getByRole("link", { name: "返回商品主档", exact: true })).toHaveAttribute("href", `${path}&page=2`); await page.getByRole("link", { name: "返回商品主档", exact: true }).click();
     const review = sources.getByRole("link", { name: "继续审核", exact: true }); await review.focus(); await review.press("Enter"); await expect(page).toHaveURL(/\/catalog\/imports\/42$/); await expect(page.getByRole("link", { name: "返回来源页面", exact: true })).toBeVisible(); await page.goBack(); await expect(sources).toContainText("DEMO-SOURCE-26");
-    const maintenance = await page.getByRole("link", { name: "生成或继续审核候选", exact: true }).getAttribute("href"); expect(new URL(maintenance!, "http://localhost").searchParams.get("return_to")).toBe(`${path}&page=2`);
+    const maintenance = await page.getByRole("link", { name: "多商品批量维护", exact: true }).getAttribute("href"); expect(new URL(maintenance!, "http://localhost").searchParams.get("return_to")).toBe(`${path}&page=2`);
     await page.screenshot({ path: testInfo.outputPath(`actual-unmatched-${width}.png`), fullPage: true }); await page.reload(); await expect(sources).toContainText("DEMO-SOURCE-26");
     laterEmpty = true; await page.reload(); await expect(page.getByRole("heading", { name: "本页没有来源记录" })).toBeVisible(); await page.getByRole("button", { name: "上一页", exact: true }).click(); await expect(sources.getByRole("listitem")).toHaveCount(25);
-    canReview = false; await page.reload(); await expect(page.getByText("当前没有关联到已生效商品的审核候选。", { exact: true })).toBeVisible(); await expect(sources.getByRole("listitem")).toHaveCount(25);
+    canReview = false; await page.reload(); await expect(page.getByRole("region", { name: "已有审核候选", exact: true })).toHaveCount(0); await expect(sources.getByRole("listitem")).toHaveCount(25);
     await expect(page.getByRole("link", { name: "返回产品分析", exact: true })).toHaveAttribute("href", "/products?month=2026-09"); expect(requests.filter(request => request.method !== "GET")).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }

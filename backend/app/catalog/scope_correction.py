@@ -25,7 +25,7 @@ from sqlalchemy.engine import Engine
 from app.catalog.canonical_json import canonical_json_bytes
 
 SUPPORTED_SCHEMA_VERSIONS = frozenset(
-    {"0029", "0030", "0031", "0032", "0033", "0034", "0035"}
+    {"0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037"}
 )
 
 

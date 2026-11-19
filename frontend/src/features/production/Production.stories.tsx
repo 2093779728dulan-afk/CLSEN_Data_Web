@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { AuthzGenerationProvider } from "../../app/AuthzGenerationContext";
 import { MemoryRouter } from "react-router-dom";
 import { PageHeader, StatusMessage } from "../../design-system";
 import { DocumentContent, DocumentTable, SummaryContent } from "./ProductionViews";
@@ -29,7 +30,7 @@ function ProductionStory({ scenario }: { scenario: "order-list" | "order-detail"
     {scenario === "result-unknown" && <StatusMessage kind="warning" title="保存结果待核实，已锁定当前输入">保留原操作ID，查询结果或重发原操作。不能再次创建一笔出货。</StatusMessage>}
   </main>;
 }
-const meta = { title: "Pages/Production", component: ProductionStory, parameters: { layout: "fullscreen" }, args: { scenario: "order-list" }, decorators: [(Story) => <MemoryRouter><Story /></MemoryRouter>] } satisfies Meta<typeof ProductionStory>;
+const meta = { title: "Pages/Production", component: ProductionStory, parameters: { layout: "fullscreen" }, args: { scenario: "order-list" }, decorators: [(Story) => <MemoryRouter><AuthzGenerationProvider boundary={{principalId:1,roles:["admin"],siteId:1,siteConfigVersionId:1}} onRevoked={()=>undefined}><Story /></AuthzGenerationProvider></MemoryRouter>] } satisfies Meta<typeof ProductionStory>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const OrderList: Story = {};

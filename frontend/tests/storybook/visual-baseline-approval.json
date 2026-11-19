@@ -868,6 +868,22 @@
         "desktop_or_tablet_updated": 0,
         "user_verified_new_scope": false
       }
+    },
+    {
+      "approved_by": "Codex（沿用户已批准的界面精简与流程优化，代理逐类视觉核对）",
+      "reason": "同步B已批准的资料来源折叠、说明精简、审核默认分类及维护操作布局。Linux同版本浏览器抽样比较8类页面确认变化对应实现；先修复样板上下文和交互错误，未降低视觉阈值。保留原214张截图与首轮CI失败证据；本记录不是用户体验确认或发布验收。",
+      "generated_at": "2026-11-19T05:29:27.243979+00:00",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "platform": "linux",
+      "source_sha": "573c30135f7f0bad47a04fe2c9d83757966ecf12 + current fixture repairs",
+      "source_run": "44459716839/attempt1",
+      "story_filter": "214 exact failed story/viewport pairs in git-ci-publication-20261119 evidence",
+      "baselines": {
+        "generation_passed": 214,
+        "independent_comparison": "pending new fixed-source public CI",
+        "user_verified_new_scope": false
+      }
     }
   ]
 }

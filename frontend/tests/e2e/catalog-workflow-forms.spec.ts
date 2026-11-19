@@ -32,12 +32,12 @@ async function fixture(page: Page, baseURL: string, highRisk = false) {
         return route.fulfill({ json: { safe_result: { workflow_revision: imported.workflow_revision } } });
       }
       if (action === "approve") {
-        expect(body).toMatchObject({ expected_catalog_publication_revision: 8, projection_id: 901, projection_digest: "fictional-digest", reason: "虚构批准依据" });
+        expect(body).toMatchObject({ expected_catalog_publication_revision: 8, projection_id: 901, projection_digest: "fictional-digest", reason: "虚构本批商品目录批准依据" });
         imported.status = "approved"; imported.approved_catalog_version_number = 5; imported.workflow_revision++;
         return route.fulfill({ json: { safe_result: { catalog_version_number: 5, workflow_revision: imported.workflow_revision } } });
       }
       if (action === "reject" || action === "withdraw") {
-        expect(body.reason).toBe("虚构拒绝与撤回依据");
+        expect(body.reason).toBe("虚构本批商品拒绝与撤回依据");
         imported.workflow_revision++;
         return route.fulfill({ json: { safe_result: { workflow_revision: imported.workflow_revision } } });
       }
@@ -53,24 +53,24 @@ async function fixture(page: Page, baseURL: string, highRisk = false) {
 for (const width of [1280, 390]) {
   test(`actual catalog workflow failure, rebase, preview, approval and reload at ${width}px`, async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 900 }); const { commands } = await fixture(page, baseURL!);
-    await page.getByRole("button", { name: "生成批准预览", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
     const reason = page.getByRole("textbox", { name: "批准原因", exact: true });
     await reason.fill("ab"); await expect(page.getByRole("button", { name: "确认批准目录", exact: true })).toBeDisabled();
-    await reason.fill("虚构批准依据"); await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
+    await reason.fill("虚构本批商品目录批准依据"); await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
     const id = page.getByRole("textbox", { name: "替代导出编号（export ID）", exact: true });
     await id.fill("8002"); await page.getByRole("button", { name: "调整到新基准", exact: true }).click();
-    await expect(page.getByRole("alert")).toContainText("输入内容已保留"); await expect(id).toHaveValue("8002"); await expect(reason).toHaveValue("虚构批准依据");
+    await expect(page.getByRole("alert")).toContainText("输入内容已保留"); await expect(id).toHaveValue("8002"); await expect(reason).toHaveValue("虚构本批商品目录批准依据");
     expect(commands.filter(c => c.action === "rebase")).toHaveLength(1);
-    await page.getByRole("button", { name: "调整到新基准", exact: true }).click();
+    await page.getByRole("button", { name: "核实原操作结果", exact: true }).click();
     await expect(page.getByText("当前修订 4", { exact: true })).toBeVisible();
-    await expect(reason).toHaveCount(0); await page.reload();
-    await page.getByRole("button", { name: "生成批准预览", exact: true }).click();
-    await reason.fill("虚构批准依据"); await page.getByRole("button", { name: "确认批准目录", exact: true }).click();
+    await expect(reason).toBeVisible(); await page.reload();
+    await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
+    await reason.fill("虚构本批商品目录批准依据"); await page.getByRole("button", { name: "确认批准目录", exact: true }).click();
     await expect(page.getByRole("heading", { name: "已批准生效", exact: true })).toBeVisible(); await page.reload();
     await expect(page.getByRole("heading", { name: "已批准生效", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "确认批准目录", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "查看目录版本", exact: true })).toHaveAttribute("href", "/catalog/versions");
-    const rebases = commands.filter(c => c.action === "rebase"); expect(rebases).toHaveLength(2); expect(rebases[0]!.key).not.toBe(rebases[1]!.key);
+    const rebases = commands.filter(c => c.action === "rebase"); expect(rebases).toHaveLength(2); expect(rebases[0]!.key).toBe(rebases[1]!.key);
     expect(commands.filter(c => c.action === "approve")).toHaveLength(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
@@ -78,30 +78,34 @@ for (const width of [1280, 390]) {
 
 test("actual unsaved draft blocks workflow fields and high risk cannot approve", async ({ page, baseURL }) => {
   const { commands, imported } = await fixture(page, baseURL!, true);
-  await page.getByRole("button", { name: "生成批准预览", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
   await expect(page.getByText("风险：高风险（仅管理员可批准）", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "确认批准目录", exact: true })).toHaveCount(0);
+  await page.getByRole("tab", { name: /^款式命名/ }).click();
+  await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
   await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("虚构新名称");
   await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "生成批准预览", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "生成批准预览", exact: true })).toHaveCount(0);
   await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
   await expect(page.getByRole("textbox", { name: "替代导出编号（export ID）", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "撤销本行修改", exact: true }).click();
-  await expect(page.getByRole("button", { name: "生成批准预览", exact: true })).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeEnabled();
   imported.workflow_revision++;
   await page.getByRole("button", { name: "重新读取草稿", exact: true }).click();
-  await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
   expect(commands.every(c => c.action === "approval-preview")).toBe(true);
 });
 
 test("actual rejection and withdrawal use the shared entered reason and latest revision", async ({ page, baseURL }) => {
   const { commands, imported } = await fixture(page, baseURL!);
-  imported.permissions.can_withdraw = true; await page.reload();
-  await page.getByRole("textbox", { name: "操作原因", exact: true }).fill("虚构拒绝与撤回依据");
+  imported.permissions.can_withdraw = true; imported.permissions.can_preview = false; await page.reload();
+  await page.getByText("退回或撤回本批", { exact: true }).click();
+  await page.getByRole("textbox", { name: "退回或撤回原因（至少10字）", exact: true }).fill("虚构本批商品拒绝与撤回依据");
   await page.getByRole("button", { name: "拒绝", exact: true }).click();
   await expect(page.getByText("当前修订 4", { exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "退回或撤回原因（至少10字）", exact: true }).fill("虚构本批商品拒绝与撤回依据");
   await page.getByRole("button", { name: "撤回", exact: true }).click();
   await expect(page.getByText("当前修订 5", { exact: true })).toBeVisible();
-  expect(commands.map(c => [c.action, c.body.expected_workflow_revision])).toEqual([["reject", 3], ["withdraw", 4]]);
+  expect(commands.filter(c => c.action === "reject" || c.action === "withdraw").map(c => [c.action, c.body.expected_workflow_revision])).toEqual([["reject", 3], ["withdraw", 4]]);
   await page.reload(); await expect(page.getByText("当前修订 5", { exact: true })).toBeVisible();
 });

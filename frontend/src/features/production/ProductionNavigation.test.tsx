@@ -143,16 +143,33 @@ describe("independent production pages", () => {
     expect(screen.queryByRole("button", { name: "登记生产实收" })).not.toBeInTheDocument();
     expect(api.write).not.toHaveBeenCalled();
   });
-  it.each(["orders", "shipments", "stock"])("keeps %s intake in business context without a second purpose selector", async business => {
+  it.each([
+    ["/production/orders/intake", "/production/orders/new"],
+    ["/production/stock/intake", "/production/stock/movements/new?kind=ADJUST"],
+    ["/production/shipments/intake?method=table", "/production/shipments/new?method=table&flow=guided&purpose=WAREHOUSE_DISPATCH"],
+  ])("keeps the default intake on its unified business form: %s", async (entry, destination) => {
+    mount(entry);
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent(destination));
+    expect(screen.queryByRole("group", { name: "这份表用于什么业务" })).not.toBeInTheDocument();
+    expect(api.write).not.toHaveBeenCalled();
+  });
+
+  it.each(["orders", "shipments", "stock"])("keeps legacy %s intake in business context without a second purpose selector", async business => {
     vi.stubEnv("VITE_MANUAL_TABLES_ENABLED", "true");
     const original = api.read.getMockImplementation()!;
     api.read.mockImplementation((path: string) => path === "/api/manual-tables/capabilities" ? Promise.resolve({ enabled: false }) : original(path) as Promise<unknown>);
-    const user = userEvent.setup(); mount(`/production/${business}/intake${business === "shipments" ? "?method=table" : ""}`);
+    const user = userEvent.setup(); mount(`/production/${business}/intake?layout=raw&method=manual`);
     expect(screen.queryByRole("group", { name: "这份表用于什么业务" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: business === "stock" ? /手工盘点调整/ : /手工填写/ })).toHaveAttribute("href", business === "stock" ? "/production/stock/movements/new?kind=ADJUST" : `/production/${business}/new`);
     const tableImport = screen.getByRole("button", { name: /从表格导入/ });
-    expect(tableImport).toHaveAttribute("aria-expanded", business === "shipments" ? "true" : "false");
+    expect(tableImport).toHaveAttribute("aria-expanded", "false");
     await user.click(tableImport);
+    if (business === "shipments") {
+      await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/production/shipments/new?"));
+      expect(screen.getByTestId("location")).toHaveTextContent("flow=guided&purpose=WAREHOUSE_DISPATCH");
+      expect(api.write).not.toHaveBeenCalled();
+      return;
+    }
     expect(tableImport).toHaveAttribute("aria-expanded", "true");
     await user.click(screen.getByText("标准模板与已适配格式", { exact: true }));
     if (business !== "stock") expect(screen.getByRole("link", { name: "使用标准模板导入" })).toHaveAttribute("href", `/production/${business}/import`);
@@ -193,7 +210,7 @@ describe("independent production pages", () => {
   });
 
   it("keeps central upload unavailable to viewers", async () => {
-    vi.stubEnv("VITE_MANUAL_TABLES_ENABLED", "true"); mount("/production/imports?kind=orders", false);
+    vi.stubEnv("VITE_MANUAL_TABLES_ENABLED", "true"); mount("/production/imports?kind=orders&layout=raw", false);
     expect(await screen.findByText("当前账号只读")).toBeInTheDocument();
     expect(screen.queryByLabelText("人工表格文件")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "使用标准模板导入" })).not.toBeInTheDocument();
@@ -432,7 +449,7 @@ describe("independent production pages", () => {
     expect(within(primary()).getByRole("link", { name: "业务总览" })).toHaveAttribute("href", "/production/overview");
     for (const [group, items] of [
       ["订单与出货", [["订单跟进", "预计订单", "/production/orders"], ["全部出货", "仓库出货", "/production/shipments"]]],
-      ["仓库中心", [["仓库中心", "仓库中心", "/production/warehouses"], ["库存总览", "库存总览", "/production/stock"], ["库存记录", "库存变动单", "/production/stock/movements"]]],
+      ["仓库中心", [["仓库中心", "仓库中心", "/production/warehouses"], ["库存总览", "库存总览", "/production/stock"], ["库存记录", "库存记录", "/production/stock/movements"]]],
     ] as const) {
       await user.click(within(primary()).getByRole("link", { name: group }));
       for (const [label, title, path] of items) {

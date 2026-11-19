@@ -236,6 +236,7 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
       const path = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (path.includes("/api/auth/me")) return Promise.resolve(response(currentUser));
+      if (path === "/api/catalog/production-sources/capabilities") return Promise.resolve(response({ scopes: [] }));
       if (path.startsWith("/api/catalog/imports?")) return Promise.resolve(response({ items: [], has_next: false }));
       if (path === "/api/catalog/styles?contract_version=2") return Promise.resolve(response({ catalog: null }));
       if (path === "/api/catalog/exports/latest") return Promise.resolve(response({ export: null }));

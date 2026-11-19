@@ -16,6 +16,7 @@ async function fixture(page: Page, edit = false) {
     if (path === "/api/data-calendar/site-context") return route.fulfill({ json: { site_id: 1, site_code: "US", display_name: "示例站点", site_config_version_id: 2, source_timezone: "UTC", reporting_timezone: "UTC", currency_code: "USD" } });
     if (path === "/api/dashboard/style-readiness") return route.fulfill({ json: { prerequisites_present: true, catalog_approved: true, published_reports: 0 } });
     if (path === "/api/catalog/source-scope") return route.fulfill({ json: { status: "unconfirmed", permissions: { can_confirm: false }, site_config_revision: 1 } });
+    if (path === "/api/catalog/production-sources/capabilities") return route.fulfill({ json: { scopes: [] } });
     if (path === "/api/catalog/styles") return route.fulfill({ json: { catalog: { catalog_version_id: 3, catalog_publication_revision: mode.publication, version_number: 3, skus: [], styles: [style()] } } });
     if (path === "/api/catalog/styles/700") {
       if (mode.styleStatus) return route.fulfill({ status: mode.styleStatus, json: { error: { code: "UNAVAILABLE" } } });
@@ -32,6 +33,7 @@ async function fixture(page: Page, edit = false) {
       const pageNo = Number(url.searchParams.get("page"));
       return route.fulfill({ json: { page: pageNo, page_size: 50, total_items: 51, items: Array.from({ length: pageNo === 1 ? 50 : 1 }, (_, i) => ({ evidence_id: (pageNo - 1) * 50 + i + 1, dataset_id: 1, report_type: pageNo === 1 ? "business_report" : "return_report", report_date: "2026-07-03", event_date: "2026-07-02", published_version_id: 7, source_row_id: 44 + i, source_filename: "synthetic.csv", source_record_number: 5 + i, source_event_timestamp: "2026-07-02T23:00:00-07:00", source_timezone: "America/Los_Angeles", seller_sku: pageNo === 2 ? ref("demo:unsafe", "<script>unsafe</script>") : ref(`demo:safe:${i}`, `DEMO-ALIAS-${i + 1}`), title: pageNo === 2 ? ref("demo:title", "截断标题…", false, true) : null, child_asin: null, parent_asin: null, fnsku: null, evidence_digest: `sha256:${"b".repeat(64)}` })) } });
     }
+    if (path === "/api/catalog/styles/700/name-suggestions") return route.fulfill({ json: { items: [], limited: false } });
     if (path === "/api/catalog/categories") return route.fulfill({ json: { categories: [{ category_id: 1, code: "SHIRT", display_name: "示例分类", status: "enabled", aliases: [] }] } });
     if (path === "/api/catalog/styles/700/change-drafts") {
       const body = route.request().postDataJSON() as Record<string, unknown>;
@@ -110,7 +112,7 @@ for (const width of [1280, 390]) {
 test("existing approval observes refresh failure and recovers without a second approval", async ({ page }) => {
   const { mode } = await fixture(page, true);
   await page.getByRole("button", { name: "修改名称 / 分类", exact: true }).click();
-  await page.getByRole("textbox", { name: "标准商品名称", exact: true }).fill("示例修改名称");
+  await page.getByRole("textbox", { name: "标准商品名称（选填）", exact: true }).fill("示例修改名称");
   await page.getByRole("button", { name: "生成变更预览", exact: true }).click();
   await expect(page.getByText("批准后", { exact: true })).toBeVisible();
   mode.approvalRefreshFailure = true;

@@ -81,7 +81,7 @@ for (const width of [1280, 390]) {
     await reason.fill("核对原表：两行均保留"); await expect(submit).toBeEnabled(); await submit.click();
     await expect(dialog.getByRole("alert")).toContainText("虚构提交结果暂时无法确认");
     await expect(reason).toHaveValue("核对原表：两行均保留"); await submit.click();
-    await expect(page).toHaveURL(/\/review\/2026-09-13/); await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/review-advanced\/2026-09-13/); await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
     await page.reload(); await expect(page.getByRole("button", { name: "经营报告 · 草稿 v4", exact: true })).toBeVisible();
     expect(f.state.previewReads).toHaveLength(initialReads + 1); expect(f.state.previewReads.every(query => query === f.state.previewReads[0])).toBe(true);
     const calls = f.writes.filter(w => w.path === "/api/admin/versions/53/move-date"); expect(calls).toHaveLength(2); expect(calls[0]!.key).toBe(calls[1]!.key);

@@ -58,7 +58,7 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
     await expect(page.getByRole("region", { name: "当前分类编辑区", exact: true })).toBeVisible();
     if (/--(save-failure|refresh-failure)$/.test(storyId)) {
       await page.getByLabel("demo-styles-2 standard_name", { exact: true }).fill("虚构修改名称");
-      await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+      await page.getByRole("region", { name: "当前分类编辑区", exact: true }).filter({ visible: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
       await expect(page.getByRole("alert")).toContainText(storyId.endsWith("--save-failure") ? "编辑内容已保留" : "草稿已保存，但最新明细读取失败");
     }
   }
@@ -255,13 +255,14 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
   }
   if (storyId.endsWith("catalog-import-review--pending-changes")) {
     await expect(page.locator("details[open] ins").filter({ hasText: "示例 · 暖灰直筒长裤" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "保存当前分类修改（2行）", exact: true })).toBeEnabled();
+    await expect(page.getByRole("region", { name: "当前分类编辑区", exact: true }).filter({ visible: true }).getByRole("button", { name: "保存当前分类修改（2行）", exact: true })).toBeEnabled();
   }
   if (storyId.endsWith("catalog-import-review--save-failure") || storyId.endsWith("catalog-import-review--refresh-failure")) {
+    await page.getByRole("tab", { name: /^款式命名/ }).click();
     const pendingOnly = page.getByRole("checkbox", { name: "仅看待处理" });
     if (await pendingOnly.isChecked()) await pendingOnly.click();
     await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("示例审核名称");
-    await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+    await page.getByRole("region", { name: "当前分类编辑区", exact: true }).filter({ visible: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
     await expect(page.getByText(storyId.endsWith("--save-failure") ? /编辑内容已保留/ : /草稿已保存，但最新明细读取失败/)).toBeVisible();
   }
   if (storyId.endsWith("dialog-interaction")) {

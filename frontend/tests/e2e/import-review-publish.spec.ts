@@ -485,6 +485,8 @@ test("orchestrates upload, review, publication, and immutable-version viewing ag
   await expect(page.getByRole("heading", { name: "发布数据总表" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "每日总表" })).toBeVisible();
   await page.getByRole("button", { name: "进入今日审核" }).click();
+  await expect(page).toHaveURL(/\/review\/\d{4}-\d{2}-\d{2}/);
+  await page.goto(page.url().replace("/review/", "/review-advanced/"));
   await expect(page.getByRole("heading", { name: "导入先审核，发布后才进入看板" })).toBeVisible();
   const dateInput = page.getByLabel("识别不到日期时的归属日");
   const selectedDate = await dateInput.inputValue();

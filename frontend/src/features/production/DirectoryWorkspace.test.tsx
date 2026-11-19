@@ -386,7 +386,7 @@ it("does not show zero when the shipment stock reference failed to load", async 
   api.read.mockImplementation(path => path === "/api/production/orders/10" ? Promise.resolve(source) : path.startsWith("/api/production/orders?") ? Promise.resolve({ items: [source], total: 1, page: 1 }) : path.includes("inventory/availability?") && path.includes("sku_id=") ? Promise.reject(Error("虚构库存读取失败")) : original(path));
   mount("warehouses", "/production/warehouses/1?tab=records&ship=1&mode=ship&source_order=10");
   const dialog = await screen.findByRole("dialog", { name: "新建出货单" });
-  await userEvent.click(within(dialog).getByRole("button", { name: "下一步" }));
+  await userEvent.click(await within(dialog).findByRole("button", { name: "下一步" }));
   expect(await within(dialog).findByText("库存读取失败，未显示为0。虚构库存读取失败")).toBeInTheDocument();
 });
 it.each(["factories", "warehouses"] as const)("synchronizes the %s search with applied filters on back and forward", async kind => {

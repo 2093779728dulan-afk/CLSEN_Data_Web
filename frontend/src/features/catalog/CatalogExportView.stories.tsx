@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
 import { StatusMessage } from "../../design-system";
 import type { CatalogExportStatus } from "./catalogApi";
@@ -23,7 +24,7 @@ function Sample({ scenario = "reference" }: { scenario?: Scenario }) {
     <p>所有候选、文件与任务均为虚构示例。操作只更新样板内存，不请求实际 API；刷新会重置。</p>
   </main>;
 }
-const meta = { title: "Patterns/Catalog Workbook", component: Sample, parameters: { layout: "fullscreen" } } satisfies Meta<typeof Sample>;
+const meta = { title: "Patterns/Catalog Workbook", component: Sample, parameters: { layout: "fullscreen" }, decorators: [(Story) => <MemoryRouter><Story /></MemoryRouter>] } satisfies Meta<typeof Sample>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Reference: Story = { args: { scenario: "reference" } };

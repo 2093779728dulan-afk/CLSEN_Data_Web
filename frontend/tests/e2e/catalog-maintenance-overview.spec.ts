@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
-  test(`actual maintenance overview, prepared-state boundary, navigation and refresh at ${width}px`, async ({ page }, testInfo) => {
+  test(`actual maintenance entry, prepared-state boundary, dialog recovery and refresh at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     let initialized = true; let prepared = false;
     let release: () => void = () => undefined;
@@ -21,17 +21,33 @@ for (const width of [1280, 390]) {
       throw new Error(`Unexpected API ${path}`);
     });
     const url = "/catalog/maintenance?return_to=%2Fcatalog%2Funmatched%3Fpage%3D2";
-    await page.goto(url); await expect(page.getByRole("status").filter({ hasText: "正在读取批量维护" })).toBeVisible(); release(); gate = undefined;
-    const panel = page.getByRole("region", { name: "批量维护总览", exact: true }); await expect(panel.getByText("#104", { exact: true })).toBeVisible(); await expect(panel).toContainText("已生效 V4");
-    const generate = page.getByRole("region", { name: "目录工作簿", exact: true }).getByRole("button", { name: "生成候选", exact: true }); await expect(generate).toBeDisabled();
-    await expect(page.getByRole("region", { name: "商品分析初始化", exact: true })).toContainText("待管理员确认");
-    const products = panel.getByRole("link", { name: "查看已生效商品", exact: true }); await products.focus(); await products.press("Enter"); await expect(page).toHaveURL(/\/catalog$/); await expect(page.getByRole("heading", { name: "当前主档尚无商品", exact: true })).toBeVisible(); await page.goBack(); await expect(panel).toBeVisible();
-    await panel.getByRole("link", { name: "查看批准记录", exact: true }).click(); await expect(page.getByRole("table", { name: "已批准目录记录" })).toContainText("目录记录 #104"); await page.goBack(); await expect(page).toHaveURL(new RegExp(url.replaceAll("?", "\\?"))); await expect(generate).toBeDisabled();
-    await page.reload(); await expect(panel).toContainText("已生效 V4");
-    prepared = true; await page.getByRole("button", { name: "刷新准备状态", exact: true }).click(); await expect(generate).toBeEnabled(); await expect(panel).toContainText("已生效目录不代表新的来源资料已就绪");
-    await panel.screenshot({ path: testInfo.outputPath(`actual-overview-${width}.png`) });
-    initialized = false; prepared = false; await page.reload(); await expect(panel).toContainText("尚未初始化"); await expect(page.getByRole("region", { name: "首个目录前置", exact: true })).toContainText("先在每日核验中导入、审核并发布来源报告"); await expect(generate).toBeDisabled(); await expect(panel.getByRole("link", { name: "返回每日数据查看发布情况", exact: true })).toHaveAttribute("href", "/");
-    await page.reload(); await expect(panel).toContainText("尚未初始化"); await expect(panel.getByRole("link", { name: "查看已生效商品", exact: true })).toHaveCount(0);
-    expect(requests.filter(request => request.method !== "GET")).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.goto(url);
+    await expect(page.getByRole("status").filter({ hasText: "正在读取建档与维护" })).toBeVisible();
+    release(); gate = undefined;
+    await expect(page.getByText("当前目录 V4", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "已有审核批次", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "目录维护", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "目录维护", exact: true });
+    const generate = dialog.getByRole("button", { name: "生成候选", exact: true });
+    await expect(generate).toBeDisabled();
+    await expect(dialog.getByText("来源准备尚未完成", { exact: true })).toBeVisible();
+    await expect(dialog.getByLabel("上传已修改的目录维护工作簿")).toBeEnabled();
+    await dialog.getByRole("button", { name: "关闭对话框" }).click();
+    await expect(page).toHaveURL(new RegExp(url.replaceAll("?", "\\?")));
+    prepared = true;
+    await page.getByRole("button", { name: "目录维护", exact: true }).click();
+    await expect(generate).toBeEnabled();
+    await dialog.screenshot({ path: testInfo.outputPath(`actual-maintenance-${width}.png`) });
+    await dialog.getByRole("button", { name: "关闭对话框" }).click();
+    await page.reload();
+    await expect(page.getByText("当前目录 V4", { exact: true })).toBeVisible();
+    initialized = false; prepared = false;
+    await page.reload();
+    await expect(page.getByText("尚未建立目录", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "目录维护", exact: true }).click();
+    await expect(generate).toBeDisabled();
+    await expect(dialog.getByLabel("上传已修改的目录维护工作簿")).toBeEnabled();
+    expect(requests.filter(request => request.method !== "GET")).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }

@@ -40,6 +40,7 @@ async function install(page: Page, role: "viewer" | "data_manager" = "viewer") {
       data.reconciliation.mapped_totals = { ...detail.style_reconciliation.summary_totals };
       return route.fulfill({ json: data });
     }
+    if (path === "/api/catalog/production-sources/capabilities") return route.fulfill({ json: { scopes: [] } });
     if (path === "/api/catalog/styles") return route.fulfill({ json: { catalog: { catalog_publication_revision: 7, catalog_version_id: 7, version_number: 7, skus: [], styles } } });
     const style = path.match(/^\/api\/catalog\/styles\/(7\d\d)$/);
     if (style) return route.fulfill({ json: { style: styles.find(item => item.style_id === Number(style[1])), skus: [], catalog_version_id: 7, permissions: { can_edit: false, can_manage_categories: false } } });

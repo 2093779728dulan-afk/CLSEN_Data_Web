@@ -33,7 +33,7 @@ for (const width of [1280, 390]) test(`actual advanced date retry, draft URL, re
   await expect(page).toHaveURL(/report_type=return_report&version_id=62/); await expect(returns).toHaveAttribute("aria-pressed", "true"); await expect.poll(() => fixture.draftIds.includes(62)).toBe(true);
   await page.reload(); await expect(page.getByRole("group", { name: "选择待审核报表", exact: true }).getByRole("button", { name: "退货报告 · 草稿 v3", exact: true })).toHaveAttribute("aria-pressed", "true");
   const day11 = page.getByRole("button", { name: "选择 8 月 11 日，部分发布：仅一类报表已发布", exact: true }); await day11.focus(); await day11.press("Enter");
-  await expect(page).toHaveURL(/review-advanced\/2026-08-11/); await expect(day11).toHaveAttribute("aria-current", "date"); await expect(page.getByRole("heading", { name: "批量文件逐份识别，再进入各自工作日", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/review-advanced\/2026-08-11/); await expect(day11).toHaveAttribute("aria-current", "date"); await expect(page.getByRole("heading", { name: "选择报表文件", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "返回日期表格", exact: true })).toHaveAttribute("href", /\/review\/2026-08-11\?report_type=business_report/);
   expect(fixture.calendarQueries.every(q => q.includes("from=2026-08-01&to=2026-08-31"))).toBe(true);
   await page.goto("/review-advanced/2026-08-10?batch_id=11"); await expect(page.getByRole("heading", { name: "从指定文件重新审核", exact: true })).toBeVisible();

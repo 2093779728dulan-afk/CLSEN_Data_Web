@@ -412,7 +412,7 @@ describe("independent stock workflows", () => {
     const original = api.read.getMockImplementation()!;
     api.read.mockImplementation((path, options) => path.split("?")[0] === "/api/production/inventory/availability" ? Promise.resolve({ items: [{ ...balance, on_hand_units: "0", free_available_units: "0" }, { ...balance, sku_id: "1002", style_code: "QA-1102", display_sku: "DEMO-RED-L", standard_color: "Red", standard_size: "L", state: "not_ready", on_hand_units: null, free_available_units: null, opening_metadata: { review_id: "7fa34135-5e2a-4dbc-94fa-c08427b13966" } }], scopes: [{ warehouse_id: "1", warehouse_name: "虚构库存仓1", owner_id:"1", owner_name:"自有" }], writes_enabled: false }) : original(path, options));
     mount("/production/stock"); await userEvent.click(await screen.findByRole("button",{name:"更多"})); await userEvent.click(screen.getByRole("menuitem",{name:"查看库存汇总"}));
-    const summary = await screen.findByRole("region", { name: "全范围库存与运输汇总" });
+    const summary = await screen.findByRole("region", { name: "展示范围库存与整批运输汇总" });
     expect(within(summary).getAllByText("待核").length).toBeGreaterThan(0);await openTools();
     const table = screen.getByRole("table", { name: "原始库存记录" });
     expect(within(table).getByRole("button", { name: "查看QA-1101 Blue M库存明细" }).closest("tr")).toHaveTextContent("0 / 0");
@@ -464,7 +464,7 @@ describe("independent stock workflows", () => {
       { ...balance, sku_id: "900000000209", sku_label: "待核商品 · 2205 Black / L", style_code: "2205", display_sku: "正式SKU待补", standard_color: "Black", standard_size: "L", identity_status: "pending", state: "not_ready", on_hand_units: "3", free_available_units: null, missing: "历史库存已保留，但尚未与当前服务器商品目录建立唯一对应；当前禁止发货或继续过账。" },
     ], scopes: [{ warehouse_id: "1", warehouse_name: "花都仓库1号" }], writes_enabled: true }) : original(path, options));
     mount("/production/stock"); await userEvent.click(await screen.findByRole("button",{name:"更多"})); await userEvent.click(screen.getByRole("menuitem",{name:"查看库存汇总"}));
-    const summary = await screen.findByRole("region", { name: "全范围库存与运输汇总" });
+    const summary = await screen.findByRole("region", { name: "展示范围库存与整批运输汇总" });
     expect(within(summary).getByText("16")).toBeInTheDocument();
     expect(within(summary).getByText("13")).toBeInTheDocument();await openTools();
     await userEvent.click(screen.getByRole("button", { name: "查看2205 Black L库存明细" }));
@@ -614,7 +614,7 @@ describe("independent stock workflows", () => {
     mount("/production/stock", false); await openTools(); await screen.findByRole("table", { name: "原始库存记录" });
     const detailButton=within(screen.getByRole("table", { name: "原始库存记录" })).getByRole("button",{name:"查看QA-1101 Blue M库存明细"}); expect(detailButton.closest("tr")).toHaveTextContent("3 / 3"); await userEvent.click(detailButton); expect(screen.getByRole("region",{name:"库存明细"})).toHaveTextContent("借出未还7 件"); await userEvent.click(screen.getByRole("button",{name:"返回记录"}));
     expect(screen.queryByRole("link", { name: "登记虚构期初" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "确认占用" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button",{name:"更多"})); await userEvent.click(screen.getByRole("menuitem",{name:"预计库存"})); await screen.findByText("10"); expect(screen.getByText(/预计量不能放行现在的发货/)).toBeInTheDocument(); expect(api.write).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button",{name:"更多"})); await userEvent.click(screen.getByRole("menuitem",{name:"预计库存"})); await screen.findByText("10"); expect(screen.queryByRole("link", { name: "登记实际入库" })).not.toBeInTheDocument(); expect(api.write).not.toHaveBeenCalled();
   });
   it("previews before confirmation and refreshes the saved document", async () => {
     const user = userEvent.setup(); let saved = false;
@@ -658,10 +658,12 @@ describe("independent stock workflows", () => {
     await user.selectOptions(screen.getByLabelText("操作人员"), "1"); await user.click(screen.getByRole("button", { name: "查询用户操作" })); await waitFor(() => expect(api.read).toHaveBeenCalledWith("/api/production/inventory/history?actor_id=1", expect.anything()));
   });
   it("does not convert missing quality counts to zero and previews opening before confirmation", async () => {
-    const user = userEvent.setup(); mount("/production/stock/opening"); await screen.findByLabelText("虚构蓝色 M合格期初件数");
-    fireEvent.change(screen.getByLabelText("明确盘点截止日期"), { target: { value: "2026-10-01" } }); await user.type(screen.getByLabelText("虚构来源编号（以FICTIONAL开头）"), "FICTIONAL-OPEN-UI"); await user.type(screen.getByLabelText("期初依据"), "独立虚构期初"); await user.type(screen.getByLabelText("虚构蓝色 M合格期初件数"), "10");
-    await user.click(screen.getByRole("button", { name: "预览虚构期初" })); await screen.findByText(/选中的SKU需分别明确/); expect(api.write).not.toHaveBeenCalled();
-    await user.type(screen.getByLabelText("虚构蓝色 M待检期初件数"), "0"); await user.type(screen.getByLabelText("虚构蓝色 M次品期初件数"), "0"); api.write.mockResolvedValueOnce({ posting_enabled: true, lines: [] }); await user.click(screen.getByRole("button", { name: "预览虚构期初" })); await screen.findByRole("button", { name: "确认虚构期初" });
+    const original = api.read.getMockImplementation()!;
+    api.read.mockImplementation((path, options) => path.split("?")[0] === "/api/production/inventory/availability" ? Promise.resolve({ items: [], scopes: [], opening_enabled: true, writes_enabled: true }) : original(path, options));
+    const user = userEvent.setup(); mount("/production/stock/opening"); await screen.findByLabelText("DEMO-BLUE-M合格期初");
+    fireEvent.change(screen.getByLabelText(/^期初截止日期/), { target: { value: "2026-10-01" } }); await user.type(screen.getByLabelText(/^来源编号/), "FICTIONAL-OPEN-UI"); await user.type(screen.getByLabelText(/^期初依据/), "独立虚构期初"); await user.type(screen.getByLabelText("DEMO-BLUE-M合格期初"), "10");
+    await user.click(screen.getByRole("button", { name: "预览期初库存" })); await screen.findByText(/请明确填写所选SKU的三类数量/); expect(api.write).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("DEMO-BLUE-M待检期初"), "0"); await user.type(screen.getByLabelText("DEMO-BLUE-M次品期初"), "0"); api.write.mockResolvedValueOnce({ posting_enabled: true, lines: [] }); await user.click(screen.getByRole("button", { name: "预览期初库存" })); await screen.findByRole("button", { name: "确认期初库存" });
     expect(api.write.mock.calls[0]?.[0]).toBe("/api/production/inventory/openings/preview"); expect(api.write.mock.calls[0]?.[1].body.lines).toEqual([{ sku_id: "1001", quality: "QUALIFIED", units: "10" }, { sku_id: "1001", quality: "PENDING", units: "0" }, { sku_id: "1001", quality: "DEFECTIVE", units: "0" }]);
   });
   it("can cancel only part of a plan and retains the original plan identity", async () => {
@@ -718,8 +720,10 @@ describe("independent stock workflows", () => {
     expect(api.write).not.toHaveBeenCalled();
   });
   it("warns after entering only an opening basis", async () => {
+    const original = api.read.getMockImplementation()!;
+    api.read.mockImplementation((path, options) => path.split("?")[0] === "/api/production/inventory/availability" ? Promise.resolve({ items: [], scopes: [], opening_enabled: true, writes_enabled: true }) : original(path, options));
     const router = mount("/production/stock/opening");
-    await userEvent.type(await screen.findByLabelText("期初依据"), "虚构期初待核");
+    await userEvent.type(await screen.findByLabelText(/^期初依据/), "虚构期初待核");
     await act(async () => { await router.navigate("/production/stock"); });
     expect(await screen.findByText("还有未保存的内容")).toBeInTheDocument();
     expect(api.write).not.toHaveBeenCalled();

@@ -51,7 +51,7 @@ test("actual published day rejects unsafe return destinations and invalid dates;
   const { state, requests } = await install(page); state.empty = true;
   await page.goto("/published-details/2026-09-12?return_to=" + encodeURIComponent("https://example.com/"));
   await expect(page.getByText("这个日期没有发布数据", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "返回发布明细", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "返回发布明细", exact: true })).toHaveAttribute("href", "/ledger/published-details");
   const before = requests.filter(path => path.startsWith("/api/dashboard/daily-ledger")).length;
   await page.goto("/published-details/2026-02-31");
   await expect(page.getByRole("alert")).toContainText("报告日期格式无效");

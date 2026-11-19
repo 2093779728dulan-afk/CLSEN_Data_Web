@@ -9,8 +9,8 @@ it("restores focus lost to disabled controls after a successful refresh", async 
   const { rerender } = render(view(false));
   const button = screen.getByRole("button", { name: "刷新" });
   await userEvent.click(button); rerender(view(true));
-  expect(button).toBeDisabled();
-  button.blur(); // Emulate the native browser blur missing from JSDOM's disabled fieldset.
+  expect(button.closest("[inert]")).toHaveAttribute("aria-disabled", "true");
+  button.blur(); // Emulate the native browser blur missing from JSDOM's inert container.
   rerender(view(false)); expect(button).toHaveFocus();
 });
 it("does not steal focus moved to another region while reading", async () => {

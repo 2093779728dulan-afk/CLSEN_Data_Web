@@ -83,14 +83,14 @@ for (const status of [403, 404, 422, 429]) {
 }
 
 for (const width of [1280, 390]) {
-  test(`actual partial candidate failure retains source evidence and query at ${width}px`, async ({ page }) => {
+  test(`actual unmatched view keeps source evidence independent from approved-style candidate reads at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); const f = await fixture(page, 503, false, true);
     const path = "/catalog/unmatched?from=2026-09-01&to=2026-09-30&return_basis=event_date";
     await page.goto(path);
-    await expect(page.getByRole("alert")).toContainText("无法读取已有审核候选");
+    await expect(page.getByRole("region", { name: "来源清单" })).toBeVisible();
+    expect(f.requests).not.toContain("/api/catalog/styles");
     await expect(page.getByText("DEMO-Light-Blue-XL", { exact: true })).toBeVisible();
-    f.recover(); await page.getByRole("button", { name: "重新读取", exact: true }).click();
-    await expect(page.getByText("当前没有关联到已生效商品的审核候选。", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "已有审核候选" })).toHaveCount(0);
     await expect(page.getByText("DEMO-Light-Blue-XL", { exact: true })).toBeVisible();
     await expect(page).toHaveURL(new RegExp(path.replaceAll("?", "\\?")));
     await page.reload(); await expect(page.getByText("DEMO-Light-Blue-XL", { exact: true })).toBeVisible();

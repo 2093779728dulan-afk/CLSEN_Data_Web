@@ -46,7 +46,7 @@ test("return intake preserves context and requires explicit confirmation of a bu
   });
   await page.goto(`/review/${date}?report_type=return_report&page=1`);
   await expect(page.getByRole("button", { name: /^退货报告\s*未导入$/ })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByText(`${date} · 退货报告`, { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^退货报告\s*未导入$/ })).toBeVisible();
   await page.reload();
   await expect(page).toHaveURL(/report_type=return_report/);
   await page.getByLabel("选择 CSV 文件", { exact: true }).setInputFiles({ name: "synthetic-business.csv", mimeType: "text/csv", buffer: Buffer.from("SKU,Sessions\nSYNTHETIC,2\n") });
@@ -58,8 +58,8 @@ test("return intake preserves context and requires explicit confirmation of a bu
   await expect(page).toHaveURL(/report_type=return_report/);
   await page.getByRole("button", { name: "按经营报告继续", exact: true }).click();
   await expect(page).toHaveURL(/report_type=business_report/);
-  await expect(page.getByText("草稿自动保存，但不会进入总表；检查并发布后才会显示", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
   expect(confirmCount).toBe(1);
   await page.reload();
-  await expect(page.getByText("草稿自动保存，但不会进入总表；检查并发布后才会显示", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
 });

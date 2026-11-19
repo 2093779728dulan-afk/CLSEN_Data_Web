@@ -13,6 +13,7 @@ async function fixture(page: Page, mode: "normal" | "failure" | "uninitialized" 
     if (path === "/api/auth/me") return route.fulfill({ json: { id: 77, username: "synthetic-catalog-reader", display_name: "示例目录账号", roles: [mode === "viewer" ? "viewer" : "data_manager"] } });
     if (path === "/api/data-calendar/site-context") return route.fulfill({ json: { site_id: 1, site_code: "US", display_name: "示例站点", site_config_version_id: 2, source_timezone: "UTC", reporting_timezone: "UTC", currency_code: "USD" } });
     if (path === "/api/dashboard/style-readiness") return route.fulfill({ json: { prerequisites_present: false, catalog_approved: mode !== "uninitialized", published_reports: 0 } });
+    if (path === "/api/catalog/production-sources/capabilities") return route.fulfill({ json: { scopes: [] } });
     if (path === "/api/catalog/source-scope") return route.fulfill({ json: { status: "unconfirmed", permissions: { can_confirm: false }, site_config_revision: 1 } });
     if (path === "/api/catalog/versions") return route.fulfill({ json: { versions: [] } });
     if (path === "/api/catalog/styles") {

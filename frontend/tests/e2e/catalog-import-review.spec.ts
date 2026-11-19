@@ -30,7 +30,7 @@ async function fixture(page: Page, baseURL: string, mode: "normal" | "save-failu
     }
     if (path === "/api/catalog/imports/42") {
       if (failRead) { failRead = false; return route.fulfill({ status: 503, json: { error: { code: "UNAVAILABLE", message: "示例明细暂不可用。" } } }); }
-      return route.fulfill({ json: { issues: mode === "issues" && revision === 1 ? [{ section: "styles", row_key: "demo-style-2", field: "/standard_name", severity: "error", reason_code: "required" }] : [], import_id: 42, base_catalog_version_id: null, catalog_publication_revision: 0, export_id: 1, failure_reason_code: null, has_original_file: false, parse_attempt_revision: 1, source_kind: "online", status: "needs_attention", submitted_by_user_id: null, validation_run_id: null, workflow_revision: revision,
+      return route.fulfill({ json: { issues: mode === "issues" && revision === 1 ? [{ section: "styles", row_key: "demo-style-2", field: "/standard_name", severity: "error", reason_code: "required" }] : [], import_id: 42, base_catalog_version_id: null, catalog_publication_revision: 0, export_id: 1, failure_reason_code: null, has_original_file: false, parse_attempt_revision: 1, source_kind: "online", status: "needs_attention", submitted_by_user_id: null, validation_run_id: revision, workflow_revision: revision,
         permissions: { can_view: true, can_edit: mode !== "readonly", can_validate: mode !== "readonly", can_submit: false, can_preview: false, can_approve_normal: false, can_approve_high_risk: false, can_reject: false, can_withdraw: false, can_resume: false, can_rebase: mode === "global-style", can_download_original: false } } });
     }
     if (path.includes("/rows/")) return route.fulfill({ json: { rows: path.endsWith("/styles") ? rows : [], total_rows: path.endsWith("/styles") ? rows.length : 0, workflow_revision: revision } });
@@ -38,7 +38,11 @@ async function fixture(page: Page, baseURL: string, mode: "normal" | "save-failu
   });
   await page.goto("/catalog/imports/42");
   if (mode === "readonly") await expect(page).toHaveURL(/\/catalog$/);
-  else await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
+  else {
+    await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: /^款式命名/ }).click();
+    await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
+  }
   return commands;
 }
 
@@ -46,14 +50,14 @@ test("routed review preserves filtered and cross-tab drafts and saves one revisi
   const commands = await fixture(page, baseURL!);
   await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("示例衬衫");
   await page.getByLabel("demo-style-2 standard_name", { exact: true }).fill("示例外套");
-  await expect(page.getByRole("button", { name: "重新校验", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "重新校验", exact: true })).toHaveCount(0);
   await page.getByRole("searchbox", { name: "搜索当前审核项" }).fill("DEMO-01");
   await page.getByRole("tab", { name: /^SKU 标准化/ }).click();
   await page.getByRole("tab", { name: /^款式命名/ }).click();
   await expect(page.getByLabel("demo-style-1 standard_name", { exact: true })).toHaveValue("示例衬衫");
   await page.getByText("核对本次修改 · 2 行（含筛选隐藏的修改）").click();
   await expect(page.locator("details[open] ins").filter({ hasText: "示例外套" })).toBeVisible();
-  await page.getByRole("button", { name: "保存当前分类修改（2行）", exact: true }).click();
+  await page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（2行）", exact: true }).click();
   await expect(page.getByText("已保存 2 行草稿。目录尚未批准生效。", { exact: true })).toBeVisible();
   expect(commands).toHaveLength(1);
   const command = commands[0];
@@ -64,7 +68,7 @@ test("routed review preserves filtered and cross-tab drafts and saves one revisi
   await expect(page.getByRole("searchbox", { name: "搜索当前审核项" })).toHaveValue("DEMO-01");
   await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
   await expect(page.getByLabel("demo-style-1 standard_name", { exact: true })).toHaveValue("示例衬衫");
-  await expect(page.getByRole("button", { name: "重新校验", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "重新校验", exact: true })).toHaveCount(0);
   await page.reload();
   await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
   await expect(page.getByLabel("demo-style-2 standard_name", { exact: true })).toHaveValue("示例外套");
@@ -74,14 +78,14 @@ test("failed batch preserves edits and only retries after an explicit user actio
   const commands = await fixture(page, baseURL!, "save-failure");
   await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("失败后保留的示例名称");
   await page.getByRole("searchbox", { name: "搜索当前审核项" }).fill("没有匹配项");
-  await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+  await page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
   await expect(page.getByText(/编辑内容已保留/)).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: "已保存，已移到" })).toHaveCount(0);
   await page.getByRole("button", { name: "返回修改行" }).click();
   await expect(page.getByLabel("demo-style-1 style_code", { exact: true })).toBeFocused();
   await expect(page.getByLabel("demo-style-1 standard_name", { exact: true })).toHaveValue("失败后保留的示例名称");
   expect(commands).toHaveLength(1);
-  await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+  await page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
   await expect(page.getByText("已保存 1 行草稿。目录尚未批准生效。", { exact: true })).toBeVisible();
   expect(commands).toHaveLength(2);
 });
@@ -92,8 +96,8 @@ test("single-row save keeps another row's unsaved edit through projection refres
   await page.getByLabel("demo-style-2 standard_name", { exact: true }).fill("尚未保存示例");
   await page.getByRole("button", { name: "保存此行", exact: true }).first().click();
   await expect(page.getByLabel("demo-style-2 standard_name", { exact: true })).toHaveValue("尚未保存示例");
-  await expect(page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+  await expect(page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true })).toBeEnabled();
+  await page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
   await expect(page.getByText("已保存 1 行草稿。目录尚未批准生效。", { exact: true })).toBeVisible();
   expect(commands.map(command => command.expected_workflow_revision)).toEqual([1, 2]);
 });
@@ -101,7 +105,7 @@ test("single-row save keeps another row's unsaved edit through projection refres
 test("acknowledged save with failed read blocks writes until a read-only recovery", async ({ page, baseURL }) => {
   const commands = await fixture(page, baseURL!, "refresh-failure");
   await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("已经写入的示例");
-  await page.getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
+  await page.getByLabel("审核固定操作", { exact: true }).getByRole("button", { name: "保存当前分类修改（1行）", exact: true }).click();
   await expect(page.getByText(/草稿已保存，但最新明细读取失败/)).toBeVisible();
   await expect(page.getByRole("button", { name: "保存此行", exact: true }).first()).toBeDisabled();
   await page.getByRole("button", { name: "重新读取草稿", exact: true }).click();
@@ -138,18 +142,19 @@ for (const width of [1280, 390]) {
     await first.focus();
     await first.press("Control+Enter");
     await expect(page.getByText("已保存 1 行草稿。目录尚未批准生效。", { exact: true })).toBeVisible();
-    await expect(second).toBeFocused();
+    await expect(first).toBeFocused();
     expect(commands).toHaveLength(1);
     await second.fill("连续完成的名称");
     await second.press("Control+Enter");
-    await expect(page.getByText("当前分类已没有待处理项，或搜索条件没有匹配。")).toBeVisible();
-    await expect(page.getByRole("region", { name: "当前分类编辑区", exact: true }).filter({ visible: true })).toBeFocused();
+    await expect(second).toBeFocused();
+    await expect(second).toHaveValue("连续完成的名称");
     expect(commands).toHaveLength(2);
     await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
     await expect(first).toHaveValue("最终保留的名称");
     await expect(second).toHaveValue("连续完成的名称");
     await page.screenshot({ path: testInfo.outputPath(`continuous-${width}.png`), fullPage: true });
     await page.reload();
+    await page.getByRole("tab", { name: /^款式命名/ }).click();
     await page.getByRole("checkbox", { name: "仅看待处理" }).uncheck();
     await expect(second).toHaveValue("连续完成的名称");
   });
