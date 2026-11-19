@@ -302,6 +302,7 @@ describe("unified production workbench", () => {
     const preview = { preview_id:"qa-preview",filename:"fictional.xlsx",rows:[{sku_id:"1001",sku_label:"QA-Blue-M",expected_units:"12"}],issues:[],command:{business_number:"QA-TABLE",business_date:"2026-10-23",source_system:"SIM",external_event_id:"EV-1",source_event_kind:"ORDER",_source_digest:"a".repeat(64)},source_check:{candidates:[]} };
     api.write.mockImplementation(path=>Promise.resolve(path.includes("/preview?")?preview:{...order,status:"DRAFT"}));
     mount("/production/orders/10?new=1");
+    await screen.findByRole("option", { name: "青禾示例厂" });
     await userEvent.selectOptions(await screen.findByLabelText(/生产工厂（一单一家）/),"3");
     await userEvent.selectOptions(screen.getByLabelText(/生产完成后入库仓库/),"900:1");
     await userEvent.upload(screen.getByLabelText(/下单XLSX文件/),new File(["fictional"],"fictional.xlsx"));
@@ -1015,6 +1016,7 @@ describe("same-page order creation and streamlined search",()=>{
   it("retains a selected import file behind the close guard on a direct new-order link",async()=>{
     const router=mount("/production/orders/new?method=table&factory=3");
     const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    await screen.findByRole("option", { name: "虚构仓900" });
     await userEvent.selectOptions(await screen.findByLabelText(/生产完成后入库仓库/),"900:1");
     api.write.mockResolvedValue({issues:[{row:2,message:"样例错误"}],rows:[],command:{},filename:"qa.xlsx"});
     const file=new File(["fictional"],"qa.xlsx");

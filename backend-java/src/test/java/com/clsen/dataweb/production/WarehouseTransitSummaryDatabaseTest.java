@@ -3,6 +3,7 @@ package com.clsen.dataweb.production;
 import static org.junit.jupiter.api.Assertions.*;
 import java.time.Instant;
 import java.util.*;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
@@ -35,6 +36,7 @@ class WarehouseTransitSummaryDatabaseTest {
     }
     @Test void fullSummaryCountsEachSourceOnceBeyondWarehousePageAndKeepsUnknownAndSiteBoundaries() throws Exception {
         String url=System.getenv("FBA_TEST_JDBC_URL");assertNotNull(url);assertTrue(url.startsWith("jdbc:mysql://127.0.0.1:"));assertTrue(url.contains("/clsen_fba_contract?"));
+        Flyway.configure().dataSource(url,System.getenv("FBA_TEST_MIGRATION_USER"),System.getenv("FBA_TEST_MIGRATION_PASSWORD")).load().migrate();
         db=new JdbcTemplate(new SingleConnectionDataSource(url,System.getenv("FBA_TEST_RUNTIME_USER"),System.getenv("FBA_TEST_RUNTIME_PASSWORD"),true));
         assertEquals("20",db.queryForObject("SELECT version FROM flyway_schema_history WHERE success=TRUE ORDER BY installed_rank DESC LIMIT 1",String.class));
         for(int i=0;i<25;i++)leg(site,1001,2,true,"CONFIRMED",1,0,"DISPATCHED");

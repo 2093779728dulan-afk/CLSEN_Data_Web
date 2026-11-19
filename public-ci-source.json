@@ -2,8 +2,8 @@
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
-  "source_sha": "2eb7dda03eb5a79739c6ac8da4d98a6a83c71ba0",
-  "source_tree": "0d624fbaa8a156ef838f0809897c724b069f9650",
+  "source_sha": "6fd609cc44dd1d5ab43971fd18595df2be317611",
+  "source_tree": "4c43c9d9d64088c5ef050b0aa8a30f6a81b9332d",
   "history_exported": false,
   "files": [
     {
@@ -304,7 +304,7 @@
     },
     {
       "path": "backend-java/src/test/java/com/clsen/dataweb/production/WarehouseTransitSummaryDatabaseTest.java",
-      "git_blob": "a4d947b2ab15758be825673790194ac3a909f575"
+      "git_blob": "e65d122645021b8415e764512394b6461822fc0e"
     },
     {
       "path": "backend/Dockerfile",
@@ -1840,7 +1840,7 @@
     },
     {
       "path": "backend/tests/integration/test_schema_compatibility.py",
-      "git_blob": "88dca1c74462625753cab04ba7ac204d7edda9e7"
+      "git_blob": "824b9e4c6637f9ad60a776e0a66eed89b7fecbca"
     },
     {
       "path": "backend/tests/integration/test_schema_startup_processes.py",
@@ -4696,7 +4696,7 @@
     },
     {
       "path": "frontend/src/features/production/OrderWorkbench.test.tsx",
-      "git_blob": "7b16ca31bfcf993ab53eca0600374390c53636a1"
+      "git_blob": "6418b4918b4a58619a29ce827e2044e3085ab5cf"
     },
     {
       "path": "frontend/src/features/production/OrderWorkbench.tsx",
@@ -5856,7 +5856,7 @@
     },
     {
       "path": "frontend/tests/e2e/product-analytics-cutover.spec.ts",
-      "git_blob": "c2f2659ecbb7b9a108a523af27cb4b09f00c20e7"
+      "git_blob": "84fc1908ca5260bd20aeeeb7d67a018533526c3c"
     },
     {
       "path": "frontend/tests/e2e/product-detail-ui.spec.ts",

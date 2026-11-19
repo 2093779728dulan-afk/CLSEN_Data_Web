@@ -19,6 +19,7 @@ from sqlalchemy.engine import Engine
 
 pytestmark = pytest.mark.mysql
 
+_FUTURE_SCHEMA_REVISION = f"{int(CURRENT_SCHEMA_REVISION) + 1:04d}"
 _VERSION_TABLE = "alembic_version"
 _SAVED_VERSION_TABLE = "alembic_version_stage1_saved"
 
@@ -155,7 +156,11 @@ def test_missing_mysql_version_table_refuses(schema_case: _SchemaCase) -> None:
             None,
         ),
         (("0021",), SchemaCompatibilityCode.REVISION_OLDER, "0021"),
-        (("0031",), SchemaCompatibilityCode.REVISION_NEWER, "0031"),
+        (
+            (_FUTURE_SCHEMA_REVISION,),
+            SchemaCompatibilityCode.REVISION_NEWER,
+            _FUTURE_SCHEMA_REVISION,
+        ),
         (("branch-head",), SchemaCompatibilityCode.REVISION_UNKNOWN, "branch-head"),
     ),
     ids=("zero", "multiple", "older", "newer", "unknown"),
