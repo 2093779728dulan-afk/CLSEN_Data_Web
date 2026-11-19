@@ -12,7 +12,9 @@ import {
   test,
 } from "./catalogLiveFixtures";
 
-type ImportDetail = { status: string; workflow_revision: number };
+type ImportDetail = { status: string; workflow_revision: number; validation_run_id: number | null };
+type ValidationResult = { blocking_issue_count?: number; status?: string; workflow_revision?: number };
+type ValidationEnvelope = ValidationResult & { safe_result?: ValidationResult };
 type CatalogSection = "styles" | "skus" | "mappings" | "exceptions" | "evidence";
 type CurrentCatalog = {
   catalog: null | {
@@ -42,10 +44,12 @@ async function saveRow(page: Page, row: Locator) {
   ));
   const reloadPromise = page.waitForResponse((response) => (
     response.request().method() === "GET"
+      && response.ok()
       && /\/api\/catalog\/imports\/\d+$/.test(new URL(response.url()).pathname)
   ));
   const rowsReloadPromise = page.waitForResponse((response) => (
     response.request().method() === "GET"
+      && response.ok()
       && /\/api\/catalog\/imports\/\d+\/rows\/(styles|skus|mappings|exceptions|evidence)$/.test(
         new URL(response.url()).pathname,
       )
@@ -63,7 +67,9 @@ async function saveRow(page: Page, row: Locator) {
   expect(response.ok(), diagnostic).toBeTruthy();
   expect((await reloadPromise).ok()).toBeTruthy();
   expect((await rowsReloadPromise).ok()).toBeTruthy();
-  await expect(row.getByRole("button", { name: "保存此行" })).toBeEnabled();
+  await expect(row.getByRole("status")).toHaveText("已保存");
+  await expect(page.getByRole("tabpanel")
+    .getByText("已保存 1 行草稿。目录尚未批准生效。", { exact: true })).toBeVisible();
 }
 
 async function selectSection(page: Page, section: CatalogSection) {
@@ -107,7 +113,7 @@ async function assertRequiredDraftFields(page: Page, importId: number) {
   const detail = await detailResponse.json() as ImportDetail;
   const requirements: Record<string, readonly string[]> = {
     mappings: ["identity_decision"],
-    skus: ["internal_display_sku", "standard_color", "standard_size"],
+    skus: ["internal_display_sku", "code_status", "code_evidence", "standard_color", "standard_size"],
     styles: ["standard_name"],
   };
   const missing: string[] = [];
@@ -139,8 +145,9 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
 
   await page.goto("/catalog");
   await expect(page.getByRole("heading", { name: "商品主档尚未初始化" })).toBeVisible();
-  await page.getByRole("link", { name: "进入批量维护" }).click();
-  await expect(page.getByRole("heading", { name: "批量维护" })).toBeVisible();
+  await page.getByRole("link", { name: "开始初始化商品主档" }).click();
+  await expect(page.getByRole("heading", { name: "建档与维护", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "目录维护", exact: true }).click();
   const exportResponsePromise = page.waitForResponse((response) => (
     response.request().method() === "POST"
       && response.url().endsWith("/api/catalog/exports")
@@ -172,7 +179,7 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
     }
     return `${status.export_status}:${status.workbook_status}`;
   }, { timeout: 45_000 }).toBe("ready:ready");
-  const downloadLink = page.getByRole("link", { name: "下载兼容 XLSX" });
+  const downloadLink = page.getByRole("link", { name: "下载目录维护工作簿" });
   await expect(downloadLink).toBeVisible({ timeout: 45_000 });
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -182,11 +189,28 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   await download.saveAs(downloadedPath);
   const downloadSha256 = await sha256File(downloadedPath);
 
-  await page.getByRole("button", { name: "开始在线审核" }).click();
-  await page.waitForURL(/\/catalog\/imports\/\d+$/);
-  const onlineImportId = Number(page.url().match(/\/imports\/(\d+)$/)?.[1]);
+  const onlineResponsePromise = page.waitForResponse(response => (
+    response.request().method() === "POST"
+      && new URL(response.url()).pathname === "/api/catalog/imports/from-export"
+  )).then(async response => ({ ok: response.ok(), body: await response.json() as { import_id: number } }));
+  const [onlineResponse] = await Promise.all([
+    onlineResponsePromise,
+    page.getByRole("button", { name: "开始在线审核" }).click(),
+  ]);
+  expect(onlineResponse.ok).toBeTruthy();
+  const onlineImportId = onlineResponse.body.import_id;
   expect(onlineImportId).toBeGreaterThan(0);
+  await expect(page).toHaveURL(/\/catalog\/maintenance$/);
+  await expect(page.getByRole("dialog", { name: "目录维护", exact: true })
+    .getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
 
+  // Initial automatic validation advances the revision before editing starts.
+  await expect.poll(async () => {
+    const response = await page.request.get(`/api/catalog/imports/${onlineImportId}`);
+    expect(response.ok()).toBeTruthy();
+    const detail = await response.json() as ImportDetail;
+    return typeof detail.validation_run_id;
+  }).toBe("number");
   const importResponse = await page.request.get(`/api/catalog/imports/${onlineImportId}`);
   const importDetail = await importResponse.json() as ImportDetail;
   const styleRowsResponse = await page.request.get(
@@ -198,11 +222,11 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
     JSON.stringify({ importStatus: importDetail.status, styleRowCount: styleRowsPayload.rows.length }),
   ).toBeGreaterThan(0);
 
-  const styleRows = reviewRows(page);
-  await expect(styleRows.first()).toBeVisible({ timeout: 15_000 });
   const onlyPending = page.getByRole("checkbox", { name: "仅看待处理" });
   await expect(onlyPending).toBeChecked();
   await onlyPending.uncheck();
+  await selectSection(page, "styles");
+  const styleRows = reviewRows(page);
   await expect(styleRows).toHaveCount(2);
   for (let index = 0; index < await styleRows.count(); index += 1) {
     const row = styleRows.nth(index);
@@ -219,9 +243,11 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   await expect(skuRows).toHaveCount(11);
   for (let index = 0; index < await skuRows.count(); index += 1) {
     const row = skuRows.nth(index);
-    await setReviewField(row, "internal_display_sku", `LIVE-DISPLAY-${index + 1}`);
     await setReviewField(row, "standard_color", `Live Color ${index + 1}`);
     await setReviewField(row, "standard_size", `Live Size ${index + 1}`);
+    await setReviewField(row, "internal_display_sku", `LIVE-DISPLAY-${index + 1}`);
+    await setReviewField(row, "code_status", "confirmed");
+    await setReviewField(row, "code_evidence", "Synthetic formal SKU confirmed for live acceptance");
     await saveRow(page, row);
   }
 
@@ -261,6 +287,21 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   expect(correctedAnomaly).toBeTruthy();
   expect(excludedCandidate).toBeTruthy();
 
+  // The current review automatically validates and prepares approval after saving.
+  // Observe the successful final validation before the last correction is saved.
+  let lastValidation: ValidationResult | undefined;
+  const validateResponsePromise = page.waitForResponse(async response => {
+    if (response.request().method() !== "POST" || !response.ok()
+      || new URL(response.url()).pathname !== `/api/catalog/imports/${onlineImportId}/validate`) return false;
+    const envelope = await response.json() as ValidationEnvelope;
+    lastValidation = envelope.safe_result ?? envelope;
+    return (envelope.safe_result ?? envelope).blocking_issue_count === 0;
+  }, { timeout: 45_000 }).catch(async (cause: unknown) => {
+    const response = await page.request.get(`/api/catalog/imports/${onlineImportId}`);
+    const detail = await response.json() as ImportDetail & { issues: unknown[] };
+    throw new Error(JSON.stringify({ validation: lastValidation, status: detail.status,
+      workflow_revision: detail.workflow_revision, issues: detail.issues }), { cause });
+  });
   await selectSection(page, "exceptions");
   const exceptionRows = reviewRows(page);
   expect(await exceptionRows.count()).toBeGreaterThanOrEqual(2);
@@ -278,24 +319,8 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
     await saveRow(page, excluded);
   }
 
-  await assertRequiredDraftFields(page, onlineImportId);
-
-  const validateResponsePromise = page.waitForResponse((response) => (
-    response.request().method() === "POST"
-      && response.url().endsWith(`/api/catalog/imports/${onlineImportId}/validate`)
-  ));
-  await page.getByRole("button", { name: "重新校验" }).click();
   const validateResponse = await validateResponsePromise;
-  const validateEnvelope = await validateResponse.json() as {
-    safe_result?: {
-      blocking_issue_count?: number;
-      status?: string;
-      workflow_revision?: number;
-    };
-    blocking_issue_count?: number;
-    status?: string;
-    workflow_revision?: number;
-  };
+  const validateEnvelope = await validateResponse.json() as ValidationEnvelope;
   const validateResult = validateEnvelope.safe_result ?? validateEnvelope;
   expect(validateResponse.ok(), JSON.stringify(validateResult)).toBeTruthy();
   expect(validateResult.blocking_issue_count, JSON.stringify(validateResult)).toBe(0);
@@ -303,14 +328,12 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
   await expect.poll(async () => {
     const response = await page.request.get(`/api/catalog/imports/${onlineImportId}`);
     if (!response.ok()) return "http-error";
-    const detail = await response.json() as ImportDetail & { permissions: { can_submit: boolean } };
-    return `${detail.status}:${detail.workflow_revision}:${detail.permissions.can_submit}`;
-  }).toBe(`validated:${validateResult.workflow_revision}:true`);
-  await expect(page.getByRole("button", { name: "提交审核" })).toBeVisible();
-  await page.getByRole("button", { name: "提交审核" }).click();
-  await expect(page.getByRole("button", { name: "生成批准预览" })).toBeVisible();
-  await page.getByRole("button", { name: "生成批准预览" }).click();
+    const detail = await response.json() as ImportDetail;
+    expect(detail.workflow_revision).toBeGreaterThanOrEqual(validateResult.workflow_revision!);
+    return detail.status;
+  }).toBe("ready_for_approval");
   await expect(page.getByText("风险：普通")).toBeVisible();
+  await assertRequiredDraftFields(page, onlineImportId);
   await page.getByRole("button", { name: "确认批准目录" }).click();
 
   await expect.poll(async () => {
@@ -342,12 +365,29 @@ test("Milestone A performs a real catalog approval, XLSX upload, RBAC, and revea
 
   const mutatedPath = join(downloadDirectory, "catalog-ready-e-field.xlsx");
   await mutateWorkbookEField(downloadedPath, mutatedPath);
-  await page.getByRole("link", { name: "进入批量维护" }).click();
-  await expect(page.getByRole("heading", { name: "批量维护" })).toBeVisible();
+  await page.getByRole("navigation", { name: "商品主档导航" })
+    .locator('a[href="/catalog/maintenance"]').click();
+  await expect(page.getByRole("heading", { name: "建档与维护", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "目录维护", exact: true }).click();
   await page.locator('input[type="file"][accept=".xlsx"]').setInputFiles(mutatedPath);
-  await page.getByRole("button", { name: "上传并进入审核" }).click();
-  await page.waitForURL(/\/catalog\/imports\/\d+$/);
-  const rawImportId = Number(page.url().match(/\/imports\/(\d+)$/)?.[1]);
+  const uploadResponsePromise = page.waitForResponse(response => (
+    response.request().method() === "POST"
+      && new URL(response.url()).pathname === "/api/catalog/imports"
+  ));
+  const [uploadResponse] = await Promise.all([
+    uploadResponsePromise,
+    page.getByRole("button", { name: "上传并进入审核" }).click(),
+  ]);
+  expect(uploadResponse.ok()).toBeTruthy();
+  await expect(page).toHaveURL(/\/catalog\/maintenance$/);
+  const uploadReview = page.getByRole("dialog", { name: "目录维护", exact: true });
+  await expect(uploadReview.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
+  // The original-file link binds this inline review to the server-created import.
+  // Binary uploads can evict CDP's response body even when fetch and the UI succeed.
+  const originalFile = uploadReview.getByRole("link", { name: "下载原始 XLSX", exact: true });
+  await expect(originalFile).toHaveAttribute("href", /^\/api\/catalog\/imports\/[1-9]\d*\/file$/);
+  const rawFileHref = await originalFile.getAttribute("href");
+  const rawImportId = Number(rawFileHref!.match(/\/imports\/(\d+)\/file$/)![1]);
   expect(rawImportId).toBeGreaterThan(onlineImportId);
   let rawStatus = "";
   await expect.poll(async () => {
