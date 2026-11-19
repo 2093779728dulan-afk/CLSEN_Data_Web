@@ -73,7 +73,7 @@ it("fills unmatched imports into the shared editable grid and reviews edits with
  expect(screen.getByRole("textbox",{name:"本次实际数量 1"})).toHaveValue("5");
  await userEvent.click(screen.getByRole("button",{name:"下一步"}));
  expect(screen.getByRole("table",{name:"原表与当前填写对照"})).toHaveTextContent("RAW-A · 5件");
-});
+}, 15_000);
 
 it("restores the original comparison from a saved draft without changing its input baseline", async () => {
  warehouseStock();

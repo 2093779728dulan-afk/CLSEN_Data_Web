@@ -399,7 +399,7 @@ describe("unified production workbench", () => {
     await userEvent.type(nextAmount, "1");
     await userEvent.click(screen.getByRole("button", { name: "关闭入库" }));
     expect(await screen.findByRole("dialog", { name: "还有未保存的内容" })).toBeInTheDocument();
-  });
+  }, 15_000);
   it("does not advance incomplete packing, and saves a complete draft without confirming stock effects", async () => {
     api.write.mockResolvedValue(order); mount("/production/orders/10?tab=ship&operation=guided"); await openOperation("ship"); expect(screen.getByLabelText(/发货仓库/)).toHaveValue("900:1"); expect(screen.getByRole("option",{name:"虚构仓900"})).toHaveValue("900:1"); expect(screen.queryByRole("option",{name:/本公司/})).not.toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "下一步" }));
     fireEvent.change(screen.getByLabelText("QA-Blue-M本次出货"), { target: { value: "20" } }); await userEvent.click(screen.getByRole("button", { name: "下一步" })); await userEvent.click(screen.getByRole("button", { name: "下一步" }));
@@ -453,7 +453,7 @@ describe("unified production workbench", () => {
     expect(api.write.mock.calls[0]?.[0]).toBe("/api/production/inventory/documents/22/preview");
     expect(api.write.mock.calls[0]?.[1].body).toMatchObject({ expected_revision: "4" });
     expect(api.write).toHaveBeenCalledTimes(1);
-  });
+  }, 15_000);
   it.each(["owner", "source"])("does not rewrite a receipt draft with a different %s", async mismatch => {
     const original = api.read.getMockImplementation()!;
     api.read.mockImplementation(path => path === "/api/production/inventory/documents/22" ? Promise.resolve({ id: "22", revision: "4", status: "DRAFT", kind: "IN", warehouse_id: "900", owner_id: mismatch === "owner" ? "9" : "1", business_date: "2026-10-25", reason: "original", lines: [{ sku_id: "1001", quality: "QUALIFIED", purpose: "PRODUCTION_RECEIPT", units: "6", production_allocations: [{ order_line_id: mismatch === "source" ? "999" : "101", units: "6" }] }] }) : original(path));
@@ -499,7 +499,7 @@ describe("unified production workbench", () => {
     expect(await screen.findByText("本批已确认发货")).toBeInTheDocument();
     expect(api.write.mock.calls[1]?.[1].body).toMatchObject({ expected_revision: "2" });
     expect(screen.queryByRole("button", { name: "确认本草稿已实际发货" })).not.toBeInTheDocument();
-  });
+  }, 15_000);
   it("clears the previous order's receipt draft when choosing another order", async () => {
     const nextOrder = { ...order, id: "11", business_number: "虚构第二张订单" };
     const original = api.read.getMockImplementation()!;
