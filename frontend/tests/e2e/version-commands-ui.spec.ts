@@ -48,6 +48,8 @@ async function install(page: Page) {
 
 for (const width of [1280, 390]) {
   test(`actual command failure, retry, handoff and refreshed results at ${width}px`, async ({ page }) => {
+    // Four command/retry flows and seven full navigations share this test budget.
+    test.setTimeout(60_000);
     await page.setViewportSize({ width, height: 900 }); const f = await install(page); const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
     // Revision failure keeps reason and existing idempotency key; retry hands off the fixed new version.
     await page.goto(initial); await page.getByRole("button", { name: "创建修订", exact: true }).click();
