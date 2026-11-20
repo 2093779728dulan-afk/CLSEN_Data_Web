@@ -574,3 +574,14 @@ it("groups daily issues, searches and pages without mounting every original reco
   expect(screen.queryByRole("button",{name:"重试库存更新"})).not.toBeInTheDocument();
   expect(api.write).not.toHaveBeenCalled();
 });
+
+it("opens real snapshot without marking it simulated",async()=>{
+ const {FbaOpening}=await import("./FbaOpening");
+ const original=api.read.getMockImplementation()!;api.read.mockImplementation((path,options)=>path.includes("catalog-products")?Promise.resolve({identities:[{sku_id:"11",seller_sku:"SKU-A",asin:"B000000001",fnsku:"X000000001",store:"SIM store"}],issues:[],store:"SIM store",catalog_version:"1:1"}):original(path,options));
+ const saved=vi.fn();mount(<FbaOpening record={record} catalog={[]} sourceId={3} sourceName="SIM store" saved={saved}/>);
+ await screen.findByText(/已自动带入/);await userEvent.click(screen.getByRole("button",{name:"导入库存快照"}));
+ api.write.mockResolvedValueOnce({identities:[{sku_id:"11"}],source_id:"a".repeat(64),report_source_scope_id:"3",snapshot_on:"2026-11-04",available_units:"10",transit_units:"7",excluded_rows:[{source_row:"9",seller_sku:"OUTSIDE",reason:"不属于本店铺"}]});
+ await userEvent.upload(screen.getByLabelText("亚马逊物流库存CSV"),new File(["original report"],"inventory.csv",{type:"text/csv"}));await userEvent.click(screen.getByRole("button",{name:"读取库存快照"}));await screen.findByText("可售 10");await userEvent.click(screen.getByText("1 条待核"));expect(screen.getByRole("table",{name:"库存快照待核记录"})).toHaveTextContent("OUTSIDE");
+ await userEvent.type(screen.getByLabelText(/^货主编号/),"1");await userEvent.type(screen.getByLabelText(/^货主名称/),"Owner");await userEvent.click(screen.getByRole("checkbox",{name:"按快照登记，未列规格按0计"}));await userEvent.click(screen.getByRole("button",{name:"确认快照并启用"}));
+ await waitFor(()=>expect(api.write.mock.calls.length).toBe(2));expect(api.write.mock.calls[1]?.[1]?.body).toMatchObject({opening_mode:"snapshot",simulated:false,cutoff_on:"2026-11-04",missing_skus_zero_confirmed:true,snapshot_source:{source_id:"a".repeat(64),report_source_scope_id:"3"},identity_mode:"catalog"});
+});

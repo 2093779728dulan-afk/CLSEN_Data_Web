@@ -2,7 +2,7 @@
  * Generated from FastAPI OpenAPI. Do not edit by hand.
  * Run: pwsh ./scripts/generate-api-client.ps1
  */
-// OpenAPI SHA-256: 36c8223ef3b4fbbb3e95c809ba773c5d7d0ab5104eda83885a25729e3d0c019d
+// OpenAPI SHA-256: 0914e849edaa8ad62454c1a667a83f03232ec07be65b48ab6a66b95d9c2b51eb
 
 export interface components {
   schemas: {
@@ -743,6 +743,7 @@ export const API_OPERATIONS = {
   "mapping_preview_api_production_fba_mapping_preview_post": { method: "POST", path: "/api/production/fba/mapping-preview" },
   "identity_original_api_production_fba_mapping_source__source_id__get": { method: "GET", path: "/api/production/fba/mapping-source/{source_id}" },
   "reconciliation_export_api_production_fba_reconciliation_export_get": { method: "GET", path: "/api/production/fba/reconciliation/export" },
+  "snapshot_preview_api_production_fba_snapshot_preview_post": { method: "POST", path: "/api/production/fba/snapshot-preview" },
   "state_api_production_fba_state_get": { method: "GET", path: "/api/production/fba/state" },
   "upload_api_production_fba_uploads_post": { method: "POST", path: "/api/production/fba/uploads" },
   "confirm_preview_api_production_files_previews__preview_id__confirm_post": { method: "POST", path: "/api/production/files/previews/{preview_id}/confirm" },
@@ -2702,6 +2703,17 @@ export interface operations {
     path: Record<string, never>;
     query: { "warehouse_id": number; "scope_id": number; };
     headers: Record<string, never>;
+    requestBody: never;
+    responses: {
+      200: unknown;
+      422: components["schemas"]["ApiErrorResponse"];
+    };
+  };
+  "snapshot_preview_api_production_fba_snapshot_preview_post": {
+    security: "SessionCookie";
+    path: Record<string, never>;
+    query: { "report_source_scope_id": number; };
+    headers: { "X-CSRF-Token"?: string | null; };
     requestBody: never;
     responses: {
       200: unknown;

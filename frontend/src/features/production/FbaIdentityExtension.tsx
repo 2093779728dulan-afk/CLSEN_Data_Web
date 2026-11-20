@@ -42,7 +42,7 @@ export function FbaIdentityExtension({ scope, identities, catalog, canWrite, sav
     <p>使用{scope.store_evidence}的商品资料。</p>
     {connected > 0 && <StatusMessage kind="success" title={`已启用 ${connected} 个规格`}>可返回原接收表继续核对数量。</StatusMessage>}
     {command.feedback}
-    {canWrite && !!ready.length && !source && <div className={styles.productSetup}><strong>已自动带入 {ready.length} 个商品规格</strong><Button variant="primary" disabled={locked||!products.current} onClick={()=>command.submit("/api/production/fba/commands/extend-identities",{scope_id:scope.id,expected_revision:scope.revision,identity_mode:"catalog",catalog_version:products.value!.catalog_version,identities:ready,explicit_zero_opening:true,reason:"复用已审核商品资料，沿本仓已确认模拟零期初启用"})}>启用已带入商品</Button></div>}
+    {canWrite && !!ready.length && !source && <div className={styles.productSetup}><strong>已自动带入 {ready.length} 个商品规格</strong><Button variant="primary" disabled={locked||!products.current} onClick={()=>command.submit("/api/production/fba/commands/extend-identities",{scope_id:scope.id,expected_revision:scope.revision,identity_mode:"catalog",catalog_version:products.value!.catalog_version,identities:ready,explicit_zero_opening:true,reason:"复用已审核商品资料，明确确认新接入规格在原截止日库存为零"})}>启用已带入商品</Button></div>}
     <details open={!ready.length || !!source}><summary>补充商品资料</summary>
     {canWrite && <FbaFileUpload identity path={`/api/production/fba/mapping-preview?report_source_scope_id=${scope.report_source_scope_id}`} label="FBA商品资料CSV" disabled={locked} onGuardChange={setFileGuard} saved={result => {
       if ("identities" in result) {
@@ -62,12 +62,12 @@ export function FbaIdentityExtension({ scope, identities, catalog, canWrite, sav
         <td>{row.asin}</td><td>{row.fnsku}</td>
       </tr>)}</tbody>
     </Table>}
-    {!!rows.length && <label className={styles.check}><input type="checkbox" checked={confirmed} disabled={locked || fileGuard.dirty} onChange={event => setConfirmed(event.target.checked)} />已核对平台资料，确认这些新接入规格在{scope.cutoff_on}的体验期初库存为零</label>}
+    {!!rows.length && <label className={styles.check}><input type="checkbox" checked={confirmed} disabled={locked || fileGuard.dirty} onChange={event => setConfirmed(event.target.checked)} />已核对平台资料，确认这些新接入规格在{scope.cutoff_on}的期初库存为零</label>}
     <div className={styles.actions}>
       {!embedded && <LinkButton variant="quiet" to={returnUrl}>返回验收或商品管理</LinkButton>}
       {canWrite && <Button disabled={locked || fileGuard.dirty || !source || !rows.length || invalid || !confirmed} onClick={() => command.submit("/api/production/fba/commands/extend-identities", {
         scope_id: scope.id, expected_revision: scope.revision, identities: rows, identity_source: source,
-        identities_confirmed: confirmed, explicit_zero_opening: confirmed, reason: "核对对应商品规格及本仓平台资料，接入当前体验账簿",
+        identities_confirmed: confirmed, explicit_zero_opening: confirmed, reason: "核对对应商品规格及本仓平台资料，接入当前FBA账簿",
       })}>确认并启用商品</Button>}
     </div></details>
   </section>;

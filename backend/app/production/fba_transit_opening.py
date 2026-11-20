@@ -30,6 +30,13 @@ def load_transit_opening(
     catalog: dict[str, Any],
     scope: dict[str, Any],
 ) -> dict[str, Any] | None:
+    metadata = scope.get("opening_metadata") or {}
+    if isinstance(metadata, str):
+        metadata = json.loads(metadata)
+    if metadata.get("quantity_basis") == "FBA_REAL_SNAPSHOT":
+        return _real_transit(
+            settings, context, engine, catalog, scope, metadata["snapshot"]
+        )
     if not settings.production_inventory_source_root:
         return None
     root = Path(settings.production_inventory_source_root)
@@ -123,6 +130,88 @@ def load_transit_opening(
         **source,
         "rows": rows,
         "digest": hashlib.sha256(metadata + raw).hexdigest(),
+    }
+
+
+def _real_transit(
+    settings: Any,
+    context: Any,
+    engine: Any,
+    catalog: dict[str, Any],
+    scope: dict[str, Any],
+    source: dict[str, Any],
+) -> dict[str, Any]:
+    from app.production.fba_opening_identity import read_identity_source
+    from app.production.fba_snapshot import parse_snapshot
+
+    if (
+        source.get("source_kind") != "REAL_SOURCE"
+        or source.get("database") != engine.url.database
+        or str(source.get("site_id")) != str(context.site_id)
+        or str(source.get("report_source_scope_id"))
+        != str(scope["report_source_scope_id"])
+        or scope.get("simulated") not in (False, "false", "0", 0)
+        or source.get("snapshot_on") != str(scope.get("cutoff_on"))
+    ):
+        raise ApiError(
+            409,
+            "transit_opening_scope_invalid",
+            "真实在途期初与当前FBA账簿范围不一致。",
+        )
+    raw = read_identity_source(
+        settings.production_inventory_source_root,
+        context.site_id,
+        int(source["source_actor_id"]),
+        int(scope["report_source_scope_id"]),
+        source["source_id"],
+    )
+    identities = [{**r, "sku_id": str(r["sku_id"])} for r in source["rows"]]
+    verified = parse_snapshot(
+        raw, {"identities": identities, "catalog_version": scope["catalog_version"]}
+    )
+    if (
+        verified["rows"] != source["rows"]
+        or verified["snapshot_on"] != source["snapshot_on"]
+    ):
+        raise ApiError(
+            409, "transit_opening_source_changed", "在途期初原表与已确认版本不一致。"
+        )
+    rows = []
+    for r in verified["rows"]:
+        if not int(r["transit_units"]):
+            continue
+        sku = catalog.get(r["sku_id"])
+        if (
+            not sku
+            or sku.get("status") != "active"
+            or sku.get("code") != r["seller_sku"]
+        ):
+            raise ApiError(
+                409,
+                "transit_opening_identity_invalid",
+                "在途期初商品不在当前店铺有效目录中。",
+            )
+        rows.append(
+            {
+                "sku_id": r["sku_id"],
+                "sku_label": sku["code"],
+                "style_code": sku["style_code"],
+                "units": r["transit_units"],
+                "source_row": r["source_row"],
+                "snapshot_on": source["snapshot_on"],
+                "source_filename": "亚马逊物流库存-" + source["snapshot_on"] + ".csv",
+            }
+        )
+    return {
+        "scope": {
+            k: scope[k]
+            for k in ("id", "warehouse_id", "owner_id", "report_source_scope_id")
+        },
+        "snapshot_on": source["snapshot_on"],
+        "source_filename": "亚马逊物流库存-" + source["snapshot_on"] + ".csv",
+        "source_sha256": source["source_id"],
+        "rows": rows,
+        "digest": source["source_id"],
     }
 
 

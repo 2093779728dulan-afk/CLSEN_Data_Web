@@ -75,7 +75,8 @@
       "catalog_command_effects",
       "catalog_audit_events",
       "manual_table_operations",
-      "manual_table_profiles"
+      "manual_table_profiles",
+      "production_inventory_review_revisions"
     ],
     "mutable_insert": [
       "users",
@@ -115,7 +116,8 @@
       "product_category_aliases",
       "catalog_draft_identity_reservations",
       "catalog_style_change_drafts",
-      "manual_table_batches"
+      "manual_table_batches",
+      "production_inventory_reviews"
     ],
     "update": [
       "users",
@@ -145,7 +147,8 @@
       "worker_consumer_states",
       "product_categories",
       "catalog_style_change_drafts",
-      "manual_table_batches"
+      "manual_table_batches",
+      "production_inventory_reviews"
     ],
     "update_columns": {
       "daily_dataset_locks": [

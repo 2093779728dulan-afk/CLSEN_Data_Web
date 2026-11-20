@@ -31,7 +31,7 @@ final class FbaInventoryStore {
         if(db.queryForObject("SELECT COUNT(*) FROM fba_scope s JOIN production_warehouse w ON w.site_id=s.site_id AND w.id=s.warehouse_id WHERE s.site_id=? AND s.warehouse_id=? AND s.owner_id=? AND w.type='FBA' AND w.status='ACTIVE'",Long.class,site,warehouse,owner)!=1)
             throw fail("fba_scope_conflict","FBA逻辑仓、账号、货权未明确或已停用。");
     }
-    private Map<String,Object> scope(ProductionContext c,long scope){return one("SELECT * FROM fba_scope WHERE site_id=? AND id=?",c.site(),scope);}
+    private Map<String,Object> scope(ProductionContext c,long scope){var value=one("SELECT * FROM fba_scope WHERE site_id=? AND id=?",c.site(),scope);var opening=one("SELECT opening_metadata FROM inventory_scope WHERE site_id=? AND warehouse_id=? AND owner_id=?",c.site(),value.get("warehouse_id"),value.get("owner_id"));if(opening.get("opening_metadata")!=null)value.put("opening_metadata",node(opening.get("opening_metadata")));return value;}
     Object scopeContext(ProductionContext c,long id){return scope(c,id);}
     Object actionScopeContext(ProductionContext c, long id) {
         var action = one("SELECT scope_id FROM fba_action WHERE site_id=? AND id=?", c.site(), id);
@@ -65,6 +65,7 @@ final class FbaInventoryStore {
             GROUP BY l.sku_id,l.quality
             """,c.site(),scope.get("warehouse_id"),scope.get("owner_id")))
             result.put(row.get("sku_id")+":"+row.get("quality"),row.get("snapshot_on").toString());
+        if(!Boolean.parseBoolean(scope.get("simulated").toString()))for(var identity:rows("SELECT sku_id FROM fba_identity WHERE site_id=? AND scope_id=?",c.site(),scope.get("id")))result.merge(identity.get("sku_id")+":QUALIFIED",scope.get("cutoff_on").toString(),(a,b)->a.compareTo(b)>=0?a:b);
         return result;
     }
     private void checkFactDate(ProductionContext c,Map<String,Object> scope,long sku,String quality,String date) {
@@ -156,15 +157,20 @@ final class FbaInventoryStore {
         if(!"FBA".equals(directory.get("type"))||!"ACTIVE".equals(directory.get("status"))||!seller.equals(profile.path("seller_account").asText())||!market.equals(profile.path("marketplace").asText())||!Set.of("US","amazon_us").contains(market))throw fail("fba_scope_conflict","请核对已启用FBA资料的卖家账号和US站点。");
         var approved=b.path("_fba_scope");
         if(!approved.path("seller_account").asText().equals(seller)||approved.path("id").asLong()!=id(b,"report_source_scope_id")||!approved.path("marketplace").asText().equals("amazon_us"))throw fail("fba_scope_conflict","报表账号范围未由服务端核实。");
-        if(!b.path("explicit_zero_opening").asBoolean()||!b.path("simulated").asBoolean())throw fail("fba_opening_required","当前仅启用明确模拟零期初；跟踪选择或未开卖不能证明真实期初为零。");
+        boolean real=b.path("opening_mode").asText().equals("snapshot");
+        var snapshot=b.path("_real_snapshot");
+        if(real && date.isAfter(LocalDate.now(ZoneId.of("America/Los_Angeles"))))throw fail("invalid_business_date","快照日期不能晚于店铺当前日期。");
+        if(real && (!snapshot.path("source_kind").asText().equals("REAL_SOURCE") || !snapshot.path("source_id").asText().matches("[a-f0-9]{64}") || !snapshot.path("site_id").asText().equals(Long.toString(c.site())) || !snapshot.path("snapshot_on").asText().equals(cutoff) || snapshot.path("report_source_scope_id").asLong()!=id(b,"report_source_scope_id") || !snapshot.path("missing_skus_zero_confirmed").asBoolean() || b.path("simulated").asBoolean()))throw fail("fba_opening_required","真实期初必须核对原始库存快照及完整店铺范围。");
+        if(!real && (!b.path("explicit_zero_opening").asBoolean()||!b.path("simulated").asBoolean()))throw fail("fba_opening_required","当前仅启用明确模拟零期初；跟踪选择或未开卖不能证明真实期初为零。");
+        if(real && db.queryForObject("SELECT COUNT(*) FROM inventory_scope WHERE site_id=? AND JSON_UNQUOTE(JSON_EXTRACT(opening_metadata,'$.snapshot.source_id'))=?",Long.class,c.site(),snapshot.path("source_id").asText())>0)throw fail("fba_snapshot_used","此库存快照已建立期初，不能在其他仓库重复入账。");
         if(db.queryForObject("SELECT COUNT(*) FROM inventory_scope WHERE site_id=? AND warehouse_id=? AND owner_id=?",Long.class,c.site(),warehouse,owner)>0)throw fail("fba_opening_exists","已有范围或期初，不能重建或覆盖余额。");
         if(!b.path("identities").isArray()||b.path("identities").isEmpty())throw fail("fba_identity_required","请逐规格确认账号内MSKU、ASIN、FNSKU和稳定商品身份。");
         String version="";
         for(var line:b.path("identities")){var identity=inventory.identity(c.site(),b,id(line,"sku_id"));if(version.isEmpty())version=identity.path("catalog_version").asText();if(!version.equals(identity.path("catalog_version").asText()))throw fail("fba_catalog_conflict","商品目录版本不一致。");}
         String ownerName=required(b,"owner_name",120);
         if(b.path("identity_mode").asText().equals("catalog")&&!version.equals(b.path("catalog_version").asText()))throw fail("fba_catalog_conflict","商品资料已更新，请刷新后重新确认期初。");
-        db.update("INSERT INTO inventory_scope(site_id,warehouse_id,owner_id,warehouse_name,owner_name,cutoff_on,source_reference,opening_token,opening_metadata) VALUES(?,?,?,?,?,?,?,?,?)",c.site(),warehouse,owner,directory.get("name"),ownerName,date,"SIMULATED-FBA-"+token,token,encode(Map.of("simulated",true,"explicit_zero_opening",true,"quantity_basis","FBA_CONFIRMED_EVENTS","evidence",basis)));
-        db.update("INSERT INTO fba_scope(site_id,warehouse_id,owner_id,seller_account,marketplace,report_source_scope_id,store_evidence,catalog_version,cutoff_on,opening_basis,simulated) VALUES(?,?,?,?,?,?,?,?,?,?,TRUE)",c.site(),warehouse,owner,seller,market,id(b,"report_source_scope_id"),required(b,"store_evidence",255),version,date,basis);
+        db.update("INSERT INTO inventory_scope(site_id,warehouse_id,owner_id,warehouse_name,owner_name,cutoff_on,source_reference,opening_token,opening_metadata) VALUES(?,?,?,?,?,?,?,?,?)",c.site(),warehouse,owner,directory.get("name"),ownerName,date,(real?"REAL-FBA-SNAPSHOT-":"SIMULATED-FBA-")+token,token,encode(real?Map.of("simulated",false,"quantity_basis","FBA_REAL_SNAPSHOT","snapshot",snapshot,"evidence",basis):Map.of("simulated",true,"explicit_zero_opening",true,"quantity_basis","FBA_CONFIRMED_EVENTS","evidence",basis)));
+        db.update("INSERT INTO fba_scope(site_id,warehouse_id,owner_id,seller_account,marketplace,report_source_scope_id,store_evidence,catalog_version,cutoff_on,opening_basis,simulated) VALUES(?,?,?,?,?,?,?,?,?,?,?)",c.site(),warehouse,owner,seller,market,id(b,"report_source_scope_id"),required(b,"store_evidence",255),version,date,basis,!real);
         long scope=last();var seen=new HashSet<Long>();
         for(var line:b.path("identities")){
             long sku=id(line,"sku_id");if(!seen.add(sku))throw fail("fba_identity_conflict","同一范围不能重复确认规格。");
@@ -175,14 +181,20 @@ final class FbaInventoryStore {
             db.update("INSERT INTO fba_identity(site_id,scope_id,sku_id,seller_sku,seller_sku_raw,fnsku,asin,style_id,catalog_version,evidence,tracked) VALUES(?,?,?,?,?,?,?,?,?,?,TRUE)",c.site(),scope,sku,match,raw,bytes(fnsku),bytes(asin),identity.path("style_id").asLong(),version,required(line,"reason",2000));
             db.update("INSERT INTO inventory_balance(site_id,warehouse_id,owner_id,sku_id,sku_label,catalog_version) VALUES(?,?,?,?,?,?)",c.site(),warehouse,owner,sku,identity.path("label").asText(),version);
         }
-        inventory.audit(c,"fba_scope",scope,1,token,"EXPLICIT_ZERO_OPENING",basis,null,Map.of("warehouse_id",warehouse,"owner_id",owner,"skus",seen.size(),"simulated",true));return state(c,warehouse);
+        if(real){
+            var counts=new HashMap<Long,Long>();
+            if(!snapshot.path("rows").isArray()||snapshot.path("rows").isEmpty())throw fail("fba_opening_required","库存快照不能为空。");
+            for(var row:snapshot.path("rows")){long sku=id(row,"sku_id");if(!seen.contains(sku)||counts.put(sku,InventoryService.number(row,"units"))!=null)throw fail("fba_identity_conflict","快照规格重复或不属于本店铺。");}
+            for(long sku:seen)inventory.recordFbaOpening(c,new InventoryService.Key(warehouse,owner,sku),counts.getOrDefault(sku,0L),token,basis,cutoff);
+        }
+        inventory.audit(c,"fba_scope",scope,1,token,real?"REAL_SNAPSHOT_OPENING":"EXPLICIT_ZERO_OPENING",basis,null,Map.of("warehouse_id",warehouse,"owner_id",owner,"skus",seen.size(),"simulated",!real));return state(c,warehouse);
     }
     private Object extendIdentities(ProductionContext c,JsonNode b,String token) {
         var scope=scope(c,id(b,"scope_id"));
         revision(scope,b);
         requireScope(db,c.site(),n(scope.get("warehouse_id")),n(scope.get("owner_id")));
-        if(!Boolean.parseBoolean(scope.get("simulated").toString())||!b.path("explicit_zero_opening").asBoolean())
-            throw fail("fba_opening_required","请确认本次模拟新接入规格在原截止日库存为零。");
+        if(!b.path("explicit_zero_opening").asBoolean())
+            throw fail("fba_opening_required","请确认新接入规格在原截止日库存为零，不能覆盖已有余额。");
         var approved=b.path("_fba_scope");
         if(approved.path("id").asLong()!=n(scope.get("report_source_scope_id"))||!approved.path("seller_account").asText().equals(scope.get("seller_account"))||!required(b,"store_evidence",255).equals(scope.get("store_evidence")))
             throw fail("fba_scope_conflict","新接入规格须属于当前FBA的店铺与账号范围。");
@@ -935,6 +947,7 @@ final class FbaInventoryStore {
     }
     Object state(ProductionContext c,long warehouse){
         var found=rows("SELECT * FROM fba_scope WHERE site_id=? AND warehouse_id=? ORDER BY owner_id",c.site(),warehouse);var result=new LinkedHashMap<String,Object>();result.put("enabled",true);result.put("scopes",found);result.put("initialized",!found.isEmpty());
+        for(var item:found){var opening=rows("SELECT opening_metadata FROM inventory_scope WHERE site_id=? AND warehouse_id=? AND owner_id=?",c.site(),warehouse,item.get("owner_id"));if(!opening.isEmpty()&&opening.getFirst().get("opening_metadata")!=null)item.put("opening_metadata",node(opening.getFirst().get("opening_metadata")));}
         if(found.isEmpty())return result;
         var classification=new LinkedHashMap<String,Object>();
         for(var item:found)classification.put(item.get("id").toString(),new FbaClassificationStore(db,json).summary(c,item));

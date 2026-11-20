@@ -911,7 +911,10 @@ def stock_read(
         f"inventory/{resource}",
         query=list(request.query_params.multi_items()),
     )
-    if resource in {"transport-summary", "transit-batches", "warehouse-transit"}:
+    if (
+        resource in {"transport-summary", "transit-batches", "warehouse-transit"}
+        and shipment_id is None
+    ):
         from datetime import datetime
         from zoneinfo import ZoneInfo
 
@@ -923,14 +926,21 @@ def stock_read(
 
         settings = request.app.state.settings
         configured = configured_transit_scope(settings)
+        daily_scopes = cast(
+            dict[str, Any],
+            production_request(settings, context, "GET", "inventory/fba-daily-scopes"),
+        )
+        scope_ids = {str(row["id"]) for row in daily_scopes.get("items", [])}
         if configured:
+            scope_ids.add(str(configured["id"]))
+        for scope_id in sorted(scope_ids):
             scope = cast(
                 dict[str, Any],
                 production_request(
                     settings,
                     context,
                     "GET",
-                    f"inventory/fba-scopes/{int(configured['id'])}",
+                    f"inventory/fba-scopes/{int(scope_id)}",
                 ),
             )
             catalog = catalog_for_report_scope(

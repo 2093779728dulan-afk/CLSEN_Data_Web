@@ -755,7 +755,17 @@ def read_sheet(
         catalog = catalog_for_report_scope(
             engine, context, catalog, int(fba["report_source_scope_id"])
         )
-    transit_opening = load_transit_opening(settings, context, engine, catalog, fba)
+    transit_scope = next(
+        (
+            row
+            for row in facts["fba_state"].get("scopes", [])
+            if str(row["id"]) == str(fba["id"])
+        ),
+        fba,
+    )
+    transit_opening = load_transit_opening(
+        settings, context, engine, catalog, transit_scope
+    )
     opening_by_sku = {
         row["sku_id"]: row for row in opening_records(transit_opening, as_of)
     }

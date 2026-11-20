@@ -2,8 +2,8 @@
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
-  "source_sha": "dd4ef34413556cb2ca37623a2e1889168ef7f87c",
-  "source_tree": "9de1e381073e5bb405480af761efcd0157768fbf",
+  "source_sha": "eab67029c3a0219d42ac6c86553822f47bfa981b",
+  "source_tree": "241b66fcab1a214a521ae59ac83f625425494379",
   "history_exported": false,
   "files": [
     {
@@ -72,11 +72,11 @@
     },
     {
       "path": "backend-java/src/main/java/com/clsen/dataweb/production/FbaInventoryStore.java",
-      "git_blob": "de4af9bef9b8e501b0015ad06c44353aa73acbbe"
+      "git_blob": "0c6cf394ac515703760dea8fb1d59287ade42583"
     },
     {
       "path": "backend-java/src/main/java/com/clsen/dataweb/production/InternalIdentityFilter.java",
-      "git_blob": "f7c886800cf16be642d0be4ac5539a96b3af2502"
+      "git_blob": "e58acbd075891c0c2915c51d7f82446aa8f75e13"
     },
     {
       "path": "backend-java/src/main/java/com/clsen/dataweb/production/InventoryController.java",
@@ -96,7 +96,7 @@
     },
     {
       "path": "backend-java/src/main/java/com/clsen/dataweb/production/InventoryService.java",
-      "git_blob": "45912b06ee25c381f336d8c22ba7547517823446"
+      "git_blob": "01c9268a78507f058befb2a93937cc3b6ceb7674"
     },
     {
       "path": "backend-java/src/main/java/com/clsen/dataweb/production/ProductionApplication.java",
@@ -252,7 +252,7 @@
     },
     {
       "path": "backend-java/src/test/java/com/clsen/dataweb/production/IdentityRebindingFilterTest.java",
-      "git_blob": "6a92c873fd0c21d2899f16b5742cc1cdc3938a2e"
+      "git_blob": "039c202a019ede0d5b736724a7b98dea13e52e28"
     },
     {
       "path": "backend-java/src/test/java/com/clsen/dataweb/production/InventoryContractsTest.java",
@@ -632,11 +632,11 @@
     },
     {
       "path": "backend/app/api/production.py",
-      "git_blob": "f491feae438d501a7f316949895dd7ffe5455264"
+      "git_blob": "66934842b1516f38d8636ff8b91761826b6e06e5"
     },
     {
       "path": "backend/app/api/production_fba.py",
-      "git_blob": "d9ae6228012d846a6b9767963bca4557d8640314"
+      "git_blob": "121983bc2630f0140c565b774614b308033006df"
     },
     {
       "path": "backend/app/api/publications.py",
@@ -1203,8 +1203,12 @@
       "git_blob": "4c907d9a04612e773d7304a8dec9c1dad2505fc1"
     },
     {
+      "path": "backend/app/production/fba_snapshot.py",
+      "git_blob": "37929e8ec2861b3622f3122a71c5114d3d84ffe2"
+    },
+    {
       "path": "backend/app/production/fba_transit_opening.py",
-      "git_blob": "f1e417615b9ccf6231904725189a8867cb0bdb5c"
+      "git_blob": "0870aa4718cc0fc6a20681e1247da1590e07e071"
     },
     {
       "path": "backend/app/production/identity.py",
@@ -1220,7 +1224,7 @@
     },
     {
       "path": "backend/app/production/inventory_overview.py",
-      "git_blob": "7f99b1adea70fd434fa910792cca6ff754f8f40b"
+      "git_blob": "b71837f8fbbaf4a74a2cb8da587fb571c1297b71"
     },
     {
       "path": "backend/app/production/inventory_product_match.py",
@@ -2379,6 +2383,10 @@
       "git_blob": "2b761e4db0c443c9294bd0840720b4455722e460"
     },
     {
+      "path": "backend/tests/unit/test_fba_snapshot.py",
+      "git_blob": "99b528029d203f0e5a4ba0842732df509e651820"
+    },
+    {
       "path": "backend/tests/unit/test_fba_transit_opening.py",
       "git_blob": "ecd79436deb5873c02ed9a523bd34f51838c2a15"
     },
@@ -2392,7 +2400,7 @@
     },
     {
       "path": "backend/tests/unit/test_inventory_gateway.py",
-      "git_blob": "917a659d129995820ab795128961964933727dbb"
+      "git_blob": "8548ac0a13f11d09c696e4c12c841371cbdf6080"
     },
     {
       "path": "backend/tests/unit/test_inventory_overview.py",
@@ -3016,7 +3024,7 @@
     },
     {
       "path": "frontend/src/api/generated.ts",
-      "git_blob": "20891948938aed8737413426485e2008c6b6f93f"
+      "git_blob": "cf1780af38e43ae9648502024522fa246f714ed7"
     },
     {
       "path": "frontend/src/api/productionReadCache.test.ts",
@@ -4576,7 +4584,7 @@
     },
     {
       "path": "frontend/src/features/production/FbaFileUpload.tsx",
-      "git_blob": "4b484e13356a09165b27afe8176c60530a3ea245"
+      "git_blob": "5b248abeabbd236916389033d5287d438f65bf3b"
     },
     {
       "path": "frontend/src/features/production/FbaIdentityExtension.test.tsx",
@@ -4584,7 +4592,7 @@
     },
     {
       "path": "frontend/src/features/production/FbaIdentityExtension.tsx",
-      "git_blob": "3e8523acb51a24285646ffc0ebb6489cc9e796cc"
+      "git_blob": "e7ee7003918419c6650b01dd18bd6c84bff8517a"
     },
     {
       "path": "frontend/src/features/production/FbaInventoryOverview.tsx",
@@ -4592,7 +4600,7 @@
     },
     {
       "path": "frontend/src/features/production/FbaOpening.tsx",
-      "git_blob": "3de5682de2bbe040ef59f0d144686524acabca64"
+      "git_blob": "4b857f2a51f6ccd74171d6c15ff79a337ebf767a"
     },
     {
       "path": "frontend/src/features/production/FbaReceipts.test.tsx",
@@ -4624,7 +4632,7 @@
     },
     {
       "path": "frontend/src/features/production/FbaWorkspace.test.tsx",
-      "git_blob": "5b7e38263bc86cd1896ff056691bf32ab0320c14"
+      "git_blob": "901f366e697a4d47e8006745611167e60b7344b7"
     },
     {
       "path": "frontend/src/features/production/FbaWorkspace.tsx",
@@ -12840,7 +12848,7 @@
     },
     {
       "path": "scripts/database-privileges.json",
-      "git_blob": "40aff6a11f7e1cb7fd833e1290deec34c8b2b1f5"
+      "git_blob": "83ca9429ffa42cc9b7499af0ae9dceabf6a09a51"
     },
     {
       "path": "scripts/dev-backend.ps1",

@@ -68,7 +68,7 @@ public class InventoryService {
         JsonNode opening=s.get("opening_metadata")==null?json.createObjectNode():json.readTree(s.get("opening_metadata").toString());
         if(!identityReady){result.put("state","not_ready");result.put("free_available_units",null);result.put("dispatch_allowed_units",null);result.put("missing","历史库存已保留，但尚未与当前服务器商品目录建立唯一对应；当前禁止发货或继续过账。");}
         else if(!shortage&&(unassessed>0||opening.path("owner_state").asText().equals("UNASSIGNED")&&!RealOpeningSource.WAREHOUSE_BASIS.equals(opening.path("quantity_basis").asText()))){result.put("state","not_ready");result.put("free_available_units",null);result.put("dispatch_allowed_units",null);result.put("missing","期初数量已登记，货主及货品状态待核，当前可发尚未就绪。");}
-        if(!opening.isEmpty())result.put("opening_metadata",opening);return result;
+        if(!opening.isEmpty())result.put("opening_metadata","FBA_REAL_SNAPSHOT".equals(opening.path("quantity_basis").asText())?Map.of("quantity_basis","FBA_REAL_SNAPSHOT","source_id",opening.path("snapshot").path("source_id").asText(),"snapshot_on",opening.path("snapshot").path("snapshot_on").asText(),"simulated",false):opening);return result;
     }
     static Map<String,Object> displayIdentity(String label){
         var result=new LinkedHashMap<String,Object>();
@@ -470,6 +470,10 @@ public class InventoryService {
         String system=text(b,"source_system",120),external=text(b,"external_event_id",120);String source=null;if(!system.isEmpty()||!external.isEmpty()){if(system.isBlank()||external.isBlank())throw error(422,"source_key_incomplete","来源系统和外部事件号需同时填写。");source=hashValue(List.of(system,external,kind));}
         String fingerprint=hashValue(List.of(kind,k.warehouse,k.owner,date,canonical(lines)));if(source!=null){var known=rows("SELECT id,source_fingerprint FROM inventory_document WHERE site_id=? AND source_key=?",c.site(),source);if(!known.isEmpty()){if(!known.getFirst().get("source_fingerprint").equals(fingerprint))throw error(409,"business_source_conflict","同一外部事件存在不同内容，请更正原单。");return document(c.site(),n(known.getFirst().get("id")));}}
         db.update("INSERT INTO inventory_document(site_id,warehouse_id,owner_id,kind,business_date,reason,line_items,source_key,source_fingerprint,actor_id,actor_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)",c.site(),k.warehouse,k.owner,kind,day(date),why,json.writeValueAsString(lines),source,fingerprint,c.actor(),c.actorName());long id=inserted();var result=document(c.site(),id);audit(c,"stock",id,1,token,"CREATE_DRAFT",why,null,result);return result;
+    }
+    void recordFbaOpening(ProductionContext c, Key key, long units, String token, String reason, String date) {
+        db.update("UPDATE inventory_balance SET qualified_units=? WHERE site_id=? AND warehouse_id=? AND owner_id=? AND sku_id=?", units,c.site(),key.warehouse,key.owner,key.sku);
+        event(c,new Delta(key,"QUALIFIED",units,"",""),"opening",key.warehouse,1,token,reason,date,null);
     }
     Object postFbaCount(ProductionContext c, JsonNode body, String token) {
         var created = json.valueToTree(createDocument(c, body, token));

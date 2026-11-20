@@ -1041,3 +1041,15 @@ def test_light_availability_preserves_scope_query_and_rejects_sku_projection(
     assert client.get(base + "&sku_id=1001").status_code == 422
     assert client.get(base + "&overview=1").status_code == 422
     assert len(calls) == before
+
+
+def test_explicit_first_transit_page_does_not_receive_unbound_opening(
+    gateway: Any,
+) -> None:
+    client, calls, _ = gateway
+    response = client.get(
+        "/api/production/inventory/transit-batches?shipment_id=77&sku_id=1001&page=1&page_size=5"
+    )
+    assert response.status_code == 200
+    assert calls[-1]["args"][2:4] == ("GET", "inventory/transit-batches")
+    assert not response.json().get("opening_balances")

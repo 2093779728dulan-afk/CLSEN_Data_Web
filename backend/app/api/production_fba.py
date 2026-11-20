@@ -990,6 +990,44 @@ async def mapping_preview(
     }
 
 
+@router.post("/snapshot-preview")
+async def snapshot_preview(
+    request: Request,
+    context: CatalogWriteContext,
+    engine: CatalogEngine,
+    report_source_scope_id: int,
+) -> Any:
+    from app.production.fba_snapshot import parse_snapshot, snapshot_products
+
+    require_catalog_manager(context)
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > 2_000_000:
+            raise ApiError(413, "file_too_large", "库存CSV不能超过2MB。")
+    products = approved_products(request, context, engine, report_source_scope_id)
+    catalog = production_skus(request.app.state.settings, context, engine)
+    products = snapshot_products(
+        bytes(raw),
+        products,
+        catalog_for_report_scope(engine, context, catalog, report_source_scope_id),
+    )
+    result = parse_snapshot(bytes(raw), products)
+    source_id = retain_identity_source(
+        request.app.state.settings.production_inventory_source_root,
+        context.site_id,
+        context.principal_user_id,
+        report_source_scope_id,
+        bytes(raw),
+    )
+    return {
+        **result,
+        "source_id": source_id,
+        "report_source_scope_id": str(report_source_scope_id),
+        "stock_effect": False,
+    }
+
+
 @router.get("/catalog-products")
 def approved_products(
     request: Request,
@@ -1161,6 +1199,24 @@ def command(
                         engine, context, catalog, int(cast(str | int, scope_id))
                     ),
                 )
+                if payload.get("opening_mode") == "snapshot":
+                    from app.production.fba_snapshot import snapshot_products
+
+                    reference = payload.get("snapshot_source") or {}
+                    raw_snapshot = read_identity_source(
+                        request.app.state.settings.production_inventory_source_root,
+                        context.site_id,
+                        context.principal_user_id,
+                        int(str(scope_id)),
+                        str(reference.get("source_id", "")),
+                    )
+                    products = snapshot_products(
+                        raw_snapshot,
+                        products,
+                        catalog_for_report_scope(
+                            engine, context, catalog, int(str(scope_id))
+                        ),
+                    )
                 wanted = {
                     str(line.get("sku_id"))
                     for line in identities
@@ -1183,6 +1239,55 @@ def command(
                     )
                 payload["store_evidence"] = products["store"]
                 payload["identities_confirmed"] = True
+            if payload.get("opening_mode") == "snapshot":
+                from app.production.fba_snapshot import (
+                    parse_snapshot,
+                    snapshot_products,
+                )
+
+                if (
+                    command != "scopes"
+                    or not automatic
+                    or payload.get("missing_skus_zero_confirmed") is not True
+                ):
+                    raise ApiError(
+                        422,
+                        "fba_snapshot_confirmation",
+                        "请确认按快照登记，未列规格按0计。",
+                    )
+                reference = payload.get("snapshot_source") or {}
+                if str(reference.get("report_source_scope_id")) != str(scope_id):
+                    raise ApiError(
+                        409, "fba_scope_conflict", "库存原表的店铺范围不一致。"
+                    )
+                raw_snapshot = read_identity_source(
+                    request.app.state.settings.production_inventory_source_root,
+                    context.site_id,
+                    context.principal_user_id,
+                    int(str(scope_id)),
+                    str(reference.get("source_id", "")),
+                )
+                snapshot = parse_snapshot(raw_snapshot, products)
+                if payload.get("cutoff_on") != snapshot["snapshot_on"] or wanted != {
+                    str(r["sku_id"]) for r in products["identities"]
+                }:
+                    raise ApiError(
+                        409,
+                        "fba_snapshot_changed",
+                        "快照日期或商品范围已变化，请重新读取。",
+                    )
+                payload["simulated"] = False
+                payload["_real_snapshot"] = {
+                    "source_kind": "REAL_SOURCE",
+                    "source_id": reference["source_id"],
+                    "source_actor_id": str(context.principal_user_id),
+                    "site_id": str(context.site_id),
+                    "database": engine.url.database,
+                    "report_source_scope_id": str(scope_id),
+                    "snapshot_on": snapshot["snapshot_on"],
+                    "rows": snapshot["rows"],
+                    "missing_skus_zero_confirmed": True,
+                }
             if isinstance(source, dict):
                 raw = read_identity_source(
                     request.app.state.settings.production_inventory_source_root,
@@ -1283,15 +1388,22 @@ def command(
                     line, catalog, [str(m["sku_id"]) for m in mappings]
                 )
                 if automatic:
-                    trusted["basis"] = "approved_catalog_source"
+                    trusted["basis"] = (
+                        "confirmed_snapshot_source"
+                        if sku_id in products.get("source_identity_sku_ids", [])
+                        else "approved_catalog_source"
+                    )
                 if trusted["basis"] == "confirmed_fba_identity_source" and (
-                    payload.get("simulated") is not True
-                    or payload.get("explicit_zero_opening") is not True
+                    payload.get("explicit_zero_opening") is not True
+                    or (
+                        payload.get("simulated") is not True
+                        and command != "extend-identities"
+                    )
                 ):
                     raise ApiError(
                         409,
                         "fba_zero_opening_required",
-                        "当前仅支持明确的模拟零期初，不可用身份资料推断真实库存为零。",
+                        "新接入规格须明确确认零期初；真实库存初始化请使用库存快照。",
                     )
                 verified[sku_id] = trusted
                 confirmed_lines.append(

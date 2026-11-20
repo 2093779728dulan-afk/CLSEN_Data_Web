@@ -30,4 +30,14 @@ class IdentityRebindingFilterTest {
             var called=new AtomicBoolean();filter.doFilter(request,new MockHttpServletResponse(),(r,s)->called.set(true));assertEquals(enabled,called.get());
         }
     }
+    @Test void scopedImportAndFbaDoNotRequireGeneralWrites() throws Exception {
+        String token="test-rebinding-internal-token-0123456789";
+        for(boolean enabled:java.util.List.of(false,true))for(String path:java.util.List.of("/internal/production/files/orders/preview","/internal/production/files/shipments/preview","/internal/production/files/previews/11111111-2222-3333-4444-555555555555/confirm","/internal/production/inventory/fba-scopes","/internal/production/inventory/fba-stocktake")){
+            var filter=new InternalIdentityFilter(token,false,false,enabled,enabled,false);
+            var request=new MockHttpServletRequest("POST",path);request.addHeader("Authorization","Bearer "+token);request.addHeader("X-Production-Site","1");request.addHeader("X-Production-Actor","1");request.addHeader("X-Production-Roles","admin");
+            var called=new AtomicBoolean();filter.doFilter(request,new MockHttpServletResponse(),(r,t)->called.set(true));assertEquals(enabled,called.get(),path);
+        }
+        check(false,"admin","/internal/production/files/other/preview",false);
+        check(false,"admin","/internal/production/inventory/openings/confirm",false);
+    }
 }
