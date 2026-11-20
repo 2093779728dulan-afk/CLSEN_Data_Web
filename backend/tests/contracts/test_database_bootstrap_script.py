@@ -159,6 +159,19 @@ def _migration_created_table_names() -> set[str]:
             }
             assert created_objects == {"batches", "operations", "profiles"}
             table_names.extend(table.name for table in (batches, operations, profiles))
+        if migration_file.name == "0031_inventory_reviews.py":
+            from app.production.inventory_review import reviews, revisions
+
+            created_objects = {
+                node.func.value.id
+                for node in ast.walk(module)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "create"
+                and isinstance(node.func.value, ast.Name)
+            }
+            assert created_objects == {"reviews", "revisions"}
+            table_names.extend(table.name for table in (reviews, revisions))
     counts = Counter(table_names)
     assert {
         table_name: count for table_name, count in counts.items() if count != 1
@@ -188,6 +201,7 @@ def test_database_privilege_manifest_is_strict_and_protects_event_history() -> N
         "publication_command_results",
         "review_operation_tokens",
         "review_operation_results",
+        "production_inventory_review_revisions",
         "admin_operation_tokens",
         "admin_operation_results",
         "version_review_events",
@@ -317,7 +331,10 @@ def test_every_migration_table_has_exactly_one_insert_classification() -> None:
     )
     created_tables = _migration_created_table_names()
     assert created_tables == classified_tables
-    assert len(created_tables) == 120
+    assert len(created_tables) == 122
+    assert "production_inventory_reviews" in mutable_insert
+    assert "production_inventory_reviews" in runtime["update"]
+    assert "production_inventory_reviews" not in runtime["delete"]
 
 
 def test_all_database_privilege_consumers_load_and_validate_the_manifest() -> None:

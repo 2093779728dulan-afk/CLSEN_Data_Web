@@ -298,6 +298,7 @@ def test_all_write_operations_expose_csrf_and_expected_idempotency(
         ("/api/production/source-drafts/{kind}/upload", "post"),
         ("/api/production/inventory-reviews", "post"),
         ("/api/production/fba/mapping-preview", "post"),
+        ("/api/production/fba/snapshot-preview", "post"),
         # Preparation/preview POSTs do not confirm business facts.
         ("/api/production/inventory-reviews/{review_id}/preview", "post"),
         ("/api/production/inventory/count-table/preview", "post"),

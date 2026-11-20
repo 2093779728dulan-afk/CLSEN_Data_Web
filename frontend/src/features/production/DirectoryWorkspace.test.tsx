@@ -364,7 +364,7 @@ it("shows shipment progress, current stock and the result after this shipment", 
   api.read.mockImplementation(path => path === "/api/production/orders/10" ? Promise.resolve(source) : path.startsWith("/api/production/orders?") ? Promise.resolve({ items: [source], total: 1, page: 1 }) : path.includes("inventory/availability?") && path.includes("sku_id=") ? Promise.resolve({ state: "ready", on_hand_units: "12", dispatch_allowed_units: "8", own_reserved_units: "1" }) : original(path));
   mount("warehouses", "/production/warehouses/1?tab=records&ship=1&mode=ship&source_order=10");
   const dialog = await screen.findByRole("dialog", { name: "新建出货单" });
-  const reference = within(dialog).getByRole("region", { name: "出货业务参照" });
+  const reference = await within(dialog).findByRole("region", { name: "出货业务参照" });
   expect(reference).toHaveTextContent("下单计划10件");
   expect(reference).toHaveTextContent("累计已发3件");
   expect(reference).toHaveTextContent("订单差额7件");

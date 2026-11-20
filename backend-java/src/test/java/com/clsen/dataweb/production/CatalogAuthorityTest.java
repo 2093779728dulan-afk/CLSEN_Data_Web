@@ -142,7 +142,7 @@ class CatalogAuthorityTest {
         for(String method:List.of("POST","PUT","DELETE"))for(String path:List.of("orders","orders/1/confirm","shipments","shipments/1/confirm","inventory/openings/preview","inventory/documents","files/orders/preview")) {
             var request=request(method,path);var response=new org.springframework.mock.web.MockHttpServletResponse();var chain=mock(jakarta.servlet.FilterChain.class);
             new InternalIdentityFilter("t".repeat(48),false,false,true,true).doFilter(request,response,chain);
-            if(path.equals("orders")||path.startsWith("orders/")||path.equals("shipments")||path.startsWith("shipments/")||(method.equals("POST")&&path.equals("inventory/documents")))verify(chain).doFilter(request,response);
+            if(path.equals("orders")||path.startsWith("orders/")||path.equals("shipments")||path.startsWith("shipments/")||(method.equals("POST")&&Set.of("inventory/documents","files/orders/preview").contains(path)))verify(chain).doFilter(request,response);
             else {assertEquals(403,response.getStatus());assertTrue(response.getContentAsString().contains("库存期初仍未启用"));verifyNoInteractions(chain);}
         }
     }

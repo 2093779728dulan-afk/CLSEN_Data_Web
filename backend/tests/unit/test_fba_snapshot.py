@@ -1,6 +1,8 @@
 from copy import deepcopy
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from app.api.errors import ApiError
@@ -31,7 +33,7 @@ PRODUCTS = {
 }
 
 
-def test_snapshot_reads_available_and_shipped_separately():
+def test_snapshot_reads_available_and_shipped_separately() -> None:
     result = parse_snapshot(RAW, PRODUCTS)
     assert result["available_units"] == "10"
     assert result["transit_units"] == "7"
@@ -51,12 +53,20 @@ def test_snapshot_reads_available_and_shipped_separately():
         b"sku,available\nSKU-A,10\n",
     ],
 )
-def test_snapshot_rejects_wrong_identity_date_or_quantity(raw):
+def test_snapshot_rejects_wrong_identity_date_or_quantity(raw: bytes) -> None:
     with pytest.raises(ApiError):
         parse_snapshot(raw, PRODUCTS)
 
 
-def basis(tmp_path):
+def basis(
+    tmp_path: Path,
+) -> tuple[
+    SimpleNamespace,
+    SimpleNamespace,
+    SimpleNamespace,
+    dict[str, dict[str, str]],
+    dict[str, Any],
+]:
     digest = retain_identity_source(str(tmp_path), 1, 2, 3, RAW)
     snapshot = {
         "source_kind": "REAL_SOURCE",
@@ -90,7 +100,9 @@ def basis(tmp_path):
     )
 
 
-def test_real_production_transit_uses_committed_snapshot_and_keeps_date(tmp_path):
+def test_real_production_transit_uses_committed_snapshot_and_keeps_date(
+    tmp_path: Path,
+) -> None:
     opening = load_transit_opening(*basis(tmp_path))
     assert opening_records(opening, date(2026, 11, 3)) == []
     assert opening_records(opening, date(2026, 11, 14))[0]["remaining_units"] == "7"
@@ -99,7 +111,9 @@ def test_real_production_transit_uses_committed_snapshot_and_keeps_date(tmp_path
 @pytest.mark.parametrize(
     "change", ["database", "site", "shop", "simulated", "date", "sku", "source"]
 )
-def test_real_transit_does_not_bypass_production_scope_or_original(tmp_path, change):
+def test_real_transit_does_not_bypass_production_scope_or_original(
+    tmp_path: Path, change: str
+) -> None:
     settings, context, engine, catalog, scope = basis(tmp_path)
     scope = deepcopy(scope)
     if change == "database":
@@ -120,7 +134,7 @@ def test_real_transit_does_not_bypass_production_scope_or_original(tmp_path, cha
         load_transit_opening(settings, context, engine, catalog, scope)
 
 
-def test_snapshot_can_complete_codes_only_for_an_existing_scoped_sku():
+def test_snapshot_can_complete_codes_only_for_an_existing_scoped_sku() -> None:
     from app.production.fba_snapshot import snapshot_products
 
     products = {"identities": [], "store": "GZ", "catalog_version": "48:48"}
@@ -132,7 +146,7 @@ def test_snapshot_can_complete_codes_only_for_an_existing_scoped_sku():
         parse_snapshot(RAW, snapshot_products(RAW, products, {}))
 
 
-def test_snapshot_retains_zero_unregistered_rows_as_excluded_evidence():
+def test_snapshot_retains_zero_unregistered_rows_as_excluded_evidence() -> None:
     raw = RAW + b"2026-11-04,UNREGISTERED,B000000099,X000000099,0,0\n"
     result = parse_snapshot(raw, PRODUCTS)
     assert result["available_units"] == "10"
@@ -146,6 +160,6 @@ def test_snapshot_retains_zero_unregistered_rows_as_excluded_evidence():
         b"snapshot-date,sku,asin,fnsku,available,inbound-shipped,available\n2026-11-04,SKU-A,B000000001,X000000001,10,7,99\n",
     ],
 )
-def test_snapshot_rejects_short_rows_and_duplicate_quantity_headers(raw):
+def test_snapshot_rejects_short_rows_and_duplicate_quantity_headers(raw: bytes) -> None:
     with pytest.raises(ApiError):
         parse_snapshot(raw, PRODUCTS)
