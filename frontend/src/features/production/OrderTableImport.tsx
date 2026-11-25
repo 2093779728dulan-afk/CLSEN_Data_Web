@@ -28,6 +28,7 @@ export function OrderTableImport({ context, ready, locked, skus, sourceField, on
   onBusy: (busy: boolean) => void; onSave: (preview: string) => void;
   onCancel: () => void; onDirtyChange?: (dirty: boolean) => void; cancelLabel?: string;
 }) {
+  const [templatesOpen,setTemplatesOpen]=useState(false);
   const [file, setFile] = useState<File>();
   const [result, setResult] = useState<{ context: string; preview: OrderImportPreview }>();
   useEffect(() => {onDirtyChange?.(!!file || !!result);},[file,result,onDirtyChange]);
@@ -65,7 +66,7 @@ export function OrderTableImport({ context, ready, locked, skus, sourceField, on
     {error && <StatusMessage kind="danger" title="导入未完成，原填写内容已保留">{error}</StatusMessage>}
     {preview && <StatusMessage kind={existing?"info":"danger"} title={existing?"此来源已登记，请打开原订单":"表格未填入，原填写内容已保留"}>{preview.issues.map((issue,i)=><p key={i}>第{issue.row}行 {issue.message}</p>)}{(existing || preview.source_check?.duplicate_document) && <Link to={`/production/orders/${(existing || preview.source_check!.duplicate_document)!.id}`}>打开原订单核对</Link>}</StatusMessage>}
     {preview?.source_table && <Table aria-label="原下单表四字段核对"><thead><tr><th>原表行</th><th>款号</th><th>SKU</th><th>数量</th><th>商品关联</th></tr></thead><tbody>{preview.source_table.rows.map(row=><tr key={row.source_row}><td>{row.source_row}</td><td>{row.style_code}</td><td>{row.sku_code}</td><td>{row.expected_units}</td><td>{row.sku_label || "未唯一关联，请先核对商品资料"}</td></tr>)}</tbody></Table>}
-    <details><summary>旧模板与其他原表</summary><div className={styles.actions}><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template?version=v3">规格ID模板</LinkButton><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template">旧SKU模板</LinkButton><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template?version=v2">含来源模板</LinkButton><Link to="/production/orders/intake?method=table&layout=raw">其他排版原表整理</Link></div></details>
+    <div><Button variant="quiet" aria-expanded={templatesOpen} onClick={()=>setTemplatesOpen(!templatesOpen)}>{templatesOpen?"收起其他模板":"其他模板与原表"}</Button>{templatesOpen && <><div className={styles.actions}><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template?version=v3">规格ID模板</LinkButton><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template">旧SKU模板</LinkButton><LinkButton variant="quiet" reloadDocument download to="/api/production/files/orders/template?version=v2">含来源模板</LinkButton><Link to="/production/orders/intake?method=table&layout=raw">其他排版原表整理</Link></div></>}</div>
   </section>;
   return <div className={styles.orderImport}>
     <header className={styles.importHeading}><div><h3>从表格添加产品</h3><p>一份表格对应一张生产单，使用上方所选工厂和仓库。</p></div><LinkButton to="/api/production/files/orders/template?version=v4" reloadDocument icon={<Download />} variant="secondary">下载下单模板</LinkButton></header>

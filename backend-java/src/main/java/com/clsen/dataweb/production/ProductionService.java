@@ -198,8 +198,8 @@ public class ProductionService {
         @SuppressWarnings("unchecked") var lines=(List<Map<String,Object>>)value.get("lines");
         boolean ready=Objects.equals(value.get("status"),"CONFIRMED") && lines!=null && !lines.isEmpty() && lines.stream().allMatch(line->
             line.get("produced_units")!=null && line.get("received_units")!=null &&
-            new BigInteger(line.get("produced_units").toString()).compareTo(new BigInteger(line.get("expected_units").toString()))>=0 &&
-            new BigInteger(line.get("received_units").toString()).compareTo(new BigInteger(line.get("expected_units").toString()))>=0);
+            new BigInteger(line.get("produced_units").toString()).compareTo(new BigInteger(productionTarget(line)))>=0 &&
+            new BigInteger(line.get("received_units").toString()).compareTo(new BigInteger(productionTarget(line)))>=0);
         value.put("production_completion_ready",ready);
     }
     private Map<String,Object> detail(ProductionContext context,String kind,long id) {
@@ -310,9 +310,9 @@ public class ProductionService {
                 case "CLOSED" -> "l.tracking_state='CLOSED'";
                 case "UNSHIPPED" -> "l.tracking_state='OPEN' AND COALESCE(t.units,0)=0";
                 case "PARTIAL" -> "l.tracking_state='OPEN' AND COALESCE(t.units,0)>0 AND COALESCE(t.units,0)<l.expected_units";
-                case "WAIT_PRODUCTION" -> "l.tracking_state='OPEN' AND (l.produced_units IS NULL OR l.produced_units<l.expected_units)";
+                case "WAIT_PRODUCTION" -> "l.tracking_state='OPEN' AND (l.produced_units IS NULL OR l.produced_units<COALESCE(l.planned_production_units,l.expected_units))";
                 case "WAIT_SHIPMENT" -> "l.tracking_state='OPEN' AND COALESCE(t.units,0)<l.expected_units";
-                case "WAIT_RECEIPT" -> "l.tracking_state='OPEN' AND l.expected_units>COALESCE((SELECT SUM(CAST(r.units AS UNSIGNED)) FROM inventory_document d JOIN JSON_TABLE(d.line_items,'$[*]' COLUMNS(purpose VARCHAR(32) PATH '$.purpose',NESTED PATH '$.production_allocations[*]' COLUMNS(order_line_id BIGINT PATH '$.order_line_id',units VARCHAR(19) PATH '$.units'))) r ON TRUE WHERE d.site_id=l.site_id AND d.kind='IN' AND d.status='POSTED' AND r.purpose='PRODUCTION_RECEIPT' AND r.order_line_id=l.id),0)";
+                case "WAIT_RECEIPT" -> "l.tracking_state='OPEN' AND COALESCE(l.planned_production_units,l.expected_units)>COALESCE((SELECT SUM(CAST(r.units AS UNSIGNED)) FROM inventory_document d JOIN JSON_TABLE(d.line_items,'$[*]' COLUMNS(purpose VARCHAR(32) PATH '$.purpose',NESTED PATH '$.production_allocations[*]' COLUMNS(order_line_id BIGINT PATH '$.order_line_id',units VARCHAR(19) PATH '$.units'))) r ON TRUE WHERE d.site_id=l.site_id AND d.kind='IN' AND d.status='POSTED' AND r.purpose='PRODUCTION_RECEIPT' AND r.order_line_id=l.id),0)";
                 default -> "COALESCE(t.units,0)>l.expected_units";
             };
             where.append(" AND id IN (SELECT l.order_id FROM production_order_line l LEFT JOIN (SELECT a.order_line_id,SUM(a.units) units FROM production_shipment_allocation a JOIN production_shipment_source_line x ON x.site_id=a.site_id AND x.id=a.source_line_id JOIN production_shipment h ON h.site_id=x.site_id AND h.id=x.shipment_id WHERE a.site_id=? AND a.is_active=TRUE AND x.is_active=TRUE AND h.status='CONFIRMED' GROUP BY a.order_line_id) t ON t.order_line_id=l.id WHERE l.site_id=? AND l.is_active=TRUE AND "+condition+")");args.add(context.site());args.add(context.site());
@@ -416,7 +416,7 @@ public class ProductionService {
     }
     private void saveOrder(ProductionContext context,long id,JsonNode body,boolean confirmed,String action) {
         JsonNode lines=body.path("lines");if(!lines.isArray() || lines.isEmpty() || lines.size()>500)throw new ProductionError(422,"order_lines_required","订单需要1到500行SKU明细。");
-        var previous=rows("SELECT id,sku_id,tracking_state,expected_units,is_active FROM production_order_line WHERE site_id=? AND order_id=?",context.site(),id);
+        var previous=rows("SELECT id,sku_id,tracking_state,expected_units,planned_production_units,production_plan_reason,produced_units,is_active FROM production_order_line WHERE site_id=? AND order_id=?",context.site(),id);
         Map<Long,Long> existing=new HashMap<>();for(var line:previous)existing.put(Long.parseLong(line.get("sku_id").toString()),Long.parseLong(line.get("id").toString()));
         Set<Long> seen=new HashSet<>();
         for(JsonNode line:lines) {
@@ -425,13 +425,41 @@ public class ProductionService {
             JsonNode identity=catalog(context.site(),body,sku,confirmed);
             if(action.equals("correct") && !existing.containsKey(sku))throw new ProductionError(422,"demand_change_required","新增需求SKU请使用正式需求变更，不能与录入更正混用。");
             if(existing.containsKey(sku) && previous.stream().anyMatch(l->l.get("id").toString().equals(existing.get(sku).toString()) && "CLOSED".equals(l.get("tracking_state")) && (!l.get("expected_units").toString().equals(Long.toString(units)) || !Boolean.parseBoolean(l.get("is_active").toString()))))throw new ProductionError(409,"tracking_closed","请先恢复受影响订单行，再修改需求。");
-            if(existing.containsKey(sku))db.update("UPDATE production_order_line SET expected_units=?,is_active=TRUE WHERE site_id=? AND id=?",units,context.site(),existing.get(sku));
-            else db.update("INSERT INTO production_order_line(site_id,order_id,sku_id,sku_label,catalog_version,expected_units,produced_units) VALUES(?,?,?,?,?,?,0)",context.site(),id,sku,identity.path("label").asText(),identity.path("catalog_version").asText(),units);
+            var old=previous.stream().filter(l->l.get("sku_id").toString().equals(Long.toString(sku))).findFirst().orElse(Map.of());
+            var plan=productionPlan(line,old,units,body.path("production_plan_reason").asText(body.path("reason").asText("")));
+            if(existing.containsKey(sku))db.update("UPDATE production_order_line SET expected_units=?,planned_production_units=?,production_plan_reason=?,is_active=TRUE WHERE site_id=? AND id=?",units,plan.units(),plan.reason(),context.site(),existing.get(sku));
+            else db.update("INSERT INTO production_order_line(site_id,order_id,sku_id,sku_label,catalog_version,expected_units,produced_units,planned_production_units,production_plan_reason) VALUES(?,?,?,?,?,?,0,?,?)",context.site(),id,sku,identity.path("label").asText(),identity.path("catalog_version").asText(),units,plan.units(),plan.reason());
         }
         for(var line:existing.entrySet())if(!seen.contains(line.getKey())){requireOpenLine(context.site(),line.getValue());requireNoShipment(context.site(),line.getValue());
             if(db.queryForObject("SELECT COUNT(*) FROM production_order_line WHERE site_id=? AND id=? AND produced_units>0",Long.class,context.site(),line.getValue())>0)throw new ProductionError(409,"production_progress_exists","此规格已有生产进度，请先核对并有原因地更正进度，不能直接移除。");
             db.update("UPDATE production_order_line SET is_active=FALSE WHERE site_id=? AND id=?",context.site(),line.getValue());}
     }
+    record ProductionPlan(Long units,String reason) {}
+    static ProductionPlan productionPlan(JsonNode line,Map<String,Object> old,long demand,String reason) {
+        Object retained=old.get("planned_production_units");
+        Long planned=retained==null?null:Long.valueOf(retained.toString());
+        if(line.has("planned_production_units")) {
+            var value=line.get("planned_production_units");
+            if(value.isNull())planned=null;
+            else {
+                String text=value.asText();
+                if(!text.matches("0|[1-9][0-9]{0,18}"))throw new ProductionError(422,"invalid_production_plan","计划生产数量须为非负整数。");
+                try {planned=Long.valueOf(text);}catch(NumberFormatException error){throw new ProductionError(422,"invalid_production_plan","计划生产数量超出范围。");}
+            }
+        }
+        long target=planned==null?demand:planned;
+        long prior=retained==null?Long.parseLong(old.getOrDefault("expected_units",demand).toString()):Long.parseLong(retained.toString());
+        if(!old.isEmpty() && target!=prior) {
+            if("CLOSED".equals(old.get("tracking_state")))throw new ProductionError(409,"tracking_closed","请先恢复订单行跟进，再调整生产计划。");
+            if(old.get("produced_units")!=null && target<Long.parseLong(old.get("produced_units").toString()))throw new ProductionError(409,"production_plan_below_actual","计划生产不能低于已实际生产数量，请先核对实际进度。");
+        }
+        String explanation=!line.has("planned_production_units") && retained!=null ? old.getOrDefault("production_plan_reason", "").toString() : line.path("production_plan_reason").asText(reason).strip();
+        if(explanation.isEmpty() && Objects.equals(planned,retained==null?null:Long.valueOf(retained.toString())))explanation=old.getOrDefault("production_plan_reason","").toString();
+        if(target!=demand && explanation.isBlank())throw new ProductionError(422,"production_plan_reason_required","计划生产与下单数量不同，请填写调整原因。");
+        if(explanation.length()>2000)throw new ProductionError(422,"production_plan_reason_invalid","生产计划调整原因不能超过2000字。");
+        return new ProductionPlan(planned,planned==null?"":explanation);
+    }
+    private static String productionTarget(Map<String,Object> line) {return line.get("planned_production_units")==null?line.get("expected_units").toString():line.get("planned_production_units").toString();}
     private void requireOpenLine(long site,long line) {
         var values=rows("SELECT tracking_state FROM production_order_line WHERE site_id=? AND id=? AND is_active=TRUE",site,line);
         if(values.isEmpty())throw new ProductionError(409,"order_link_invalid","关联订单明细不存在。");
@@ -736,7 +764,7 @@ public class ProductionService {
             if(!line.has("produced_units"))continue;
             String amount=text(line,"produced_units",19);if(!amount.matches("0|[1-9][0-9]{0,18}"))throw new ProductionError(422,"invalid_integer","累计实际生产数量须为非负整数；未知请不要提交。");
             long produced;try{produced=Long.parseLong(amount);}catch(NumberFormatException e){throw new ProductionError(422,"integer_out_of_range","累计生产数量超出支持范围。");}
-            if((target.get("produced_units")!=null&&produced<Long.parseLong(target.get("produced_units").toString())||produced>Long.parseLong(target.get("expected_units").toString()))&&reason.isBlank())throw new ProductionError(422,"reason_required","更正减少或超计划生产需填写原因。");
+            if((target.get("produced_units")!=null&&produced<Long.parseLong(target.get("produced_units").toString())||produced>Long.parseLong(productionTarget(target)))&&reason.isBlank())throw new ProductionError(422,"reason_required","更正减少或超计划生产需填写原因。");
             db.update("UPDATE production_order_line SET produced_units=? WHERE site_id=? AND id=?",produced,context.site(),lineId);
         }
         db.update("UPDATE production_order SET revision=revision+1 WHERE site_id=? AND id=?",context.site(),id);

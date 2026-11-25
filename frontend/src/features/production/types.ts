@@ -1,6 +1,6 @@
 export type Kind = "orders" | "shipments";
 export type Sku = { sku_id: string; style_id?: string; style_code?: string; standard_color?: string; standard_size?: string; code: string | null; label: string; status: string; catalog_version: string };
-export type OrderLine = { production_status?: string; production_direct_units?: string; produced_units?: string | null; received_units?: string; tracking_state?: "OPEN" | "CLOSED"; closed_units?: string; pending_units?: string; overage_units?: string; id: string; sku_id: string; sku_label: string; expected_units: string; actual_units: string; difference_units: string };
+export type OrderLine = { planned_production_units?: string | null; production_plan_reason?: string; production_status?: string; production_direct_units?: string; produced_units?: string | null; received_units?: string; tracking_state?: "OPEN" | "CLOSED"; closed_units?: string; pending_units?: string; overage_units?: string; id: string; sku_id: string; sku_label: string; expected_units: string; actual_units: string; difference_units: string };
 export type ProductionReceiptSource = { line_number: string; order_id?: string; order_line_id: string; order_number?: string; order_business_number?: string; units: string };
 export type Allocation = { id?: string; order_line_id: string; units: string; order_id?: string; order_number?: string; order_business_number?: string };
 export type FulfillmentMode = "WAREHOUSE_STOCK" | "PRODUCTION_DIRECT";

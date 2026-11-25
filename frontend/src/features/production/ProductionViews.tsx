@@ -53,7 +53,7 @@ function snapshotFields(value: unknown): Record<string, string> {
   if (v.production_completion_state !== undefined) result["生产完成确认"] = v.production_completion_state === "COMPLETED" ? "已完成" : "进行中";
   if (Array.isArray(v.lines)) for (const item of v.lines as Record<string, unknown>[]) {
     const label = displayValue(item.sku_label || item.sku_id || "SKU");
-    for (const [key, title] of Object.entries({ production_status: "生产状态", produced_units: "累计实际生产", received_units: "累计实收入库", expected_units: "预计", tracking_state: "跟进状态", closed_units: "关闭量" })) if (item[key] !== undefined) result[`${label} · ${title}`] = key === "tracking_state" ? trackingName[item[key] as keyof typeof trackingName] || displayValue(item[key]) : displayValue(item[key]);
+    for (const [key, title] of Object.entries({ production_status: "生产状态", planned_production_units: "计划生产", production_plan_reason: "生产计划调整原因", produced_units: "累计实际生产", received_units: "累计实收入库", expected_units: "预计", tracking_state: "跟进状态", closed_units: "关闭量" })) if (item[key] !== undefined) result[`${label} · ${title}`] = key === "tracking_state" ? trackingName[item[key] as keyof typeof trackingName] || displayValue(item[key]) : displayValue(item[key]);
   }
   if (Array.isArray(v.sources)) for (const item of v.sources as Record<string, unknown>[]) {
     const label = `${displayValue(item.sku_label || item.sku_id || "SKU")} · 来源${displayValue(item.id || "")}`;

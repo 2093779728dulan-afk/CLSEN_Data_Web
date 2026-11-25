@@ -25,14 +25,15 @@ export function useRefreshOnReturn(refresh: () => void, enabled = true) {
   }, [enabled]);
 }
 export function useLoad<T>(path: string, revision: number | string = 0, enabled = true, retainOnRefresh = false, refreshOnReturn = path.startsWith("/api/production/skus?")) {
+  const { generation, registerSensitivePurge, productionReads } = useAuthzGeneration();
   const [returned, setReturned] = useState(0);
   useRefreshOnReturn(() => setReturned(value => value + 1), enabled && refreshOnReturn);
   const wasRefreshing = useRef(refreshOnReturn);
   useEffect(() => {
-    if (refreshOnReturn && !wasRefreshing.current) setReturned(value => value + 1);
+    if (refreshOnReturn && !wasRefreshing.current) { productionReads.forget(path); setReturned(value => value + 1); }
     wasRefreshing.current = refreshOnReturn;
-  }, [refreshOnReturn]);
-  const { generation, registerSensitivePurge, productionReads } = useAuthzGeneration();
+  }, [refreshOnReturn, productionReads, path]);
+  const lastExplicitRefresh = useRef(revision);
   const dataRevision = useSyncExternalStore(productionReads.subscribe, productionReads.version);
   const cachedRead = path.startsWith("/api/production/") && !path.startsWith("/api/production/commands/");
   const refresh = `${revision}:${returned}:${dataRevision}`;
@@ -49,7 +50,10 @@ export function useLoad<T>(path: string, revision: number | string = 0, enabled 
     let active = true;
     const gate = cachedRead ? undefined : new RequestGate();
     const ticket = gate?.begin([path, refresh], generation);
-    const job = cachedRead ? productionReads.read<T>(path, signal => requestApi<T>(path, { signal })) : undefined;
+    const force = lastExplicitRefresh.current !== revision;
+    lastExplicitRefresh.current = revision;
+    const maxAge = /\/(?:skus|factories|warehouses)\?/.test(path) ? 300_000 : 30_000;
+    const job = cachedRead ? productionReads.read<T>(path, signal => requestApi<T>(path, { signal }), force ? 0 : maxAge) : undefined;
     const isCurrent = () => active && (job ? !job.controller.signal.aborted : ticket!.isCurrent());
     void (job?.promise ?? requestApi<T>(path, { signal: ticket!.signal })).then(value => {
       if (isCurrent()) setResult({ owner: productionReads, path, refresh, generation, pending: false, value });
@@ -60,7 +64,7 @@ export function useLoad<T>(path: string, revision: number | string = 0, enabled 
       setResult(previous => ({ owner: productionReads, path, refresh, generation, pending: false, value: (retain || cachedRead) && !denied ? previous?.value : undefined, error: reason instanceof Error ? reason.message : "读取失败。" }));
     });
     return () => { active = false; gate?.dispose(); };
-  }, [path, refresh, generation, enabled, retain, cachedRead, productionReads]);
+  }, [path, refresh, generation, enabled, retain, cachedRead, productionReads, revision]);
   // Hide another resource synchronously, before the effect clears the old result.
   const sameResource = enabled && result?.path === path && result.generation === generation && result.owner === productionReads;
   const sameRequest = sameResource && result.refresh === refresh;
@@ -86,7 +90,7 @@ export function useCommand<T = Document & { deleted?: boolean }>(onSuccess: (res
       if (active.current && auth.current === start) { setUnknown(false); pending.current = undefined; keys.current = new StableOperationKeyStore(); onSuccess(result); }
     } catch (reason) {
       if (!active.current || auth.current !== start) return;
-      if (reason instanceof ApiRequestError && reason.status === 403 && reason.code !== "sku_scope_forbidden") { purgeSensitiveState(); return; }
+      if (reason instanceof ApiRequestError && reason.status === 403 && reason.code !== "sku_scope_forbidden" && reason.code !== "production_read_only") { purgeSensitiveState(); return; }
       const uncertain = query || !(reason instanceof ApiRequestError) || reason.status >= 500;
       setUnknown(uncertain); if (!uncertain) { pending.current = undefined; onRejected?.(); }
       setError(reason instanceof Error ? reason.message : "保存未完成。"); setErrorCode(reason instanceof ApiRequestError ? reason.code : undefined);

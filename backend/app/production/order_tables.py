@@ -295,6 +295,22 @@ def render_order_table(
                 "身份编码或日期待核，保留原数量"
             )
     if document:
+        plan = book.create_sheet("生产计划")
+        plan.append(["商品规格ID", "下单数量", "计划生产数量", "调整原因"])
+        for line in document.get("lines", []):
+            plan.append(
+                [
+                    str(line["sku_id"]),
+                    str(line["expected_units"]),
+                    str(
+                        line["expected_units"]
+                        if line.get("planned_production_units") is None
+                        else line["planned_production_units"]
+                    ),
+                    str(line.get("production_plan_reason", "")),
+                ]
+            )
+        style_business_sheet(plan, (20, 18, 20, 60))
         note = book.create_sheet("说明")
         for row in [
             ("格式版本", VERSION),

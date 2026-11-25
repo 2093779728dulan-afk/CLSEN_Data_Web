@@ -19,9 +19,9 @@ function deferred() {
   const promise = new Promise<{ quantity: number }>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-afterEach(() => { cleanup(); read.mockReset(); write.mockReset(); siteId = 1; });
+afterEach(() => { cleanup(); read.mockReset(); write.mockReset(); vi.restoreAllMocks(); siteId = 1; });
 
-it("shows a remounted production page immediately and revalidates shared data", async () => {
+it("reuses a fresh cached page on remount without requesting it again", async () => {
   const pending = deferred(); read.mockResolvedValueOnce({ quantity: 8 }).mockReturnValue(pending.promise);
   function Page({ visible }: { visible: boolean }) { return visible ? <Child /> : null; }
   const observed: ReturnType<typeof useLoad<{ quantity: number }>>[] = [];
@@ -31,8 +31,8 @@ it("shows a remounted production page immediately and revalidates shared data", 
   rerender(<Wrapper><Page visible={false} /></Wrapper>); rerender(<Wrapper><Page visible /></Wrapper>);
   expect(observed.at(-1)?.value?.quantity).toBe(8); expect(observed.at(-1)?.initialLoading).toBe(false);
   expect(observed.at(-1)?.current).toBe(false);
-  await act(async () => { pending.resolve({ quantity: 9 }); await pending.promise; });
-  expect(observed.at(-1)?.value?.quantity).toBe(9); expect(observed.at(-1)?.current).toBe(true);
+  await waitFor(() => expect(observed.at(-1)?.current).toBe(true));
+  expect(read).toHaveBeenCalledTimes(1); expect(observed.at(-1)?.value?.quantity).toBe(8);
 });
 
 it("deduplicates mounted consumers and refreshes both after a business write", async () => {
@@ -131,10 +131,12 @@ it("still purges sensitive references for an actual command permission denial", 
 });
 
 
-it.each(["focus", "visibilitychange"])("refreshes subscribed references on return via %s and retains SKU choices until current", async event => {
+it.each(["focus", "visibilitychange"])("refreshes expired references on return via %s and retains SKU choices until current", async event => {
+  const now=vi.spyOn(Date,"now"); now.mockReturnValue(1_000);
   const pending = deferred(); read.mockResolvedValueOnce({quantity:8}).mockReturnValueOnce(pending.promise);
   const {result} = renderHook(() => useLoad<{quantity:number}>("/api/production/skus?contract_version=2"), {wrapper:Wrapper});
   await waitFor(() => expect(result.current.current).toBe(true));
+  now.mockReturnValue(302_000);
   act(() => { (event === "focus" ? window : document).dispatchEvent(new Event(event)); });
   await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
   expect(result.current.value?.quantity).toBe(8); expect(result.current.current).toBe(false);
@@ -170,4 +172,20 @@ it("never exposes another site's cached production data and clears it on a sensi
   await act(async()=>{pending.resolve({quantity:9});await pending.promise;});
   expect(result.current.value?.quantity).toBe(9);
   act(()=>result.current.purge());expect(result.current.value).toBeUndefined();expect(result.current.current).toBe(false);
+});
+
+it("reports disabled production writes without purging the current draft or references", async () => {
+  read.mockResolvedValue({ quantity: 8 });
+  write.mockRejectedValue(new ApiRequestError(403, "production_read_only", "库存写入尚未启用。"));
+  const success = vi.fn(); const rejected = vi.fn();
+  const { result } = renderHook(() => ({ reference: useLoad("/api/production/workbench"), command: useCommand(success, rejected), auth: useAuthzGeneration() }), { wrapper: Wrapper });
+  await waitFor(() => expect(result.current.reference.current).toBe(true));
+  const generation = result.current.auth.generation;
+  act(() => result.current.command.submit("/api/production/inventory/display-settings", { expected_revision: "0", style_ids: ["1"] }));
+  await waitFor(() => expect(result.current.command.errorCode).toBe("production_read_only"));
+  expect(result.current.command.feedback).not.toBeNull();
+  expect(result.current.command.unknown).toBe(false);
+  expect(result.current.reference.value).toEqual({ quantity: 8 });
+  expect(result.current.auth.generation).toBe(generation);
+  expect(success).not.toHaveBeenCalled(); expect(rejected).toHaveBeenCalledOnce();
 });

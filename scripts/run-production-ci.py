@@ -516,7 +516,7 @@ def run(output: Path, *, offline: bool) -> dict[str, object]:
         result.update(
             status="passed",
             tls="VERIFY_IDENTITY",
-            java_migration=20,
+            java_migration=21,
             image_id=json.loads(command(["docker", "image", "inspect", image]))[0][
                 "Id"
             ],

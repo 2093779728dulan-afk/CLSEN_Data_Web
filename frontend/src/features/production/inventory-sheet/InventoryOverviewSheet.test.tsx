@@ -53,7 +53,7 @@ beforeEach(() => {
   HTMLElement.prototype.scrollTo = vi.fn();
   window.matchMedia = vi.fn().mockReturnValue({ matches: true });
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 it('shows manual production labels only after expanding the style', async () => {
   const value = sheet(options.today, '21');
@@ -206,7 +206,8 @@ it('uses color-only alerts for styles and SKUs, leaves totals plain and opens ze
   expect(await screen.findByRole('table', { name: 'SKU库存提醒设置' })).toBeVisible();
 });
 
-it('shows a visited date immediately, validates it before export and restores confirmed data on failure', async () => {
+it('shows an expired visited date immediately, validates it before export and restores confirmed data on failure', async () => {
+  const clock=vi.spyOn(Date,'now');clock.mockReturnValue(1000);
   let calls = 0;
   let reject: (error: Error) => void = () => {};
   vi.mocked(requestApi).mockImplementation(url => {
@@ -221,6 +222,7 @@ it('shows a visited date immediately, validates it before export and restores co
   fireEvent.change(screen.getByLabelText('统计截止日期'), { target: { value: '2026-11-09' } });
   await waitFor(() => expect(document.querySelector('.sheet')).toHaveAttribute('aria-busy', 'false'));
   expect(screen.getByRole('button', { name: '库存明细' })).toHaveTextContent('2026/11/09');
+  clock.mockReturnValue(32000);
   fireEvent.change(screen.getByLabelText('统计截止日期'), { target: { value: options.today } });
   await waitFor(() => expect(calls).toBe(3));
   expect(screen.getByRole('button', { name: '库存明细' })).toHaveTextContent('2026/11/11');
@@ -232,7 +234,8 @@ it('shows a visited date immediately, validates it before export and restores co
   expect(screen.getByLabelText('统计截止日期')).toHaveValue('2026-11-09');
 });
 
-it.each(['focus', 'visibilitychange'])('replaces cached quantities and clears visited dates on %s', async event => {
+it.each(['focus', 'visibilitychange'])('replaces expired quantities and clears visited dates on %s', async event => {
+  const clock=vi.spyOn(Date,'now');clock.mockReturnValue(1000);
   let calls = 0;
   const pending: ((value: SheetResponse) => void)[] = [];
   vi.mocked(requestApi).mockImplementation(url => {
@@ -244,12 +247,14 @@ it.each(['focus', 'visibilitychange'])('replaces cached quantities and clears vi
   await screen.findByRole('button', { name: '展开款号1202' });
   fireEvent.change(screen.getByLabelText('统计截止日期'), { target: { value: '2026-11-09' } });
   await waitFor(() => expect(document.querySelector('.sheet')).toHaveAttribute('aria-busy', 'false'));
+  clock.mockReturnValue(32000);
   fireEvent.change(screen.getByLabelText('统计截止日期'), { target: { value: options.today } });
   await waitFor(() => expect(pending).toHaveLength(1));
   const fresh = { ...sheet(options.today, '99'), version: 'updated-after-stock-or-report-change' };
   await act(async () => { pending[0]!(fresh); await Promise.resolve(); });
   expect(screen.getByRole('button', { name: '查看1202广州成品仓2026-11-11至2026-11-11' })).toHaveTextContent('99');
   expect(screen.getByRole('button', { name: '导出 Excel' })).toBeEnabled();
+  clock.mockReturnValue(64000);
   fireEvent(event === 'focus' ? window : document, new Event(event));
   await waitFor(() => expect(pending).toHaveLength(2));
   await act(async () => { pending[1]!(fresh); await Promise.resolve(); });

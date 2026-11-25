@@ -8,9 +8,10 @@ import { ProductionWorkspace } from "./ProductionWorkspace";
 import type { Document } from "./types";
 import { orderProductName, progressChanges, progressNumber } from "./orderProgress";
 import { orderPending } from "./orderPending";
+import { isBusinessWrite, productionDataChanged } from "../../api/productionReadCache";
 type WriteOptions = { body: Record<string, unknown>; operationKey: string };
 const api = vi.hoisted(() => ({ read: vi.fn<(path: string) => Promise<unknown>>(), write: vi.fn<(path: string, options: WriteOptions) => Promise<unknown>>() }));
-vi.mock("../../api/client", async original => ({ ...await original<typeof import("../../api/client")>(), requestApi: api.read, writeApi: api.write }));
+vi.mock("../../api/client", async original => ({ ...await original<typeof import("../../api/client")>(), requestApi: api.read, writeApi: async (path:string,options:WriteOptions) => { const result=await api.write(path,options); if(isBusinessWrite(path,"POST"))productionDataChanged(); return result; } }));
 const order: Document = { id: "10", system_number: "PO-QA-10", business_number: "虚构工作台订单", business_date: "2026-10-22", factory_id: "3", factory_name: "青禾示例厂", receipt_warehouse_id: "900", receipt_owner_id: "1", destination: "虚构集货点", notes: "", status: "CONFIRMED", revision: "2", expected_units: "100", actual_units: "20", received_units: "60", lines: [{ id: "101", sku_id: "1001", sku_label: "QA-Blue-M", expected_units: "100", actual_units: "20", difference_units: "80", produced_units: "80", received_units: "60" }], shipments: [], history: [] };
 beforeEach(() => {
   api.read.mockReset(); api.write.mockReset();
@@ -733,11 +734,11 @@ describe("factory overview and bulk cumulative production", () => {
 });
 
 it("shows only ordered, produced and received quantities and starts shipment independently",async()=>{
- mount("/production/orders");await screen.findByRole("columnheader",{name:"下单数量"});const overview=screen.getByRole("region",{name:"工厂订单跟进总览"});
+ mount("/production/orders");await screen.findByRole("columnheader",{name:"下单 / 计划生产"});const overview=screen.getByRole("region",{name:"工厂订单跟进总览"});
  expect(within(overview).queryByRole("columnheader",{name:"已出货"})).not.toBeInTheDocument();
  expect(overview).not.toHaveTextContent("已出货");expect(within(overview).queryByRole("link",{name:"本单出货"})).not.toBeInTheDocument();
  expect(within(overview).getByRole("link",{name:"仓库出货"})).toHaveAttribute("href","/production/shipments/intake");
- for(const name of ["下单数量","已生产","已入库"])expect(within(overview).getByRole("columnheader",{name})).toBeInTheDocument();
+ for(const name of ["下单 / 计划生产","已生产","已入库"])expect(within(overview).getByRole("columnheader",{name})).toBeInTheDocument();
 });
 
 it("offers contextual shared actions after an explicit row selection and preserves it after returning",async()=>{
@@ -916,7 +917,7 @@ describe("overview tools and factory overlays", () => {
     const paths = { "订单原表与整理记录": "/production/orders/materials", "全部出货": "/production/shipments", "历史订单出货汇总": "/production/summary" };
     for (const [name, href] of Object.entries(paths)) expect(within(menu).getByRole("menuitem", { name })).toHaveAttribute("href", href);
     await userEvent.click(within(menu).getByRole("menuitem",{name:"从表格下单"}));
-    const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
     expect(within(dialog).queryByRole("button",{name:"表格导入"})).not.toBeInTheDocument();
     expect(within(dialog).getByRole("link",{name:"下载下单模板"})).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "导出订单" })).toHaveAttribute("href", expect.stringContaining("tracking=WAIT_RECEIPT"));
@@ -973,7 +974,7 @@ describe("same-page order creation and streamlined search",()=>{
     const router=mount("/production/orders?factory=3&q=QA&page=2");
     const trigger=await screen.findByRole("button",{name:"下单"});
     await userEvent.click(trigger);
-    const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
     expect(router.state.location.pathname).toBe("/production/orders");
     expect(router.state.location.search).toContain("new=1");
     await userEvent.type(within(dialog).getByLabelText("业务订单号（可选）"),"QA local draft");
@@ -992,7 +993,7 @@ describe("same-page order creation and streamlined search",()=>{
     expect(within(dialog).getByLabelText("业务订单号（可选）")).toHaveValue("QA local draft");
     await userEvent.click(within(dialog).getByRole("button",{name:"关闭下单"}));
     await userEvent.click(within(screen.getByRole("dialog",{name:"保留当前填写，还是放弃？"})).getByRole("button",{name:"放弃并关闭"}));
-    await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下生产单"})).not.toBeInTheDocument());
+    await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下单与生产计划"})).not.toBeInTheDocument());
     expect(router.state.location.search).toBe("?factory=3&q=QA&page=2");
     await waitFor(()=>expect(trigger).toHaveFocus());
     expect(api.write).not.toHaveBeenCalled();
@@ -1001,13 +1002,13 @@ describe("same-page order creation and streamlined search",()=>{
     api.write.mockResolvedValue({...order,id:"11",business_number:"QA modal draft",status:"DRAFT"});
     const router=mount("/production/orders?factory=3&q=QA&page=2");
     await userEvent.click(await screen.findByRole("button",{name:"下单"}));
-    const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
     await userEvent.selectOptions(within(dialog).getByLabelText(/生产完成后入库仓库/),"900:1");
     await userEvent.selectOptions(within(dialog).getByLabelText("产品1"),"1001");
     await userEvent.type(within(dialog).getByLabelText("产品1下单数量"),"3");
     await userEvent.click(within(dialog).getByRole("button",{name:"保存草稿"}));
     expect(await screen.findByText("订单草稿已保存")).toBeVisible();
-    await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下生产单"})).not.toBeInTheDocument());
+    await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下单与生产计划"})).not.toBeInTheDocument());
     expect(router.state.location.pathname).toBe("/production/orders");
     expect(router.state.location.search).toBe("?factory=3&q=QA&page=2");
     expect(screen.getByRole("link",{name:"查看新订单"})).toHaveAttribute("href","/production/orders/11?factory=3&q=QA&page=2");
@@ -1015,7 +1016,7 @@ describe("same-page order creation and streamlined search",()=>{
   });
   it("retains a selected import file behind the close guard on a direct new-order link",async()=>{
     const router=mount("/production/orders/new?method=table&factory=3");
-    const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
     await screen.findByRole("option", { name: "虚构仓900" });
     await userEvent.selectOptions(await screen.findByLabelText(/生产完成后入库仓库/),"900:1");
     api.write.mockResolvedValue({issues:[{row:2,message:"样例错误"}],rows:[],command:{},filename:"qa.xlsx"});
@@ -1032,7 +1033,7 @@ describe("same-page order creation and streamlined search",()=>{
     const input=await screen.findByRole("searchbox",{name:"搜索工厂、订单或SKU"});
     fireEvent.change(input,{target:{value:"QA"}});
     fireEvent.click(screen.getByRole("button",{name:"下单"}));
-    const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+    const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
     await act(()=>new Promise(resolve=>setTimeout(resolve,350)));
     expect(dialog).toBeVisible();
     expect(new URLSearchParams(router.state.location.search).get("new")).toBe("1");
@@ -1062,13 +1063,13 @@ it("confirms a new order only after the existing source check and returns to the
   api.write.mockImplementation(path=>Promise.resolve(path === "/api/production/sources/orders/check" ? {candidates:[]} : {...order,id:"11",status:"CONFIRMED"}));
   const router=mount("/production/orders?factory=3");
   await userEvent.click(await screen.findByRole("button",{name:"下单"}));
-  const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+  const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
   await userEvent.selectOptions(within(dialog).getByLabelText(/生产完成后入库仓库/),"900:1");
   await userEvent.selectOptions(within(dialog).getByLabelText("产品1"),"1001");
   await userEvent.type(within(dialog).getByLabelText("产品1下单数量"),"3");
   await userEvent.click(within(dialog).getByRole("button",{name:"核对并确认下单"}));
   await screen.findByText("生产单已下达");
-  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下生产单"})).not.toBeInTheDocument());
+  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下单与生产计划"})).not.toBeInTheDocument());
   expect(api.write.mock.calls.map(([path])=>path)).toEqual(["/api/production/sources/orders/check","/api/production/orders"]);
   expect(api.write.mock.calls[1]?.[1].body).toMatchObject({save_mode:"confirm",factory_id:"3"});
   expect(router.state.location.search).toBe("?factory=3");
@@ -1080,7 +1081,7 @@ it("locks an uncertain order save and recovers its original operation before clo
   api.read.mockImplementation(path=>path.startsWith("/api/production/commands/") ? Promise.resolve({...order,id:"11",status:"DRAFT"}) : original(path));
   mount("/production/orders?factory=3");
   await userEvent.click(await screen.findByRole("button",{name:"下单"}));
-  const dialog=await screen.findByRole("dialog",{name:"下生产单"});
+  const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
   await userEvent.selectOptions(within(dialog).getByLabelText(/生产完成后入库仓库/),"900:1");
   await userEvent.selectOptions(within(dialog).getByLabelText("产品1"),"1001");
   await userEvent.type(within(dialog).getByLabelText("产品1下单数量"),"3");
@@ -1090,7 +1091,7 @@ it("locks an uncertain order save and recovers its original operation before clo
   expect(within(dialog).getByLabelText("产品1下单数量")).toBeDisabled();
   await userEvent.click(within(dialog).getByRole("button",{name:"查询原操作结果"}));
   await screen.findByText("订单草稿已保存");
-  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下生产单"})).not.toBeInTheDocument());
+  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"下单与生产计划"})).not.toBeInTheDocument());
   expect(api.write).toHaveBeenCalledTimes(1);
   expect(api.read.mock.calls.some(([path])=>path === `/api/production/commands/${api.write.mock.calls[0]?.[1].operationKey}`)).toBe(true);
 });
@@ -1176,4 +1177,23 @@ it("previews cumulative receipts compactly and expands imported quality quantiti
  expect(within(table).getByLabelText("QA-Blue-M已入库60件，确认后62件")).toBeVisible();
  expect(screen.getByRole("checkbox", { name:"填写待检或次品" })).toBeDisabled();
  expect(api.write).not.toHaveBeenCalled();
+});
+
+it("defaults production to demand, preserves an adjusted plan and submits its reason",async()=>{
+  api.write.mockImplementation(path=>Promise.resolve(path === "/api/production/sources/orders/check" ? {candidates:[]} : {...order,id:"11",status:"CONFIRMED"}));
+  mount("/production/orders?factory=3"); await userEvent.click(await screen.findByRole("button",{name:"下单"}));
+  const dialog=await screen.findByRole("dialog",{name:"下单与生产计划"});
+  await userEvent.selectOptions(within(dialog).getByLabelText(/生产完成后入库仓库/),"900:1");
+  await userEvent.selectOptions(within(dialog).getByLabelText("产品1"),"1001");
+  await userEvent.type(within(dialog).getByLabelText("产品1下单数量"),"100");
+  const target=within(dialog).getByLabelText("产品1计划生产数量"); expect(target).toHaveValue("100");
+  await userEvent.clear(target);await userEvent.type(target,"70");
+  const demand=within(dialog).getByLabelText("产品1下单数量"); await userEvent.clear(demand);await userEvent.type(demand,"110");
+  expect(target).toHaveValue("70");
+  await userEvent.type(within(dialog).getByLabelText(/生产计划调整原因/),"使用现有库存");
+  await userEvent.click(within(dialog).getByRole("button",{name:"核对并确认下单"}));
+  await within(dialog).findByRole("table",{name:"生产计划变更"});
+  await userEvent.click(within(dialog).getByRole("button",{name:"确认下单"}));
+  await screen.findByText("生产单已下达");
+  expect(api.write.mock.calls.at(-1)?.[1].body).toMatchObject({production_plan_reason:"使用现有库存",lines:[{sku_id:"1001",expected_units:"110",planned_production_units:"70"}]});
 });

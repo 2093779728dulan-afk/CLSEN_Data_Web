@@ -45,6 +45,19 @@ class ProductionContractsTest {
     long id(Map<String,Object> document){return Long.parseLong(document.get("id").toString());}
     String line(Map<String,Object> document){return ((List<Map<String,Object>>)document.get("lines")).getFirst().get("id").toString();}
     JsonNode shipment(String qty,String line,String mode){return command(Map.of("overage_reason","fictional actual-shipment explanation","save_mode",mode,"business_date","2026-10-12","sources",List.of(Map.of("sku_id","1001","actual_units",qty,"allocations",List.of(Map.of("order_line_id",line,"units",qty))))));}
+    @Test void productionPlanPersistsSeparatelyAndOldImportsPreserveIt() {
+        var original=order("100");
+        assertNull(((List<Map<String,Object>>)original.get("lines")).getFirst().get("planned_production_units"));
+        var adjustment=command(Map.of("expected_revision","1","reason","use existing stock","production_plan_reason","use existing stock","business_date","2026-10-12","lines",List.of(Map.of("sku_id","1001","expected_units","100","planned_production_units","70"))));
+        var changed=run("orders",id(original),"correct",adjustment);
+        var row=((List<Map<String,Object>>)changed.get("lines")).getFirst();
+        assertEquals("100",row.get("expected_units"));assertEquals("70",row.get("planned_production_units"));assertEquals("0",row.get("produced_units"));assertEquals("0",changed.get("actual_units"));
+        assertEquals(changed,run("orders",id(original),"correct",adjustment));
+        var oldClient=command(Map.of("expected_revision","2","reason","keep plan on old import","business_date","2026-10-12","lines",List.of(Map.of("sku_id","1001","expected_units","100"))));
+        var preserved=run("orders",id(original),"correct",oldClient);
+        assertEquals("70",((List<Map<String,Object>>)preserved.get("lines")).getFirst().get("planned_production_units"));
+        assertEquals("100",preserved.get("expected_units"));
+    }
     @Test void productionProgressIsSeparateRevisionedAndIdempotent() {
         var order=order("100");
         assertEquals("0",((List<Map<String,Object>>)order.get("lines")).getFirst().get("produced_units"));

@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { AuthzGenerationProvider } from "../../app/AuthzGenerationContext";
 import { SkuAcrossWarehouses } from "./SkuAcrossWarehouses";
+import { ApiRequestError } from "../../api/client";
 const display = vi.hoisted(() => ({ read: vi.fn<() => Promise<{style_ids: string[]; revision: string; can_manage: boolean}>>(), write: vi.fn<(path: string, options: {body: {style_ids: string[]; expected_revision: string}; operationKey?: string}) => Promise<{style_ids: string[]; revision: string; can_manage: boolean}>>() }));
 const api = vi.hoisted(() => ({ read: vi.fn<(path: string) => Promise<unknown>>() }));
 vi.mock("../../api/client", async original => ({ ...await original<typeof import("../../api/client")>(), requestApi: (path: string) => path.includes("/display-settings") ? display.read() : api.read(path), writeApi: display.write }));
@@ -169,4 +170,30 @@ it.each([{principalId:2,siteId:1},{principalId:1,siteId:2}])('reads the server s
  render(<MemoryRouter><AuthzGenerationProvider boundary={{...boundary,roles:['viewer'],siteConfigVersionId:1}} onRevoked={()=>undefined}><SkuAcrossWarehouses/></AuthzGenerationProvider></MemoryRouter>);
  expect(await screen.findByRole('button',{name:'展开款号1112'})).toBeInTheDocument();
  expect(display.read).toHaveBeenCalled();
+});
+
+it('keeps selected styles and explains disabled writes, then saves and restores the shared table', async () => {
+  let ids: string[] = [];
+  display.read.mockImplementation(() => Promise.resolve({style_ids:ids,revision:ids.length ? '1' : '0',can_manage:true}));
+  display.write.mockRejectedValueOnce(new ApiRequestError(403,'production_read_only','库存写入尚未启用。')).mockImplementation((_path, options) => {
+    ids = options.body.style_ids;
+    return Promise.resolve({style_ids:ids,revision:'1',can_manage:true});
+  });
+  mount('/production/stock');
+  await screen.findByText('管理员尚未设置展示款号');
+  await userEvent.click(screen.getByRole('button',{name:'设置展示款号'}));
+  const dialog = screen.getByRole('dialog',{name:'设置展示款号'});
+  await userEvent.click(within(dialog).getByRole('checkbox',{name:'选择款号1112'}));
+  await userEvent.click(within(dialog).getByRole('button',{name:'保存展示范围'}));
+  await within(dialog).findByText('库存写入尚未启用。');
+  expect(within(dialog).getByRole('checkbox',{name:'选择款号1112'})).toBeChecked();
+  expect(within(dialog).getByRole('button',{name:'保存展示范围'})).toBeEnabled();
+  expect(screen.queryByRole('button',{name:'展开款号1112'})).not.toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole('button',{name:'保存展示范围'}));
+  await screen.findByRole('button',{name:'展开款号1112'});
+  expect(screen.queryByRole('dialog',{name:'设置展示款号'})).not.toBeInTheDocument();
+  expect(display.write).toHaveBeenCalledTimes(2);
+  cleanup();
+  mount('/production/stock');
+  await screen.findByRole('button',{name:'展开款号1112'});
 });

@@ -169,3 +169,35 @@ def test_export_retains_unknown_rows_and_never_emits_codes_as_formulas() -> None
     assert ws["D3"].value == "15000000000000001"
     assert "待核" in str(book["说明"]["B8"].value)
     book.close()
+
+
+def test_adjusted_production_plan_export_keeps_order_demand_and_roundtrip_source() -> (
+    None
+):
+    document = {
+        "id": "18",
+        "revision": "3",
+        "business_date": "2026-10-30",
+        "lines": [
+            {
+                "sku_id": "9",
+                "expected_units": "100",
+                "planned_production_units": "70",
+                "production_plan_reason": "use stock",
+            }
+        ],
+    }
+    raw = render_order_table(
+        document, {"9": {"style_code": "QA", "code": "QA-Blue-M"}}, site_id=4
+    )
+    book = openpyxl.load_workbook(BytesIO(raw))
+    assert book.worksheets[0]["D2"].value == 100
+    assert [book["生产计划"].cell(2, c).value for c in range(1, 5)] == [
+        "9",
+        "100",
+        "70",
+        "use stock",
+    ]
+    book.close()
+    parsed = parse_order_table(raw, "plan.xlsx")
+    assert parsed is not None and parsed["source_units"] == "100"

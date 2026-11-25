@@ -196,7 +196,9 @@ def test_manual_production_status_is_visible_in_details_without_changing_totals(
     assert grouped["columns"][-1] == "生产状态"
     assert grouped["rows"][0]["cells"][-1] == "车缝 · 缺料"
     detail = sheet_details(sheet, {"metric": "production.pending", "sku_id": "20"})
-    assert detail["rows"][0]["cells"][-1] == "车缝 · 缺料"
+    assert (
+        detail["rows"][0]["cells"][detail["columns"].index("生产状态")] == "车缝 · 缺料"
+    )
     assert detail["total"]["value"] == "40"
 
 
@@ -751,3 +753,13 @@ def test_comparison_detail_shows_both_periods_and_filters_only_both_zero(
         assert detail["comparison_totals"][1]["value"] == "6"
         assert detail["comparison_totals"][2]["value"] is None
         assert second["comparison_totals"] == detail["comparison_totals"]
+
+
+def test_production_plan_is_separate_from_demand_and_does_not_allocate_stock() -> None:
+    facts = production_facts()
+    facts["orders"][0]["lines"][0]["planned_production_units"] = "70"
+    values, records = _production(facts, "20", date(2026, 11, 8), date(2026, 11, 8))
+    assert values["production.pending"]["value"] == "10"
+    assert records[0]["production.ordered"] == "100"
+    assert records[0]["production.planned"] == "70"
+    assert facts["orders"][0]["lines"][0]["expected_units"] == "100"

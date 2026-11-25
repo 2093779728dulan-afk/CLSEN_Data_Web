@@ -366,3 +366,34 @@
   .businessReference > dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .businessReference > dl > div { padding:8px 12px; }
 }
+
+/* Scoped order dialog: readable controls and explicit supplemental actions. */
+.orderEntryDialog .orderForm { font-size:16px; line-height:1.6; }
+.orderEntryDialog .orderForm :is(input,select,textarea,button,th,td,label,p,small) { font-size:16px; }
+.orderEntryDialog .orderForm :is(input,select,button) { min-height:44px; }
+.orderEntryDialog .orderFormSection { padding-block:24px; gap:16px; }
+.orderEntryDialog .orderSectionHeading h3 { font-size:18px; }
+.orderEntryDialog .orderSectionHeading p { font-size:16px; }
+.orderEntryDialog .orderProductTable td { vertical-align:top; }
+.orderEntryDialog .orderProductTable input { min-width:96px; }
+.orderEntryDialog .orderNotesDisclosure { padding-block:16px; }
+.planLinked { display:block; margin-top:8px; font-size:16px; color:var(--color-text-muted); }
+.planNotice { padding:20px; background:var(--color-info-bg); border-radius:var(--radius-md); display:grid; gap:12px; }
+.planNotice h3,.planNotice p { margin:0; }
+@media(max-width:700px) { .orderEntryDialog .orderFormFooter .actions > button { font-size:16px; padding-inline:12px; } .orderEntryDialog .orderFormFooter .actions { flex-wrap:wrap; } }
+
+.orderEntryDialog .orderForm .orderProductTable table { min-width:620px; }
+.orderEntryDialog .orderProductTable th:nth-child(3) { width:170px; }
+
+.orderEntryDialog .orderForm h3 { font-size:18px; }
+@media(max-width:700px) {
+  .orderEntryDialog .orderForm .orderProductTable table { min-width:0; display:block; }
+  .orderEntryDialog .orderProductTable thead { display:none; }
+  .orderEntryDialog .orderProductTable tbody { display:grid; gap:16px; }
+  .orderEntryDialog .orderProductTable tr { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); padding:12px; gap:16px; }
+  .orderEntryDialog .orderProductTable td { display:block; min-width:0; padding:0; border:0; }
+  .orderEntryDialog .orderProductTable td:first-child,.orderEntryDialog .orderProductTable td:last-child { grid-column:1 / -1; }
+  .orderEntryDialog .orderProductTable td[data-label]::before { content:attr(data-label); display:block; margin-bottom:8px; font-size:16px; }
+  .orderEntryDialog .orderProductTable :is(input,select) { width:100%; min-width:0; }
+  .orderEntryDialog .orderFormFooter { position:static; }
+}

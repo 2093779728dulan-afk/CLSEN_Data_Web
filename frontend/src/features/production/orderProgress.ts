@@ -28,7 +28,7 @@ export type ReceiptSourceLine = OrderLine & { order_id: string; order_label?: st
 
 export function receiptRemaining(line: OrderLine): bigint | undefined {
   if (line.received_units == null) return undefined;
-  const remaining = BigInt(line.expected_units) - BigInt(line.received_units) - BigInt(line.production_direct_units || "0");
+  const remaining = BigInt(line.planned_production_units ?? line.expected_units) - BigInt(line.received_units) - BigInt(line.production_direct_units || "0");
   return remaining > 0n ? remaining : 0n;
 }
 
@@ -38,7 +38,7 @@ export function receiptOrderGroups(lines: ReceiptSourceLine[]) {
     const first = items[0]!;
     const remaining = items.map(receiptRemaining);
     return { id, label: first.order_reference || first.order_label || id, factory: first.receipt_factory_name,
-      expected: items.reduce((n, line) => n + BigInt(line.expected_units), 0n),
+      expected: items.reduce((n, line) => n + BigInt(line.planned_production_units ?? line.expected_units), 0n),
       received: items.every(line => line.received_units != null) ? items.reduce((n, line) => n + BigInt(line.received_units!), 0n) : undefined,
       remaining: remaining.every(value => value != null) ? remaining.reduce<bigint>((n, value) => n + value, 0n) : undefined,
       complete: remaining.every(value => value === 0n) };

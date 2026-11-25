@@ -36,3 +36,15 @@ it("does not offer a failed or denied cached read to a later page mount", async 
   await expect(cache.read("stock", () => Promise.reject(new Error("denied"))).promise).rejects.toThrow("denied");
   expect(cache.peek("stock")).toBeUndefined();
 });
+
+it("reuses fresh values, revalidates expired values and never blocks an explicit refresh", async () => {
+  const now = vi.spyOn(Date, "now"); now.mockReturnValue(1_000);
+  try {
+    const cache = new ProductionReadCache(); const load = vi.fn().mockResolvedValue(8);
+    await cache.read("stock", load, 30_000).promise;
+    await cache.read("stock", load, 30_000).promise; expect(load).toHaveBeenCalledTimes(1);
+    now.mockReturnValue(31_001); await cache.read("stock", load, 30_000).promise; expect(load).toHaveBeenCalledTimes(2);
+    await cache.read("stock", load).promise; expect(load).toHaveBeenCalledTimes(3);
+    cache.invalidate(); expect(cache.isFresh("stock")).toBe(false);
+  } finally { now.mockRestore(); }
+});

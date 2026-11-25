@@ -129,6 +129,15 @@ class CatalogAuthorityTest {
             else {assertEquals(403,response.getStatus());verifyNoInteractions(chain);}
         }
     }
+    @Test void displaySettingsFollowDailyInventoryWritesWithoutOpeningOtherRoutes() throws Exception {
+        for(boolean enabled:List.of(false,true))for(String method:List.of("POST","PUT","DELETE"))for(String path:List.of("inventory/display-settings","inventory/display-settings/extra","inventory/display-settings-extra","inventory/openings/confirm")) {
+            var request=request(method,path);var response=new org.springframework.mock.web.MockHttpServletResponse();var chain=mock(jakarta.servlet.FilterChain.class);
+            new InternalIdentityFilter("t".repeat(48),false,false,enabled,true).doFilter(request,response,chain);
+            boolean allowed=enabled&&method.equals("POST")&&path.equals("inventory/display-settings");
+            if(allowed)verify(chain).doFilter(request,response);
+            else {assertEquals(403,response.getStatus());verifyNoInteractions(chain);}
+        }
+    }
     @Test void dailyModeAllowsOnlyTheTwoPostSourceChecks() throws Exception {
         for(boolean enabled:List.of(false,true))for(String method:List.of("POST","PUT","DELETE"))for(String path:List.of("sources/orders/check","sources/shipments/check","sources/orders/check/extra","sources/inventory/check")) {
             var request=request(method,path);var response=new org.springframework.mock.web.MockHttpServletResponse();var chain=mock(jakarta.servlet.FilterChain.class);

@@ -386,13 +386,12 @@ function SheetTable({ scopeQuery, defaultDate, today }: { scopeQuery: string; de
   }, [requestQueryText, refresh, dataRevision, conditions]);
   useEffect(() => {
     const revalidate = () => {
-      reads.current.clear(true);
-      if (document.visibilityState === 'visible' && !settingsDirty && !saving && !saveUnknown) setRefresh(value => value + 1);
+      if (document.visibilityState === 'visible' && !settingsDirty && !saving && !saveUnknown && !productionReads.isFresh(`/api/production/inventory/overview-sheet?${requestQueryText}&summary=1&compact=1`)) setRefresh(value => value + 1);
     };
     window.addEventListener('focus', revalidate);
     document.addEventListener('visibilitychange', revalidate);
     return () => { window.removeEventListener('focus', revalidate); document.removeEventListener('visibilitychange', revalidate); };
-  }, [settingsDirty, saving, saveUnknown]);
+  }, [settingsDirty, saving, saveUnknown, productionReads, requestQueryText]);
   const prepareDates = useCallback((dates: string[]) => {
     if (settingsDirty || saving || saveUnknown || !data || requestQueryText !== queryText) return;
     const keys = dates.map(date => {

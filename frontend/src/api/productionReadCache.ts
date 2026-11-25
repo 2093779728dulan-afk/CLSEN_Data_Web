@@ -4,6 +4,7 @@ type Read<T> = { controller: AbortController; promise: Promise<T> };
 export class ProductionReadCache {
   constructor(readonly boundary = "") {}
   private readonly values = new Map<string, unknown>();
+  private readonly savedAt = new Map<string, number>();
   private readonly pending = new Map<string, Read<unknown>>();
   private readonly listeners = new Set<() => void>();
   private revision = 0;
@@ -12,13 +13,15 @@ export class ProductionReadCache {
   version = () => this.revision;
   peek<T>(key: string) { return this.values.get(key) as T | undefined; }
   put(key: string, value: unknown) {
-    this.values.delete(key); this.values.set(key, value);
-    if (this.values.size > 24) this.values.delete(this.values.keys().next().value!);
+    this.values.delete(key); this.values.set(key, value); this.savedAt.set(key, Date.now());
+    if (this.values.size > 24) this.forget(this.values.keys().next().value!);
   }
-  forget(key: string) { this.values.delete(key); }
-  forgetPrefix(prefix: string) { for (const key of this.values.keys()) if (key.startsWith(prefix)) this.values.delete(key); }
+  isFresh(key: string, maxAge = 30_000) { return this.values.has(key) && Date.now() - (this.savedAt.get(key) ?? 0) < maxAge; }
+  forget(key: string) { this.values.delete(key); this.savedAt.delete(key); }
+  forgetPrefix(prefix: string) { for (const key of this.values.keys()) if (key.startsWith(prefix)) this.forget(key); }
 
-  read<T>(key: string, load: (signal: AbortSignal) => Promise<T>): Read<T> {
+  read<T>(key: string, load: (signal: AbortSignal) => Promise<T>, maxAge = 0): Read<T> {
+    if (maxAge > 0 && this.isFresh(key, maxAge)) return { controller: new AbortController(), promise: Promise.resolve(this.peek<T>(key)!) };
     const previous = this.pending.get(key);
     if (previous) return previous as Read<T>;
     const controller = new AbortController();
@@ -34,7 +37,7 @@ export class ProductionReadCache {
   }
   clear() {
     for (const job of this.pending.values()) job.controller.abort();
-    this.pending.clear(); this.values.clear();
+    this.pending.clear(); this.values.clear(); this.savedAt.clear();
   }
   invalidate() {
     this.clear(); this.revision++;

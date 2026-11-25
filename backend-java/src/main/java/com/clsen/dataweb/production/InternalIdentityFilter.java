@@ -66,13 +66,14 @@ class InternalIdentityFilter extends OncePerRequestFilter {
         boolean opening=openingEnabled && request.getMethod().equals("POST") && Set.of("/internal/production/inventory/openings/preview","/internal/production/inventory/openings/confirm").contains(request.getRequestURI());
         String inventoryPrefix="/internal/production/inventory/",path=request.getRequestURI();
         boolean inventory=inventoryWritesEnabled && request.getMethod().equals("POST") && Set.of("documents","holds","reservations","loans","plans","destination-bindings","destination-receipts","destination-settlements","destination-uploads").stream().anyMatch(resource->path.equals(inventoryPrefix+resource)||path.startsWith(inventoryPrefix+resource+"/"));
+        boolean displaySettings=inventoryWritesEnabled && request.getMethod().equals("POST") && path.equals(inventoryPrefix+"display-settings");
         boolean directory=(orderShipmentWritesEnabled||inventoryWritesEnabled)&&(path.matches("/internal/production/(factories|warehouses)(/[1-9][0-9]*)?")&&(request.getMethod().equals("POST")||request.getMethod().equals("PUT")));
         boolean orderShipment=orderShipmentWritesEnabled && (path.equals("/internal/production/orders")||path.startsWith("/internal/production/orders/")||path.equals("/internal/production/shipments")||path.startsWith("/internal/production/shipments/"));
         boolean sourceCheck=orderShipmentWritesEnabled && request.getMethod().equals("POST") && Set.of("/internal/production/sources/orders/check","/internal/production/sources/shipments/check").contains(path);
         boolean files=orderShipmentWritesEnabled && request.getMethod().equals("POST") && (path.matches("/internal/production/files/(orders|shipments)/preview")||path.matches("/internal/production/files/previews/[0-9a-f-]{36}/confirm"));
         boolean fba=inventoryWritesEnabled && request.getMethod().equals("POST") && path.startsWith(inventoryPrefix+"fba-");
         boolean rebind=identityRebindingEnabled && request.getMethod().equals("POST") && path.equals(inventoryPrefix+"identity-rebindings") && ((ProductionContext)request.getAttribute("production.context")).roles().contains("admin");
-        if(!writesEnabled && !opening && !inventory && !directory && !orderShipment && !sourceCheck && !files && !fba && !rebind && !Set.of("GET","HEAD").contains(request.getMethod())) {
+        if(!writesEnabled && !opening && !inventory && !displaySettings && !directory && !orderShipment && !sourceCheck && !files && !fba && !rebind && !Set.of("GET","HEAD").contains(request.getMethod())) {
             response.setStatus(403);response.setContentType("application/json");response.setCharacterEncoding("UTF-8");
             String message=orderShipmentWritesEnabled?"当前开放预计订单、实际出货及日常库存操作，库存期初仍未启用。":inventoryWritesEnabled?"当前仅开放日常库存操作，库存期初、订单及出货尚未启用。":"当前环境仅开放查询，库存期初、单据及收发操作尚未启用。";
             response.getWriter().write("{\"error\":{\"code\":\"production_read_only\",\"message\":\""+message+"\"}}");return;

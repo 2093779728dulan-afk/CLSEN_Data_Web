@@ -27,6 +27,7 @@ export class SheetReads {
   peek(key: string) { return this.values.get(key) ?? this.shared?.peek<SheetResponse>(this.key(key)); }
 
   read(key: string, prefetch = false): Read {
+    if (this.shared?.isFresh(this.key(key))) return { controller:new AbortController(), promise:Promise.resolve(this.peek(key)!) };
     const existing = this.pending.get(key);
     if (existing) return existing;
     const controller = new AbortController();

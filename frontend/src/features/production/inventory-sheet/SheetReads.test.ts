@@ -68,3 +68,12 @@ it('retains a completed sheet across page mounts and discards it after a busines
   resolve(value('late')); await pending.promise;
   expect(new SheetReads(cache).peek('scope=1')).toBeUndefined();
 });
+
+it('reuses a fresh shared total on return without repeating the full request', async () => {
+  const cache = new ProductionReadCache(); vi.mocked(requestApi).mockResolvedValue(value('same'));
+  const first = new SheetReads(cache); await first.read('scope=1').promise; first.clear();
+  await new SheetReads(cache).read('scope=1').promise;
+  expect(requestApi).toHaveBeenCalledTimes(1);
+  cache.invalidate(); await new SheetReads(cache).read('scope=1').promise;
+  expect(requestApi).toHaveBeenCalledTimes(2);
+});

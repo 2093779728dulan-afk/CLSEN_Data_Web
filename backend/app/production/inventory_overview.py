@@ -480,6 +480,11 @@ def _production(
                     history_unknown = True
                     continue
             expected = int(progress["expected_units"])
+            production_target = (
+                int(progress.get("planned_production_units") or "0")
+                if progress.get("planned_production_units") is not None
+                else expected
+            )
             received = sum(
                 int(allocation["units"])
                 for document in facts["stock_sources"]
@@ -505,7 +510,7 @@ def _production(
             pending = (
                 0
                 if line["tracking_state"] == "CLOSED"
-                else max(expected - produced, 0)
+                else max(production_target - produced, 0)
                 if produced is not None
                 else None
             )
@@ -515,8 +520,8 @@ def _production(
             if pending == 0 and intake == 0:
                 continue
             notes = []
-            if produced is not None and produced > expected:
-                notes.append(f"超产{produced - expected}件，保留原数量")
+            if produced is not None and produced > production_target:
+                notes.append(f"超产{produced - production_target}件，保留原数量")
             if produced is not None and received + direct > produced:
                 excess = received + direct - produced
                 notes.append(f"入库与直发合计超生产进度{excess}件，待入库下限0")
@@ -534,6 +539,10 @@ def _production(
                     "tracking_state": line["tracking_state"],
                     "revision": str(order["revision"]),
                     "production.ordered": str(expected),
+                    "production.planned": str(production_target),
+                    "production_plan_reason": progress.get(
+                        "production_plan_reason", ""
+                    ),
                     "production.completed": None if produced is None else str(produced),
                     "production.received": str(received),
                     "production.pending": None if pending is None else str(pending),
@@ -1397,6 +1406,8 @@ def sheet_details(sheet: dict[str, Any], query: dict[str, str]) -> dict[str, Any
             "修订",
             "说明",
             "生产状态",
+            "计划生产",
+            "计划调整原因",
         ]
         entries = [
             {
@@ -1415,6 +1426,8 @@ def sheet_details(sheet: dict[str, Any], query: dict[str, str]) -> dict[str, Any
                     v["revision"],
                     v.get("progress_note", ""),
                     v.get("production_status", ""),
+                    v.get("production.planned", v["production.ordered"]),
+                    v.get("production_plan_reason", ""),
                 ],
             }
             for v in records["production"]
