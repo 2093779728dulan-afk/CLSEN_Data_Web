@@ -20,7 +20,17 @@ jobs:
     runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
     # Allow the public MySQL job's 120-minute budget plus queue/API overhead.
     timeout-minutes: 145
+    # Override only this job's GitHub proxy; preserve the runner's global config.
+    env:
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: http.https://github.com/.proxy
+      GIT_CONFIG_VALUE_0: ''
     steps:
+      - name: Use the verified direct GitHub route
+        shell: bash
+        # GITHUB_ENV preserves Linux casing; workflow env keys are case-insensitive.
+        run: |
+          printf 'http_proxy=\nhttps_proxy=\nall_proxy=\nHTTP_PROXY=\nHTTPS_PROXY=\nALL_PROXY=\n' >> "$GITHUB_ENV"
       - name: Check out exact private source
         uses: actions/checkout@v4
         with:

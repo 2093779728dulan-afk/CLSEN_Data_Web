@@ -242,7 +242,7 @@ export async function requestApi<T>(
       apiErrorDetails(payload.error, safeErrorFields),
     );
   }
-  if (isBusinessWrite(path, init?.method ?? "GET")) productionDataChanged();
+  if (isBusinessWrite(path, init?.method ?? "GET")) productionDataChanged(path);
   const result: unknown = response.status === 204 ? undefined : await (responseType === "blob" ? response.blob() : response.json());
   return result as T;
 }

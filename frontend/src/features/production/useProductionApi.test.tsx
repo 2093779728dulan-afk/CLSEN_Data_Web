@@ -189,3 +189,17 @@ it("reports disabled production writes without purging the current draft or refe
   expect(result.current.auth.generation).toBe(generation);
   expect(success).not.toHaveBeenCalled(); expect(rejected).toHaveBeenCalledOnce();
 });
+
+it("honors an explicit refresh when a detail is remounted after saving", async () => {
+  read.mockResolvedValueOnce({quantity:8}).mockResolvedValue({quantity:9});
+  let revision=0;
+  const observed: ReturnType<typeof useLoad<{quantity:number}>>[]=[];
+  function Child(){observed.push(useLoad<{quantity:number}>("/api/production/orders/1",revision));return null;}
+  function Page({visible}:{visible:boolean}){return visible?<Child/>:null;}
+  const {rerender}=render(<Wrapper><Page visible/></Wrapper>);
+  await waitFor(()=>expect(observed.at(-1)?.value?.quantity).toBe(8));
+  rerender(<Wrapper><Page visible={false}/></Wrapper>);revision=1;
+  rerender(<Wrapper><Page visible/></Wrapper>);
+  await waitFor(()=>expect(observed.at(-1)?.value?.quantity).toBe(9));
+  expect(read).toHaveBeenCalledTimes(2);
+});

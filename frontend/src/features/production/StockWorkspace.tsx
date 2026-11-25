@@ -6,7 +6,7 @@ import { stockImportRows, withoutTableBaseline } from "./tableImportDiff";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiRequestError, requestApi, StableOperationKeyStore, writeApi } from "../../api/client";
-import { RequestGate } from "../../api/requestGate";
+import { useLoad } from "./useProductionApi";
 import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
 import { Button, Dialog, FormField, Input, LinkButton, Menu, PageHeader, Pagination, StatusMessage, Table } from "../../design-system";
 import { useProductionLeave } from "./useProductionLeave";
@@ -51,10 +51,7 @@ const remaining = (item: RecordValue) => BigInt(display(item.units)) - BigInt(di
 function localTime(value: unknown) { const date = new Date(display(value)); return Number.isNaN(date.valueOf()) ? display(value) : new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "medium" }).format(date); }
 const base = "/api/production/inventory";
 function useRead<T>(path: string, refresh = 0, enabled = true) {
-  const [value, setValue] = useState<T>(); const [error, setError] = useState<string>(); const { generation, registerSensitivePurge } = useAuthzGeneration();
-  useEffect(() => registerSensitivePurge(() => { setValue(undefined); setError(undefined); }), [registerSensitivePurge]);
-  useEffect(() => { if (!enabled) { setValue(undefined); setError(undefined); return; } const gate = new RequestGate(); const ticket = gate.begin([path, refresh], generation); setValue(undefined); setError(undefined); void requestApi<T>(path, { signal: ticket.signal }).then(v => { if (ticket.isCurrent()) setValue(v); }).catch((e: unknown) => { if (ticket.isCurrent()) setError(e instanceof Error ? e.message : "读取未完成"); }); return () => gate.dispose(); }, [path, refresh, generation, enabled]);
-  return { value, error };
+  return useLoad<T>(path, refresh, enabled, true);
 }
 function ReadState({ error }: { error?: string }) { return <StatusMessage kind={error ? "danger" : "info"} title={error ? "库存未能读取" : "正在读取库存…"}>{error}</StatusMessage>; }
 function useStockLabels() {

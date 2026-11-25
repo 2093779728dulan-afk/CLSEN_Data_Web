@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "a2693269822becc6930c5ea1c68bc85c3cbb7fa0",
-  "source_tree": "79d4a37819dc900b19099162fa3ec6837536bc28",
+  "source_sha": "b1287f6bd4843300b17c70260d3cb034f41ab186",
+  "source_tree": "c89f1d445be546a31cece1606ad4aca3b73e7fe2",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -24,8 +24,8 @@
     },
     {
       "path": ".github/workflows/compatibility.yml",
-      "git_blob": "972863c69b3bc8ae8334b8e3b4505f0f6dc9b2c4",
-      "sha256": "cb50e41f567f5cc37c199acd940ca41429752cb786b6e6e921826c171385030c"
+      "git_blob": "1fcb47e190a7b5d67e69815264de6e314e82adc2",
+      "sha256": "81b1f1ae533f1190e51351ebc5be12bcfc39aad8f6e9100588e5032be428a209"
     },
     {
       "path": ".github/workflows/release-gates.yml",
@@ -3784,8 +3784,8 @@
     },
     {
       "path": "frontend/src/api/client.ts",
-      "git_blob": "77914f4903a5adebea55f3f86ae0003657293fb1",
-      "sha256": "ab82c30f094b697e5239d58e6acb208bb3c4b3649ca6f422584ebb686474851b"
+      "git_blob": "c913b2c99a65ed1ba95fdc71ced285de17d22898",
+      "sha256": "b68db7f3acc95a6aa2a06c0ac222a28578bd7a8a1456e24c4fbfbc19428ebeec"
     },
     {
       "path": "frontend/src/api/generated.ts",
@@ -3794,13 +3794,13 @@
     },
     {
       "path": "frontend/src/api/productionReadCache.test.ts",
-      "git_blob": "45178455fae6afe31b7abba8fba9a409d00f4222",
-      "sha256": "58d9d0cefa575184a5dac63a1a885baaefd7b3546cacc656d79df0e0143dfd4e"
+      "git_blob": "b75eb67dd3b6931c70d43d2a89a7748fd56de72b",
+      "sha256": "47515fc7d2e1391147a1a6a8ac3ee03bfc11a2cc92075f915a16c0cf2b980df3"
     },
     {
       "path": "frontend/src/api/productionReadCache.ts",
-      "git_blob": "ee67718c650570e421803a71a51b2424cee984c2",
-      "sha256": "ee1805443be43e5c58344f19e5d3d71fd95419cd3a4df794e7c7df2aec9e7e2e"
+      "git_blob": "c3bab1b5f37fcd0ec2d345164a3d25f5ef6d73e9",
+      "sha256": "58404ca2a913ccf30df9c292e3d4891b6289b7795d3c3d3dedeec47c20fe0957"
     },
     {
       "path": "frontend/src/api/requestGate.test.ts",
@@ -3869,8 +3869,8 @@
     },
     {
       "path": "frontend/src/app/AuthzGenerationContext.tsx",
-      "git_blob": "7e85dba755021349ba9758c23645f4a9ef6f2d8e",
-      "sha256": "e9fcc7735df8e1929903b4ba662d1eccaea7e622fc0c6e027353922710c8c4a9"
+      "git_blob": "d6ffd04f439bdb3e9a8e229a3c8c78f9616d275e",
+      "sha256": "78341ee474ed91ec2888c05871ba6b6960f974561f8935f9a486dcd665b86d2c"
     },
     {
       "path": "frontend/src/app/SessionEntryView.module.css",
@@ -5994,8 +5994,8 @@
     },
     {
       "path": "frontend/src/features/production/ProductionProgressOverview.tsx",
-      "git_blob": "143d0529de914cf96daf4667d09906f8719703e4",
-      "sha256": "dda977d956667977174677cb31f819ffeb3bb3d76f475c7e8861a38546be7cc3"
+      "git_blob": "52cb3342f05f2bf7e5d1da017d029f091b283be5",
+      "sha256": "95c57dd528518d262e997cd422ff0e67307479fc390ba4b734d8f2127ca34514"
     },
     {
       "path": "frontend/src/features/production/ProductionReadOnly.stories.tsx",
@@ -6174,8 +6174,8 @@
     },
     {
       "path": "frontend/src/features/production/StockWorkspace.tsx",
-      "git_blob": "5e7ee0098eafb4737f6391a1f5e08d082d4fd62f",
-      "sha256": "3b7e2cf29758daded6678d8bf78d59f2637709f74cf69fd9ef32451be7ef1567"
+      "git_blob": "5b360589d19e62b7f77fe9cbea661e118c84c169",
+      "sha256": "46da49d908e501513f12c9c29a87d69a0e166d8eff3c557928a3b6b496dacb98"
     },
     {
       "path": "frontend/src/features/production/TableImportReview.test.tsx",
@@ -6474,13 +6474,13 @@
     },
     {
       "path": "frontend/src/features/production/useProductionApi.test.tsx",
-      "git_blob": "692f342fc4b9e017063db9c41f63712b63091448",
-      "sha256": "5612a6c909b6ee99b53bbb4a6837a7fa03b1e43f60b4154c710056e21d121bac"
+      "git_blob": "75e28ba0c2a1532252e4c9e049e29ac90659767b",
+      "sha256": "416df823e185f95cbb1e8561aeac49f34f20a446573da74ec611c5cc964c61df"
     },
     {
       "path": "frontend/src/features/production/useProductionApi.tsx",
-      "git_blob": "3e707424c7ff0aa48ffdcb191572026c3024e725",
-      "sha256": "911c47c809ddcc5cc10e34cf11cc3e06ad684457b36379b2a5fba1eea0158630"
+      "git_blob": "4b6231b77e6baadcd78be66292d48a8858f57347",
+      "sha256": "a951bb6988f372e974ae492b54420ce0845845fa410c895d7e0c92309f89a39c"
     },
     {
       "path": "frontend/src/features/production/useProductionLeave.tsx",

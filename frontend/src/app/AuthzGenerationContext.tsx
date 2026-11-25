@@ -58,7 +58,7 @@ export function AuthzGenerationProvider({
   const identity = fingerprint(boundary);
   const productionReads = useMemo(() => new ProductionReadCache(identity), [identity]);
   useEffect(() => {
-    const unsubscribe = onProductionDataChanged(() => productionReads.invalidate());
+    const unsubscribe = onProductionDataChanged(path => productionReads.invalidateFor(path));
     return () => { unsubscribe(); productionReads.clear(); };
   }, [productionReads]);
 

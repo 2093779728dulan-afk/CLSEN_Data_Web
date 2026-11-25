@@ -48,3 +48,22 @@ it("reuses fresh values, revalidates expired values and never blocks an explicit
     cache.invalidate(); expect(cache.isFresh("stock")).toBe(false);
   } finally { now.mockRestore(); }
 });
+
+it("invalidates display projections without throwing away unrelated order and catalog reads", () => {
+  const cache=new ProductionReadCache();
+  cache.put("/api/production/orders?page=1",1);cache.put("/api/production/skus?contract_version=2",2);cache.put("/api/production/inventory/availability?overview=1",3);
+  cache.invalidateFor("/api/production/inventory/display-settings");
+  expect(cache.peek("/api/production/orders?page=1")).toBe(1);
+  expect(cache.peek("/api/production/skus?contract_version=2")).toBe(2);
+  expect(cache.peek("/api/production/inventory/availability?overview=1")).toBeUndefined();
+  cache.invalidateFor("/api/catalog/changes/1/approve");expect(cache.peek("/api/production/skus?contract_version=2")).toBeUndefined();
+  expect(isBusinessWrite("/api/production/sources/orders/check","POST")).toBe(false);
+});
+it("joins explicit revalidation even when an older value is still fresh", async () => {
+  const cache=new ProductionReadCache();cache.put("stock",1);
+  let done!:(value:number)=>void;
+  const load=vi.fn(()=>new Promise<number>(resolve=>{done=resolve;}));
+  const fresh=cache.read("stock",load);
+  expect(cache.read("stock",load,30_000)).toBe(fresh);
+  done(2);await fresh.promise;expect(cache.peek("stock")).toBe(2);
+});

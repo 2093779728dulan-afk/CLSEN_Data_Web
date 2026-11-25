@@ -20,12 +20,13 @@ import type { OverviewGuard } from "./stockOverview";
 import styles from "./ProductionProgressFlow.module.css";
 type Directory={id:string;name:string;type?:string;status?:string};
 function useDirectory(path:string,refresh:number) {
+ const lastRefresh=useRef(0);
  const {generation,registerSensitivePurge,productionReads}=useAuthzGeneration();
  const revision=useSyncExternalStore(productionReads.subscribe,productionReads.version);
  const key=`${generation}:${refresh}:${revision}:${path}`,cacheKey=`directory:${path}`;
  const [state,setState]=useState<{owner:typeof productionReads;key:string;items:Directory[];error?:string}|undefined>(()=>({owner:productionReads,key,items:productionReads.peek<Directory[]>(cacheKey)||[]}));
  useEffect(()=>registerSensitivePurge(()=>setState(undefined)),[registerSensitivePurge]);
- useEffect(()=>{let active=true;const job=productionReads.read(cacheKey,async signal=>{const items:Directory[]=[];let pages=1;for(let page=1;page<=pages;page++){const result=await requestApi<{items:Directory[];total:number;page_size:number}>(`${path}${path.includes("?")?"&":"?"}page=${page}`,{signal});items.push(...result.items);pages=Math.ceil(result.total/(result.page_size||20));}return items;});void job.promise.then(items=>{if(active&&!job.controller.signal.aborted)setState({owner:productionReads,key,items});}).catch((error:unknown)=>{if(active&&!job.controller.signal.aborted)setState({owner:productionReads,key,items:[],error:error instanceof Error?error.message:"目录读取失败"});});return()=>{active=false;};},[path,key,cacheKey,productionReads]);
+ useEffect(()=>{let active=true;const force=lastRefresh.current!==refresh;lastRefresh.current=refresh;const job=productionReads.read(cacheKey,async signal=>{const items:Directory[]=[];let pages=1;for(let page=1;page<=pages;page++){const result=await requestApi<{items:Directory[];total:number;page_size:number}>(`${path}${path.includes("?")?"&":"?"}page=${page}`,{signal});items.push(...result.items);pages=Math.ceil(result.total/(result.page_size||20));}return items;},force?0:300_000);void job.promise.then(items=>{if(active&&!job.controller.signal.aborted)setState({owner:productionReads,key,items});}).catch((error:unknown)=>{if(active&&!job.controller.signal.aborted)setState({owner:productionReads,key,items:[],error:error instanceof Error?error.message:"目录读取失败"});});return()=>{active=false;};},[path,key,cacheKey,productionReads,refresh]);
  return {value:state?.owner===productionReads?{items:state.items}:undefined,error:state?.owner===productionReads&&state.key===key?state.error:undefined};
 }
 const pageNumber=(v:string|null)=>v&&/^[1-9][0-9]*$/.test(v)&&Number(v)<=1000000?Number(v):1;

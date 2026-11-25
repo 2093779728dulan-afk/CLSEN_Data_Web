@@ -21,9 +21,9 @@ export class ProductionReadCache {
   forgetPrefix(prefix: string) { for (const key of this.values.keys()) if (key.startsWith(prefix)) this.forget(key); }
 
   read<T>(key: string, load: (signal: AbortSignal) => Promise<T>, maxAge = 0): Read<T> {
-    if (maxAge > 0 && this.isFresh(key, maxAge)) return { controller: new AbortController(), promise: Promise.resolve(this.peek<T>(key)!) };
     const previous = this.pending.get(key);
     if (previous) return previous as Read<T>;
+    if (maxAge > 0 && this.isFresh(key, maxAge)) return { controller: new AbortController(), promise: Promise.resolve(this.peek<T>(key)!) };
     const controller = new AbortController();
     const job = { controller, promise: load(controller.signal).then(value => {
       if (!controller.signal.aborted) this.put(key, value);
@@ -39,21 +39,36 @@ export class ProductionReadCache {
     for (const job of this.pending.values()) job.controller.abort();
     this.pending.clear(); this.values.clear(); this.savedAt.clear();
   }
+  invalidateFor(path?: string) {
+    const display = path?.split("?")[0] === "/api/production/inventory/display-settings";
+    const production = path?.startsWith("/api/production/");
+    if (!production) { this.invalidate(); return; }
+    for (const key of new Set([...this.values.keys(), ...this.pending.keys()])) {
+      const affected = display
+        ? /^\/api\/production\/(?:inventory|fba)(?:\/|\?)/.test(key)
+        : !key.startsWith("/api/production/skus?") || /\/production\/(?:skus|catalog)/.test(path!);
+      if (!affected) continue;
+      this.pending.get(key)?.controller.abort(); this.pending.delete(key); this.forget(key);
+    }
+    this.revision++;
+    for (const listener of this.listeners) listener();
+  }
   invalidate() {
     this.clear(); this.revision++;
     for (const listener of this.listeners) listener();
   }
 }
 
-const listeners = new Set<() => void>();
-export function onProductionDataChanged(listener: () => void) {
+const listeners = new Set<(path?: string) => void>();
+export function onProductionDataChanged(listener: (path?: string) => void) {
   listeners.add(listener); return () => { listeners.delete(listener); };
 }
-export function productionDataChanged() { for (const listener of listeners) listener(); }
+export function productionDataChanged(path?: string) { for (const listener of listeners) listener(path); }
 
 export function isBusinessWrite(path: string, method: string) {
   if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
   const pathname = path.split("?")[0]!;
   if (!/^\/api\/(?:production|catalog|review|batch-reviews|publications|imports|drafts|workbench)(?:\/|$)/.test(pathname)) return false;
+  if (/^\/api\/production\/sources\/(?:orders|shipments)\/check$/.test(pathname)) return false;
   return !/(?:\/preview|\/mapping-preview|\/source-check|\/validate)$/.test(pathname);
 }

@@ -33,7 +33,7 @@ export function useLoad<T>(path: string, revision: number | string = 0, enabled 
     if (refreshOnReturn && !wasRefreshing.current) { productionReads.forget(path); setReturned(value => value + 1); }
     wasRefreshing.current = refreshOnReturn;
   }, [refreshOnReturn, productionReads, path]);
-  const lastExplicitRefresh = useRef(revision);
+  const lastExplicitRefresh = useRef<number | string>(0);
   const dataRevision = useSyncExternalStore(productionReads.subscribe, productionReads.version);
   const cachedRead = path.startsWith("/api/production/") && !path.startsWith("/api/production/commands/");
   const refresh = `${revision}:${returned}:${dataRevision}`;
@@ -86,7 +86,7 @@ export function useCommand<T = Document & { deleted?: boolean }>(onSuccess: (res
     setBusy(true); setError(undefined); setErrorCode(undefined); const start = auth.current;
     try {
       const result = query ? await requestApi<T>(`/api/production/commands/${command.key}`) : await writeApi<T>(command.path, { method: command.method, body: command.body, operationKey: command.key });
-      if (query) productionDataChanged();
+      if (query) productionDataChanged(command.path);
       if (active.current && auth.current === start) { setUnknown(false); pending.current = undefined; keys.current = new StableOperationKeyStore(); onSuccess(result); }
     } catch (reason) {
       if (!active.current || auth.current !== start) return;
