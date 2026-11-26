@@ -733,12 +733,15 @@ describe("factory overview and bulk cumulative production", () => {
   });
 });
 
-it("shows only ordered, produced and received quantities and starts shipment independently",async()=>{
- mount("/production/orders");await screen.findByRole("columnheader",{name:"下单 / 计划生产"});const overview=screen.getByRole("region",{name:"工厂订单跟进总览"});
+it("shows planned production instead of order quantities and starts shipment independently",async()=>{
+ const original=api.read.getMockImplementation()!;api.read.mockImplementation(path=>path.startsWith("/api/production/orders?")?Promise.resolve({items:[{...order,lines:order.lines!.map(line=>({...line,planned_production_units:"70"}))}],page:1,page_size:20,total:1}):original(path));
+ mount("/production/orders");await screen.findByRole("columnheader",{name:"计划生产"});const overview=screen.getByRole("region",{name:"工厂订单跟进总览"});
+ expect(overview).toHaveTextContent("计划生产70件");expect(overview).not.toHaveTextContent("下单100件");
+ expect(within(overview).getByRole("cell",{name:"70"})).toBeVisible();expect(within(overview).queryByRole("cell",{name:"100 / 70"})).not.toBeInTheDocument();
  expect(within(overview).queryByRole("columnheader",{name:"已出货"})).not.toBeInTheDocument();
  expect(overview).not.toHaveTextContent("已出货");expect(within(overview).queryByRole("link",{name:"本单出货"})).not.toBeInTheDocument();
  expect(within(overview).getByRole("link",{name:"仓库出货"})).toHaveAttribute("href","/production/shipments/intake");
- for(const name of ["下单 / 计划生产","已生产","已入库"])expect(within(overview).getByRole("columnheader",{name})).toBeInTheDocument();
+ for(const name of ["计划生产","已生产","已入库"])expect(within(overview).getByRole("columnheader",{name})).toBeInTheDocument();
 });
 
 it("offers contextual shared actions after an explicit row selection and preserves it after returning",async()=>{

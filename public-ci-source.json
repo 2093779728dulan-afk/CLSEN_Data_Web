@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "b1287f6bd4843300b17c70260d3cb034f41ab186",
-  "source_tree": "c89f1d445be546a31cece1606ad4aca3b73e7fe2",
+  "source_sha": "63b4e68a623996a707d432f80823114bcf6995fb",
+  "source_tree": "8394149dca0830640d394ea1e96d9be1166c04d1",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -5719,8 +5719,8 @@
     },
     {
       "path": "frontend/src/features/production/FactoryOrderOverview.tsx",
-      "git_blob": "b3ea7c699d32045c5754feda1520fd2428a81770",
-      "sha256": "0a671682078c07de5b52ff407d9a075b4895832116b4057771ca22fe188c35c1"
+      "git_blob": "492528585690b850ec65e81a78a482ae28086c76",
+      "sha256": "28b22ba86d739a36aaf3b7bc1d33fec286492f37c0551ecce822edd6fa82d5b1"
     },
     {
       "path": "frontend/src/features/production/FactoryRegionPicker.tsx",
@@ -5889,8 +5889,8 @@
     },
     {
       "path": "frontend/src/features/production/OrderWorkbench.test.tsx",
-      "git_blob": "2a9e5ae896ead01ecedcba7e10b6384179494d83",
-      "sha256": "60b82a6fa2a0f7f6b416fef33cc29f6e83183f3affd221dd1c1940829ea08960"
+      "git_blob": "c78f60b6da6f30c8789e2a37f34dfe3ef4885bf6",
+      "sha256": "7c8779341cf6970932fdeab2d900607ffbf17edd39cc07bb96900d177c074ae2"
     },
     {
       "path": "frontend/src/features/production/OrderWorkbench.tsx",
