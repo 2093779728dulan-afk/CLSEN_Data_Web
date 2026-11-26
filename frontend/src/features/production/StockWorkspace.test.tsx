@@ -367,8 +367,8 @@ describe("independent stock workflows", () => {
     api.read.mockImplementation((path, options) => path.split("?")[0] === "/api/production/inventory/availability" ? Promise.resolve({ items: [balance], scopes: [{ warehouse_id: "1", warehouse_name: "独立虚构验证仓" }], writes_enabled: true, opening_enabled: false }) : original(path, options));
     mount("/production/stock/opening", manager);
     expect(await screen.findByRole("heading", { name: "库存总览" })).toBeInTheDocument();
+    expect(await screen.findByText(manager ? "库存日常登记已开放" : "当前账号仅可查看库存")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "登记虚构期初" })).not.toBeInTheDocument();
-    expect(screen.getByText(manager ? "库存日常登记已开放" : "当前账号仅可查看库存")).toBeInTheDocument();
     expect(screen.getByText(manager ? /订单和出货请到对应单据页面操作/ : /需要登记时请由有权限的账号操作/)).toBeInTheDocument();
     expect(screen.queryByText(/订单和出货写入暂未开放/)).not.toBeInTheDocument();
     if (manager) {

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_repository": "dulanjy/CLSEN_Data_Web",
-  "source_sha": "63b4e68a623996a707d432f80823114bcf6995fb",
-  "source_tree": "8394149dca0830640d394ea1e96d9be1166c04d1",
+  "source_sha": "1f85823ce4b467947031436b504ff2561ec9ec62",
+  "source_tree": "a0960ccc1e36c69cb3f3702f982166374d1adbc5",
   "publication_repository": "2093779728dulan-afk/CLSEN_Data_Web",
   "history_exported": false,
   "workflow_policy": "public-ci.yml only; private references restored only for source contracts",
@@ -6169,8 +6169,8 @@
     },
     {
       "path": "frontend/src/features/production/StockWorkspace.test.tsx",
-      "git_blob": "adecd49c28674ba3d2ae65ee7eae9223e7a22186",
-      "sha256": "bf937891a3b083db3173312a4f055da24e9a1e485d241e2b0d04616b694bd700"
+      "git_blob": "100ad292181d06c36e98ad3c6be69435a032d4a7",
+      "sha256": "d992fcf649842a4d7012115de15d1baa36f5a6118f84172fbe260aad24352d8c"
     },
     {
       "path": "frontend/src/features/production/StockWorkspace.tsx",
