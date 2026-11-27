@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { Button, StatusMessage } from "../../design-system";
 import { orderProductName } from "./orderProgress";
 import { TransitOpening, type TransitOpeningRow } from "./TransitOpening";
@@ -25,9 +26,9 @@ export function OverviewTransitOpening({ refresh, warehouse, query, catalog, ena
   if (!rows.length) return null;
   const total = rows.reduce((sum, row) => sum + BigInt(row.units), 0n).toLocaleString("zh-CN");
   return <section className={styles.opening} aria-label="历史在途">
-    <details>
+    <Disclosure>
       <summary><h2>历史在途</h2><strong>{total} 件</strong><span>{rows.length} SKU</span><time>{rows[0]!.snapshot_on}</time></summary>
       <div className={styles.body}><TransitOpening rows={rows}/></div>
-    </details>
+    </Disclosure>
   </section>;
 }

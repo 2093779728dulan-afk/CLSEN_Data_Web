@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import type { FormEvent } from "react";
 import type { AuditEventPageResponse } from "../../api/generated";
 import { Button, EmptyState, FormField, Input, Skeleton, StatusBadge, StatusMessage } from "../../design-system";
@@ -69,7 +70,7 @@ export function AdminAuditView({ page, offset, pageSize, filter, appliedFilter, 
               <div><dt>站点</dt><dd>{item.site_id ?? "—"}</dd></div>
               <div><dt>请求</dt><dd><code>{item.request_id ?? "—"}</code></dd></div>
             </dl>
-            {Object.keys(payload).length > 0 && <details className={css.details}><summary>查看脱敏详情</summary><pre>{JSON.stringify(payload, null, 2)}</pre></details>}
+            {Object.keys(payload).length > 0 && <Disclosure className={css.details}><summary>查看脱敏详情</summary><pre>{JSON.stringify(payload, null, 2)}</pre></Disclosure>}
           </article></li>;
         })}
       </ol> : <EmptyState title="当前筛选条件下没有审计记录" description="检查事件类型，或留空后重新应用筛选。" />}

@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
 import { Button, LinkButton, StatusMessage } from "../../design-system";
 import { useCommand, useLoad } from "./useProductionApi";
@@ -21,7 +22,7 @@ export function PublicationStockStatus({ reportDate, reportType, revision, canWr
   const pending = items.filter(item => item.status === "pending");
   return <section aria-label="日报库存更新结果">
     {pending.length ? pending.map(item => <StatusMessage key={item.scope_id} kind="warning" title={`日报已发布 · ${item.warehouse_name}待更新`}>
-      <details><summary>查看原因</summary>{item.issues.map((issue, index) => <p key={index}>{issue.label}</p>)}</details>
+      <Disclosure><summary>查看原因</summary>{item.issues.map((issue, index) => <p key={index}>{issue.label}</p>)}</Disclosure>
       {canWrite && item.can_retry && <Button variant="secondary" disabled={command.busy || command.unknown} onClick={() => command.submit(`/api/production/fba/daily/sync?scope_id=${item.scope_id}`, {})}>重试库存更新</Button>}
       <LinkButton variant="quiet" to={`/production/warehouses/${item.warehouse_id}?owner=${item.owner_id}&fba_view=balance`}>前往库存处理</LinkButton>
     </StatusMessage>) : <StatusMessage kind="success" title="日报已发布 · 库存已更新" />}

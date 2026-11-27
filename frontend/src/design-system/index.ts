@@ -27,3 +27,5 @@ export { Toast, type ToastAction, type ToastProps, ToastProvider, type ToastProv
 export { Tooltip, type TooltipProps } from "./Tooltip";
 
 export { ContentReveal } from "./ContentReveal";
+
+export { Disclosure } from "./Disclosure";

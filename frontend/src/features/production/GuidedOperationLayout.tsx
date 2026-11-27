@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../../design-system";
@@ -30,7 +31,7 @@ export function GuidedOperationLayout({ step, steps, summaries, contextTitle, co
         </li>)}</ol>
       </aside>
       <main className={styles.main}>
-        <header className={styles.stepHeader}><h2>{title}</h2><details className={styles.help} key={step}><summary>填写说明</summary><p>{lead}</p><p>{footerNote}</p>{!reference && <div><strong>{contextTitle}</strong>{context}</div>}</details></header>
+        <header className={styles.stepHeader}><h2>{title}</h2><Disclosure className={styles.help} key={step}><summary>填写说明</summary><p>{lead}</p><p>{footerNote}</p>{!reference && <div><strong>{contextTitle}</strong>{context}</div>}</Disclosure></header>
         {reference}
         {children}
       </main>

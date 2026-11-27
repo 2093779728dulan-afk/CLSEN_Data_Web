@@ -51,7 +51,7 @@
 .complete { display: none; }
 .metric small { color: var(--color-text-muted); font-size: 11px; line-height: 1.4; }
 .orderTable > tbody > tr > .toggleCell { padding: 6px 4px; text-align: center; }
-.traceToggle { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; }
+.traceToggle { min-width: 64px; min-height: var(--control-height-large); padding-inline: var(--space-2); border: 0; }
 .traceToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .orderTable > tbody > .detailRow > td { padding: 0; }
 .traceBody { min-width: 0; padding: 16px; background: var(--color-surface-muted); }

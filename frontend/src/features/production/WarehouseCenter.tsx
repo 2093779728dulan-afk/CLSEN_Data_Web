@@ -1,6 +1,7 @@
+import { Disclosure } from "../../design-system";
 import { Fragment, useState, type ReactNode, type RefObject } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronRight, Pencil, Plus, Search, Warehouse } from "lucide-react";
+import { ChevronRight, Pencil, Plus, Search, Warehouse } from "lucide-react";
 import { Button, FormField, Input, LinkButton, Pagination, StatusMessage, Table } from "../../design-system";
 import { useLoad, useSearchDraft } from "./useProductionApi";
 import { ReadContent, ReadState, type WorkbenchStock } from "./WorkbenchFields";
@@ -159,7 +160,7 @@ export function WarehouseInventory({ stock, catalog, catalogError, record, owner
           const chosen = color === null ? undefined : rows.find(v => v.item.sku_id === cell);
           return <Fragment key={group.key + ":" + (color ?? "collapsed")}>
             <tr className={index === 0 ? styles.productStart : undefined}>
-              <th scope="row" className={styles.styleIdentity}>{index === 0 ? <Button variant="quiet" aria-expanded={!collapsed} icon={collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />} onClick={() => setClosed(current => current.includes(group.key) ? current.filter(k => k !== group.key) : [...current, group.key])}>{group.title}</Button> : <span>{group.title}</span>}</th>
+              <th scope="row" className={styles.styleIdentity}>{index === 0 ? <Button variant="quiet" aria-expanded={!collapsed}  onClick={() => setClosed(current => current.includes(group.key) ? current.filter(k => k !== group.key) : [...current, group.key])}>{group.title} · {collapsed ? "查看" : "收起"}</Button> : <span>{group.title}</span>}</th>
               <td className={styles.colorIdentity}>{color ?? <span className={styles.collapsedColors}>{colors.length}种颜色 · 已收起</span>}</td>
               {sizes.map(size => {
                 const matches = rows.filter(v => v.size === size);
@@ -188,9 +189,9 @@ function WarehouseProfile({ record, canWrite, edit }: { record: DirectoryRecord;
   return <><div className={styles.profileHeading}><h2>仓库资料</h2>{canWrite && <Button variant="primary" icon={<Pencil size={16} />} onClick={edit}>编辑资料</Button>}</div><div className={styles.profileLayout}><div>
     <section className={styles.profileSection}><h2>基本资料</h2><ProfileFields fields={[["仓库名称", record.name], ["类型", warehouseTypes[record.type || ""]], ["国家 / 地区", [record.country, record.region].filter(Boolean).join(" · ")], ["详细地址", record.address], ["状态", <WarehouseStatusBadge status={record.status} />], ["运营方", record.operator]]} /></section>
     <section className={styles.profileSection}><h2>联系与收货信息</h2><ProfileFields fields={[["联系人", record.contact], ["联系方式", record.phone], ["备注", record.notes]]} /></section>
-    <details className={styles.optionalProfile}><summary><ChevronDown size={16} aria-hidden="true" />可选资料（时区、外部仓码及平台信息）</summary><ProfileFields fields={[["时区", record.timezone], ["外部仓码", record.external_code], ["卖家账号", record.seller_account], ["站点", record.marketplace]]} /></details>
+    <Disclosure className={styles.optionalProfile}><summary>可选资料（时区、外部仓码及平台信息）</summary><ProfileFields fields={[["时区", record.timezone], ["外部仓码", record.external_code], ["卖家账号", record.seller_account], ["站点", record.marketplace]]} /></Disclosure>
     <section className={styles.profileSection}><h2>往来工厂（选填）</h2>{record.factory_ids?.length ? <ul className={styles.factoryLinks}>{record.factory_ids.map(id => <FactoryLink key={id} id={id} />)}</ul> : <p className={styles.note}>尚未登记往来工厂。</p>}<p className={styles.note}>仅记录往来关系；不会自动下单、入库或改变货权。</p></section>
-  </div><aside className={styles.history}><h2>资料修改记录</h2><p className={styles.note}>最近100次</p>{record.history?.length ? record.history.map(h => <article key={h.revision}><p>{h.created_at} · {h.actor_name || "操作人待核"}</p><strong>修订 {h.revision}</strong><p>原因：{h.reason}</p><details><summary>查看修改详情</summary><ProfileDiff before={h.before_value} after={h.after_value} /></details></article>) : <p className={styles.note}>暂无资料修改记录。</p>}</aside></div>{canWrite && <div className={styles.deactivate}><Button variant="quiet" onClick={edit}>{record.status === "ACTIVE" ? "管理仓库启停" : "恢复仓库"}</Button><p>在编辑资料中更改状态并填写原因。停用后保留库存及历史查询，不允许新增业务。</p></div>}</>;
+  </div><aside className={styles.history}><h2>资料修改记录</h2><p className={styles.note}>最近100次</p>{record.history?.length ? record.history.map(h => <article key={h.revision}><p>{h.created_at} · {h.actor_name || "操作人待核"}</p><strong>修订 {h.revision}</strong><p>原因：{h.reason}</p><Disclosure><summary>查看修改详情</summary><ProfileDiff before={h.before_value} after={h.after_value} /></Disclosure></article>) : <p className={styles.note}>暂无资料修改记录。</p>}</aside></div>{canWrite && <div className={styles.deactivate}><Button variant="quiet" onClick={edit}>{record.status === "ACTIVE" ? "管理仓库启停" : "恢复仓库"}</Button><p>在编辑资料中更改状态并填写原因。停用后保留库存及历史查询，不允许新增业务。</p></div>}</>;
 }
 function FactoryLink({ id }: { id: string }) { const record = useLoad<DirectoryRecord>(`${base}factories/${id}`); return <li><Link to={`/production/factories/${id}`}>{record.value?.name || `工厂编号 ${id}`}</Link>{record.value?.status === "INACTIVE" && <span> · 已停用</span>}{record.error && <span> · 资料读取失败</span>}</li>; }
 function ProfileDiff({ before, after }: { before: unknown; after: unknown }) {

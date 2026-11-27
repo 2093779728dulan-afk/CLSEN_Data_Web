@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, FolderTree, Plus, Settings2, X } from "lucide-react";
+import { FileText, Folder, FolderOpen, FolderTree, Plus, Settings2, X } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Button, FormField, Input, Select, Skeleton, StatusBadge, StatusMessage } from "../../design-system";
 import { createCatalogCategory, listCatalogCategories, updateCatalogCategory, type CatalogCategory } from "./catalogApi";
@@ -96,7 +96,7 @@ export function CatalogCategoryEditor({ services = defaultServices }: { services
         const groupId = `${hintId}-category-${root.category_id}`;
         return <div key={root.category_id} className={css.treeGroup} role="group" aria-label={`${root.display_name}分类组`}>
           <div className={css.folderRow}>
-            {expandable ? <button type="button" className={css.folderToggle} aria-label={`${expanded ? "收起" : "展开"} ${root.display_name}`} aria-expanded={expanded} aria-controls={groupId} disabled={busy} onClick={() => toggleRoot(root.category_id)}>{expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</button> : <span className={css.folderTogglePlaceholder} aria-hidden="true" />}
+            {expandable ? <button type="button" className={css.folderToggle} aria-label={`${expanded ? "收起" : "展开"} ${root.display_name}`} aria-expanded={expanded} aria-controls={groupId} disabled={busy} onClick={() => toggleRoot(root.category_id)}>{expanded ? "收起" : "查看"}</button> : <span className={css.folderTogglePlaceholder} aria-hidden="true" />}
             {selectButton(root, css.folderButton, expanded ? <FolderOpen size={16} /> : <Folder size={16} />)}
             <span className={css.childCount} aria-label={`${children.length} 个细分类`}>{children.length || "—"}</span>
           </div>

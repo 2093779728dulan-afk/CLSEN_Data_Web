@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useBusinessToday } from "./workbenchDate";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
@@ -73,16 +74,16 @@ function DailyIssues({issues}:{issues:FbaDailyIssue[]}) {
   if(!issues.length)return null;
   const filtered=groups.filter(([,group])=>(group.sku+" "+group.message).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const pages=Math.max(1,Math.ceil(filtered.length/20)),current=Math.min(page,pages);
-  return <details className={styles.issueSummary} open={open} onToggle={event=>setOpen(event.currentTarget.open)}>
+  return <Disclosure className={styles.issueSummary} open={open} onToggle={event=>setOpen(event.currentTarget.open)}>
     <summary>待处理 {issues.length} 条 · {groups.length} 组</summary>
     {open&&<><Input type="search" aria-label="查找待处理SKU或问题" placeholder="SKU、问题" value={query} onChange={event=>{setQuery(event.target.value);setPage(1);}}/><Table className={styles.issueTable} title="日报待处理项目"><thead><tr><th>SKU</th><th>问题</th><th>记录数</th><th>明细</th></tr></thead><tbody>
       {filtered.slice((current-1)*20,current*20).map(([key,group])=><tr key={key}><th scope="row">{group.sku}</th><td>{group.message}</td><td>{group.records.length}</td><td><DailyIssueRecords records={group.records}/></td></tr>)}
     </tbody></Table><Pagination page={current} totalItems={filtered.length} totalPages={pages} onPageChange={setPage} itemLabel="组"/></>}
-  </details>;
+  </Disclosure>;
 }
 function DailyIssueRecords({records}:{records:FbaDailyIssue[]}) {
   const [open,setOpen]=useState(false);
-  return <details className={styles.issueRecords} onToggle={event=>setOpen(event.currentTarget.open)}><summary>记录</summary>{open&&records.map((record,index)=><div key={index}>{record.label}</div>)}</details>;
+  return <Disclosure className={styles.issueRecords} onToggle={event=>setOpen(event.currentTarget.open)}><summary>记录</summary>{open&&records.map((record,index)=><div key={index}>{record.label}</div>)}</Disclosure>;
 }
 
 function FbaQuality({ open, close, data, scope, catalog, saved, onGuard }: {

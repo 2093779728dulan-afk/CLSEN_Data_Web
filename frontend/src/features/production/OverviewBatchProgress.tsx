@@ -1,5 +1,6 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+
 import { Link } from "react-router-dom";
 import { Button, Pagination, StatusMessage, Table } from "../../design-system";
 import { ArrivalVerificationWindow } from "./ArrivalVerification";
@@ -39,14 +40,14 @@ export function OverviewBatchProgress({ items, error, warehouse, query, catalog,
               <td><span className={styles.routeName}>{item.source_name || "来源待核"}</span><span className={styles.batchSubline}>→ {item.destination_name || "目的仓待核"}</span></td>
               <td><strong className={item.stage === "EXCEPTION" ? styles.batchWarning : undefined}>{stages[item.stage] || "进度待核"}</strong><span className={styles.batchSubline}>{location || "地点未登记"}</span>{item.eta_overdue && <span className={styles.batchWarning}>已超过预计到达</span>}</td>
               <td className={styles.numeric} data-label="已发">{amount(item.shipped_units)}</td><td className={styles.numeric} data-label="已入库">{amount(item.received_units)}</td><td className={styles.numeric} data-label="未收">{amount(item.unreceived_units)}</td>
-              <td className={styles.toggleCell}><Button variant="quiet" className={styles.traceToggle} aria-label={`${open ? "收起" : "展开"}批次 ${number}`} aria-expanded={open} aria-controls={`overview-batch-${item.id}`} icon={<ChevronDown size={18}/>} onClick={() => setExpanded(value => open ? value.filter(id => id !== item.id) : [...value, item.id])}/></td>
+              <td className={styles.toggleCell}><Button variant="quiet" className={styles.traceToggle} aria-label={`${open ? "收起" : "展开"}批次 ${number}`} aria-expanded={open} aria-controls={`overview-batch-${item.id}`} onClick={() => setExpanded(value => open ? value.filter(id => id !== item.id) : [...value, item.id])}>{open ? "收起" : "查看"}</Button></td>
             </tr>
             {open && <tr className={styles.detailRow}><td colSpan={7}><section className={styles.traceBody} id={`overview-batch-${item.id}`} aria-label={`${number}流转明细`}>
               <header className={styles.traceHeader}><h3>本批货物进度</h3><div className={styles.actions}><Link className={styles.tableLink} to={`/production/shipments/${item.id}#transport`} state={linkState}>查看运输记录</Link>{canWrite && item.destination_id && item.owner_id && !["RECEIVED", "SETTLED"].includes(item.stage) && <Button variant="primary" onClick={event => setArrival({ item, trigger: event.currentTarget })}>开始到仓核验</Button>}</div></header>
               <dl className={styles.batchDates}><div><dt>出库日期</dt><dd>{item.business_date || "未登记"}</dd></div><div><dt>实际发运</dt><dd>{item.departed ? transportTime(item.departed.occurred_local, item.departed.timezone) : "未登记"}</dd></div><div><dt>预计到达</dt><dd>{item.transport.record?.arrival_local ? transportTime(item.transport.record.arrival_local, item.transport.record.arrival_timezone) : "未登记"}</dd></div><div><dt>入库日期</dt><dd>{item.receipt_dates.join("、") || "尚无入库记录"}</dd></div></dl>
               {item.transport.source_revision_current === false && <StatusMessage kind="warning" title="出货已更正，运输资料待核对"/>}
               <Table className={styles.traceTable} aria-label={`${number}商品进度`}><thead><tr><th>款号 / 颜色 / 尺码</th><th>已发</th><th>已入库</th><th>未收</th></tr></thead><tbody>{item.sources.map(source => <tr key={source.id}><th scope="row">{orderProductName(source, catalog)}</th><td>{amount(source.actual_units)}</td><td>{amount(source.received_units)}</td><td>{amount(source.unreceived_units)}</td></tr>)}</tbody></Table>
-              <details className={styles.batchEvidence}><summary>物流节点与依据</summary>{item.transport.events.length ? <ol>{item.transport.events.map(event => <li key={event.id}><strong>{transportStatus[event.event_kind]}</strong> · {event.location || "地点未登记"}<p>{transportTime(event.occurred_local, event.timezone)} · {event.description || ""}</p><p>依据：{event.source_reference || "未登记"}</p></li>)}</ol> : <p>尚未登记物流节点，不能根据未收数量推断货物位置。</p>}</details>
+              <Disclosure className={styles.batchEvidence}><summary>物流节点与依据</summary>{item.transport.events.length ? <ol>{item.transport.events.map(event => <li key={event.id}><strong>{transportStatus[event.event_kind]}</strong> · {event.location || "地点未登记"}<p>{transportTime(event.occurred_local, event.timezone)} · {event.description || ""}</p><p>依据：{event.source_reference || "未登记"}</p></li>)}</ol> : <p>尚未登记物流节点，不能根据未收数量推断货物位置。</p>}</Disclosure>
             </section></td></tr>}
           </tbody>;
         })}

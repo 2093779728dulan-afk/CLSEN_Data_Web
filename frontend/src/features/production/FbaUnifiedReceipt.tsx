@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useBusinessToday } from "./workbenchDate";
 import { ShipmentDateNotice } from "./ShipmentDateNotice";
 import { Fragment, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -340,11 +341,11 @@ function ReceiptEditor({ data, scope, catalog, shipment, bindings, initial, canW
     {command.feedback || (error&&!complete&&!tool?<p role="alert" className={styles.inlineError}>{error}</p>:success?<p role="status" className={styles.inlineSuccess}>{success}</p>:null)}
     {needsProducts && !products.current && !products.error && <p role="status">正在读取已审核商品资料…</p>}
     {needsProducts && products.error && <StatusMessage kind="danger" title="商品资料读取未完成" action={<Button variant="secondary" onClick={()=>setProductRefresh(value=>value+1)}>重新读取</Button>}>{products.error}</StatusMessage>}
-    {!!newProducts.length && products.current && <details open>
+    {!!newProducts.length && products.current && <Disclosure open>
       <summary>补齐首次到货商品资料</summary>
       <p>{newProducts.map(sku => catalog.find(item => item.sku_id === sku)?.code || sku).join("、")}</p>
       <FbaIdentityExtension scope={identityScope} identities={identities.filter(identity => identity.scope_id === scope.id)} catalog={catalog} canWrite={canWrite && !command.busy && !command.unknown && !restoreProducts.busy && !restoreProducts.unknown} embedded skuIds={newProducts} onGuardChange={setIdentityGuard} saved={identitySaved} />
-    </details>}
+    </Disclosure>}
     {!!stoppedProducts.length && <StatusMessage kind="warning" title="本批有已停用商品">
       <p>{stoppedProducts.map(sku => catalog.find(item => item.sku_id === sku)?.code || sku).join("、")}</p>
       {restoreProducts.feedback}

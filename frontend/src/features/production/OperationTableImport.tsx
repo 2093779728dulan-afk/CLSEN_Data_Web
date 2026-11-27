@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { writeApi } from "../../api/client";
@@ -84,7 +85,7 @@ export function OperationTableImport({ kind, order, warehouse, batch = false, in
     <header className={styles.importHeading}><div><h3>{warehouse ? "导入本批出货明细" : kind === "receipt" ? "从表格填入入库数量" : "从表格填入装箱明细"}</h3></div><LinkButton reloadDocument download icon={<Download />} variant="secondary" to={`${endpoint}/template?${scopeQuery}`}>{warehouse ? "下载出货模板" : kind === "receipt" ? "下载入库模板" : "下载装箱模板"}</LinkButton></header>
     {warehouse&&<FormField label="表格格式" hint={layout==="packing_totals"?"第一列作为SKU，读取“总数量”；忽略箱号、合计和重量尺寸，空白工作表不参与导入。":undefined}><select aria-label="表格格式" disabled={locked||busy} value={layout} onChange={event=>{setLayout(event.target.value);setResult(undefined);setError("");}}><option value="standard">标准数量表</option><option value="packing_totals">原装箱单（按总数量）</option></select></FormField>}
     <FormField label="本次导入的XLSX文件（不超过2MB）"><Input type="file" accept=".xlsx" disabled={locked || busy} onChange={event => { setFile(event.target.files?.[0]); setResult(undefined); setError(""); }} /></FormField>
-    <details><summary>导入说明</summary><p>将替换未保存的数量{kind === "packing" && !warehouse ? "和箱明细" : ""}，不会直接入库或发货。{batch && "同商品跨订单请分别填量；空数量行不登记。"}</p></details><div className={styles.importActions}><Button variant="secondary" loading={busy} disabled={!file || locked} onClick={() => void upload()}>读取并填入下方表格</Button></div>
+    <Disclosure><summary>导入说明</summary><p>将替换未保存的数量{kind === "packing" && !warehouse ? "和箱明细" : ""}，不会直接入库或发货。{batch && "同商品跨订单请分别填量；空数量行不登记。"}</p></Disclosure><div className={styles.importActions}><Button variant="secondary" loading={busy} disabled={!file || locked} onClick={() => void upload()}>读取并填入下方表格</Button></div>
     </>}
     {result && !preview && <StatusMessage kind="info" title="当前操作范围已改变，请重新预览表格" />}
     {error && <StatusMessage kind="danger" title="导入预览未完成">{error}</StatusMessage>}
@@ -96,7 +97,7 @@ export function OperationTableImport({ kind, order, warehouse, batch = false, in
       <div className={styles.originalRows}><table aria-label="原单商品明细"><thead><tr><th scope="col">SKU</th><th scope="col">数量</th></tr></thead><tbody>
         {preview.source_rows.map(row => <tr key={row.row}><td title={`第${row.row}行 ${row.source_cell}`}>{row.sku_code}</td><td>{row.units ?? "待核"}</td></tr>)}
       </tbody></table></div>
-      {businessIssues.length > 0 && <details><summary>后续出货校验（{businessIssues.length}项）</summary><p>商品与库存核对完成后可填入出货表。原填写内容已保留。</p>{businessIssues.map((issue, index) => <p key={index}>{issue.sheet} 第{issue.row}行 {issue.message}</p>)}</details>}
+      {businessIssues.length > 0 && <Disclosure><summary>后续出货校验（{businessIssues.length}项）</summary><p>商品与库存核对完成后可填入出货表。原填写内容已保留。</p>{businessIssues.map((issue, index) => <p key={index}>{issue.sheet} 第{issue.row}行 {issue.message}</p>)}</Disclosure>}
       <Button variant="quiet" disabled={locked || busy} onClick={() => { setResult(undefined); setFile(undefined); setError(""); }}>重新选择文件</Button>
     </section> : preview && <StatusMessage kind="danger" title="表格未填入，原填写内容已保留">{preview.source_row_count!==undefined&&<p>原单已读取{preview.source_row_count}个规格，{preview.source_total_units!=null?`共${preview.source_total_units}件`:"总数量待核"}；请先处理以下问题。</p>}{preview.issues.length ? preview.issues.map((issue, index) => <p key={index}>{issue.sheet?`${issue.sheet} `:""}{issue.row ? `第${issue.row}行${issue.cell?`（${issue.cell}）`:""}：` : ""}{issue.message}</p>) : <p>没有可填入的数量，请在模板填写本次实际数量。</p>}<p>修正源文件后重新读取，或收起导入继续手工填写。</p></StatusMessage>}
   </section>;

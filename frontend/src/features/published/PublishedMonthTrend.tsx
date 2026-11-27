@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { DailyLedgerRow } from "../../api/generated";
@@ -86,13 +87,13 @@ export function PublishedMonthTrend({ rows, reportDate, currencyCode }: { rows: 
     </div>
     <TrendPlot currencyCode={currencyCode} label={label} metric={metric} points={points} />
     <p className={styles.note}>圆点代表已发布数据；缺报或缺值留空，不补零、不跨缺口连线。增减仅比较相邻报告日，不直接表示经营好坏。</p>
-    <details className={styles.details}>
+    <Disclosure className={styles.details}>
       <summary>查看逐日数据 · {label}</summary>
       <div className={styles.tableScroll} role="region" aria-label="逐日趋势数据" tabIndex={0}>
         <table><caption>{label} · {reportDate.slice(0, 7)}-01 至 {reportDate}</caption><thead><tr><th scope="col">报告日期</th><th scope="col">{label}</th><th scope="col">数据情况</th></tr></thead><tbody>
           {points.map((point) => <tr className={point.date === reportDate ? styles.selectedRow : undefined} key={point.date}><th scope="row">{point.date}{point.date === reportDate ? "（所选日）" : ""}</th><td>{formatMetric(point.value, metric, currencyCode)}</td><td>{point.value === null ? "未发布或暂无指标值" : "来自当前发布版本"}</td></tr>)}
         </tbody></table>
       </div>
-    </details>
+    </Disclosure>
   </section>;
 }

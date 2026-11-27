@@ -4,7 +4,7 @@ import { Plus, Search, X } from "lucide-react";
 import { Button, Input, LinkButton, Pagination, StatusMessage, Table } from "../../design-system";
 import { OrderCompletionAction } from "./OrderCompletionAction";
 import { OrderProgressDialog } from "./OrderProgressDialog";
-import { knownOrderSum, orderProductName } from "./orderProgress";
+import { knownOrderSum, orderProductName, orderOverviewUrl } from "./orderProgress";
 import { statusName, units, type Document, type DocumentPage, type Sku } from "./types";
 import type { WarehouseScope } from "./WorkbenchFields";
 import styles from "./FactoryOrderOverview.module.css";
@@ -17,6 +17,10 @@ export function FactoryOrderOverview({ data, error, loading, catalog, scopes, ca
 }) {
   const [composing, setComposing] = useState(false);
   const creating = search.get("new") === "1";
+  const returnTo = orderOverviewUrl(search);
+  const receiptQuery = new URLSearchParams({return_to:returnTo});
+  if (search.get("factory")) receiptQuery.set("factory", search.get("factory")!);
+  const shipmentUrl = `/production/shipments/intake?${new URLSearchParams({return_to:returnTo})}`;
   const progress = search.get("progress") === "completed" ? "completed" : search.get("progress") === "all" ? "all" : "active";
   const latestChange = useRef(change); latestChange.current = change;
   useEffect(() => {
@@ -30,7 +34,7 @@ export function FactoryOrderOverview({ data, error, loading, catalog, scopes, ca
   for (const order of data?.items || []) { const id = order.factory_id || "unknown"; groups.set(id, [...(groups.get(id) || []), order]); }
   const orderUrl = (order: Document, tab = "progress") => { const next = new URLSearchParams(search); next.set("tab", tab); return `/production/orders/${order.id}?${next}`; };
   return <section className={styles.workspace} aria-label="工厂订单跟进总览">
-    <header className={`ui-page-header ${styles.header}`}><div className={styles.title}><h1>订单跟进</h1>{data && <span className={styles.count}>{data.total} 单</span>}</div><div className={styles.actions}>{canWrite && <LinkButton variant="secondary" to={`/production/orders/receipts/new${search.get("factory") ? `?factory=${encodeURIComponent(search.get("factory")!)}` : ""}`}>批量入库</LinkButton>}{canWrite && <LinkButton variant="secondary" to="/production/shipments/intake">仓库出货</LinkButton>}{tools}{canWrite && <Button ref={createTrigger} variant="primary" icon={<Plus size={16}/>} onClick={onCreate}>下单</Button>}</div></header>
+    <header className={`ui-page-header ${styles.header}`}><div className={styles.title}><h1>订单跟进</h1>{data && <span className={styles.count}>{data.total} 单</span>}</div><div className={styles.actions}>{canWrite && <LinkButton variant="secondary" to={`/production/orders/receipts/new?${receiptQuery}`}>批量入库</LinkButton>}{canWrite && <LinkButton variant="secondary" to={shipmentUrl}>仓库出货</LinkButton>}{tools}{canWrite && <Button ref={createTrigger} variant="primary" icon={<Plus size={16}/>} onClick={onCreate}>下单</Button>}</div></header>
     <div className={styles.statusTabs} role="group" aria-label="生产完成状态">{[{value:"active",label:"进行中"},{value:"completed",label:"已完成"},{value:"all",label:"全部"}].map(choice => <Button key={choice.value} variant="quiet" aria-pressed={progress === choice.value} onClick={() => change({progress:choice.value === "active" ? "" : choice.value,page:"1",action_order:""},"")}>{choice.label}{data?.progress_counts && <span>{data.progress_counts[choice.value as keyof NonNullable<DocumentPage["progress_counts"]>]}</span>}</Button>)}</div>
     <div className={styles.filters}><form className={styles.search} onSubmit={event => { event.preventDefault(); if (!composing) change({ q: query.trim(), page: "1", new: "", edit: "" }, "",true); }}><Search size={18} aria-hidden="true"/><Input aria-label="搜索工厂、订单或SKU" type="search" placeholder="搜索款号、订单号或工厂" value={query} onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)} onChange={event => setQuery(event.target.value)} />{query && <Button variant="quiet" aria-label="清除搜索" icon={<X size={16}/>} onClick={() => {setQuery("");change({q:"",page:"1"},"",true);}}/>}</form>{filters}</div>
     {actionOrder && <section className={styles.orderActions} aria-label="订单统一操作"><div className={styles.selectedOrder}><span>已选择</span><strong title={actionOrder.business_number || actionOrder.system_number}>{actionOrder.business_number || actionOrder.system_number}</strong></div><div className={styles.actions}>{canWrite && actionOrder.status === "CONFIRMED" && !blocked && <LinkButton variant="secondary" to={orderUrl(actionOrder, "receive")}>入库</LinkButton>}<LinkButton variant="secondary" to={`/production/overview?overview_view=flow&trace_kind=order&trace_id=${actionOrder.id}`} state={{ordersReturn:`/production/orders?${search}`}}>查看链路</LinkButton><LinkButton variant="secondary" to={orderUrl(actionOrder, "history")}>操作记录</LinkButton><LinkButton variant="secondary" reloadDocument to={`/api/production/orders/${actionOrder.id}/table`}>导出下单表</LinkButton><Button variant="quiet" aria-label="清除订单选择" icon={<X size={16}/>} onClick={() => change({action_order:""},"",true)}/></div></section>}

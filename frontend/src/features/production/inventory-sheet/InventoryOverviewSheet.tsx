@@ -5,7 +5,7 @@ import { RequestGate } from '../../../api/requestGate';
 import { useAuthzGeneration } from '../../../app/AuthzGenerationContext';
 import { LinkButton, Menu } from '../../../design-system';
 import { useProductionLeave } from '../useProductionLeave';
-import { ArrowDown, ArrowRightLeft, ArrowUp, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, LoaderCircle, Maximize2, Minimize2, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowRightLeft, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Download, Filter, LoaderCircle, Maximize2, Minimize2, Search, X } from "lucide-react";
 import { Button } from '../../../design-system/Button';
 import { Input } from '../../../design-system/Input';
 import { Table } from '../../../design-system/Table';
@@ -237,7 +237,7 @@ function DateNavigation({ date, maxDate, onDateChange, jumpTo, prepare }: {
   }, [previous, next, prepare]);
   return <div className="date-controls" role="group" aria-label="周期日期导航">
     <label className="period-picker" title={PERIOD_LABELS[period]}>
-      <CalendarDays size={16} aria-hidden="true" /><ChevronDown size={11} aria-hidden="true" />
+      <CalendarDays size={16} aria-hidden="true" />
       <select aria-label="日期切换周期" value={period} onChange={event => {
         const value = event.target.value as Period; setPeriod(value); jumpTo(value === 'week' ? 'week-sales' : value);
       }}>{periods.map(value => <option key={value} value={value}>{PERIOD_LABELS[value]}</option>)}</select>
@@ -829,7 +829,7 @@ function SheetTable({ scopeQuery, defaultDate, today }: { scopeQuery: string; de
               </button>
               : group.defaultKeys
               ? <button className="group-toggle" aria-label={group.key === 'inventory' ? '库存明细' : group.key === 'production' ? '未完成订单明细' : `${PERIOD_LABELS[group.key as keyof typeof PERIOD_LABELS]}数据`} aria-expanded={expandedGroups.includes(group.key)} onClick={() => toggleGroup(group.key)}>
-                {expandedGroups.includes(group.key) ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{group.label}
+                {group.label} · {expandedGroups.includes(group.key) ? "收起" : "查看"}
               </button>
               : <span className="group-label">{group.label}</span>}
           </th>{group.key === 'inventory' && <>
@@ -867,7 +867,7 @@ function SheetTable({ scopeQuery, defaultDate, today }: { scopeQuery: string; de
                   data-zero={column.headerLabel && row.values[column.key] === 0n || undefined} className={index === 0 ? 'group-start' : ''}>{cellValue(row, column)}</td>)}
                 {group.key === 'inventory' && <th className="identity-cell" scope="row">{isStyle ? <button className="style-button" aria-label={`${styleOpen ? '收起' : '展开'}款号${style.code}`} aria-expanded={styleOpen}
                 onClick={() => afterSettings(() => { setExpandedStyles(current => styleOpen ? current.filter(id => id !== style.id) : [...current, style.id]); setDetail(undefined); })}>
-                {styleOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{style.code}
+                {style.code} · {styleOpen ? "收起" : "查看"}
               </button> : <span className="sku-label">{row.sku}{row.items[0]?.production_statuses?.length ? <span className="production-label" title={row.items[0].production_statuses.map(item => `${item.order_number}：${item.status}`).join("；")}>{[...new Set(row.items[0].production_statuses.map(item => item.status))].join(" / ")}</span> : null}</span>}</th>}
               </Fragment>)}
             </tr>

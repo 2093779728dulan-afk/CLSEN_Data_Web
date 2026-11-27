@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { requestApi } from "../../api/client";
@@ -263,10 +264,10 @@ export function MergeDecisionMatrix({
                 </div>
               ))}
             </dl>
-            <details>
+            <Disclosure>
               <summary>查看两行的全部字段</summary>
               <div aria-label={`重复记录 ${index + 1} 完整字段，可横向滚动`} className={decisionCss.tableScroll} role="region" tabIndex={0}><Table aria-label={`重复记录 ${index + 1} 全部字段`}><thead><tr><th scope="col">字段</th><th scope="col">目标行</th><th scope="col">来源行</th></tr></thead><tbody>{fieldNames(conflict).map((name) => <tr key={name}><th scope="row">{fieldLabels[name] ?? name}</th><td>{display(conflict.target_values[name])}</td><td>{display(conflict.source_values[name])}</td></tr>)}</tbody></Table></div>
-            </details>
+            </Disclosure>
             <div className={decisionCss["merge-matrix__decision"]}>
               <FormField label="处理方式"><Select aria-label={`重复记录 ${index + 1} 处理方式`} disabled={disabled} onChange={(event) => { const action = event.target.value ? event.target.value as MergeDecisionRequest["action"] : undefined; updateDraft(key, { action, reason: draft.automaticReason ? (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : "") : draft.reason.trim() || (action ? generatedDecisionReason(conflict, action, operator, targetVersionId) : ""), automaticReason: false }); }} value={draft.action ?? ""}><option value="">请选择</option><option value="keep_target">保留目标行</option><option value="keep_source">保留来源行</option><option value="keep_both">两行都保留</option></Select></FormField>
               <FormField label="决定依据"><Input aria-label={`重复记录 ${index + 1} 决定依据`} disabled={disabled} maxLength={1000} onChange={(event) => updateDraft(key, { reason: event.target.value, automaticReason: false })} placeholder="说明与原表核对后的判断" value={draft.reason} /></FormField>

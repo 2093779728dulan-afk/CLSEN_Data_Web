@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, LinkButton, StatusMessage, Table } from "../../design-system";
@@ -43,7 +44,7 @@ export function FbaIdentityExtension({ scope, identities, catalog, canWrite, sav
     {connected > 0 && <StatusMessage kind="success" title={`已启用 ${connected} 个规格`}>可返回原接收表继续核对数量。</StatusMessage>}
     {command.feedback}
     {canWrite && !!ready.length && !source && <div className={styles.productSetup}><strong>已自动带入 {ready.length} 个商品规格</strong><Button variant="primary" disabled={locked||!products.current} onClick={()=>command.submit("/api/production/fba/commands/extend-identities",{scope_id:scope.id,expected_revision:scope.revision,identity_mode:"catalog",catalog_version:products.value!.catalog_version,identities:ready,explicit_zero_opening:true,reason:"复用已审核商品资料，明确确认新接入规格在原截止日库存为零"})}>启用已带入商品</Button></div>}
-    <details open={!ready.length || !!source}><summary>补充商品资料</summary>
+    <Disclosure open={!ready.length || !!source}><summary>补充商品资料</summary>
     {canWrite && <FbaFileUpload identity path={`/api/production/fba/mapping-preview?report_source_scope_id=${scope.report_source_scope_id}`} label="FBA商品资料CSV" disabled={locked} onGuardChange={setFileGuard} saved={result => {
       if ("identities" in result) {
         setSourceRows(result.identities.length);
@@ -69,7 +70,7 @@ export function FbaIdentityExtension({ scope, identities, catalog, canWrite, sav
         scope_id: scope.id, expected_revision: scope.revision, identities: rows, identity_source: source,
         identities_confirmed: confirmed, explicit_zero_opening: confirmed, reason: "核对对应商品规格及本仓平台资料，接入当前FBA账簿",
       })}>确认并启用商品</Button>}
-    </div></details>
+    </div></Disclosure>
   </section>;
   return embedded ? content : <IdentityLeaveGuard dirty={dirty} busy={busy} unknown={unknown}>{content}</IdentityLeaveGuard>;
 }

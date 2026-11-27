@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
 import { CatalogProductDrawer, type CatalogStyleLoader } from "./CatalogProductDrawer";
 import { ArrowRight, LayoutGrid, RefreshCw, Rows3, Shirt } from "lucide-react";
@@ -78,7 +79,7 @@ export function CatalogProductList({ catalog, failure, refreshing = false, loadS
           <footer className={styles.footer}><Pagination itemLabel="款商品" onPageChange={next => onListChange({ ...list, page: next })} page={page} totalItems={filtered.length} totalPages={pages} /></footer>
         </ContentReveal>
         {preview && <CatalogProductDrawer scopeId={scopeId} key={preview.session} item={preview.item} open={previewOpen} onOpenChange={setPreviewOpen} onOpenStyle={onOpenStyle} loadStyle={loadStyle} />}
-        <details className={styles.guide}><summary>商品身份与阅读说明</summary><dl><div><dt>款号</dt><dd>日常识别一个商品款式的业务编号。</dd></div><div><dt>正式SKU</dt><dd>经审核确认的商品规格编码；保留来源原文，不按款号、颜色、尺码自动拼接。</dd></div><div><dt>Seller SKU</dt><dd>Amazon等渠道的卖家编码，按账号和站点关联商品规格；保留原文，可多个指向同一变体。</dd></div></dl></details>
+        <Disclosure className={styles.guide}><summary>商品身份与阅读说明</summary><dl><div><dt>款号</dt><dd>日常识别一个商品款式的业务编号。</dd></div><div><dt>正式SKU</dt><dd>经审核确认的商品规格编码；保留来源原文，不按款号、颜色、尺码自动拼接。</dd></div><div><dt>Seller SKU</dt><dd>Amazon等渠道的卖家编码，按账号和站点关联商品规格；保留原文，可多个指向同一变体。</dd></div></dl></Disclosure>
       </>}
   </section>;
 }

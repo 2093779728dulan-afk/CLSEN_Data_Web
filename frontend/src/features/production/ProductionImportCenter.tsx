@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { Navigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { LinkButton, Button, PageHeader, StatusMessage  } from "../../design-system";
 import { ManualTablePage } from "../manual-tables/ManualTablePage";
@@ -43,7 +44,7 @@ export function ProductionImportCenter({ canWrite, records = false, business }: 
         {kind === "orders" && <div className={styles.actions}><LinkButton variant="primary" to="/production/orders/new?method=table">使用最新版下单表</LinkButton><p>读取下单日期、款号、SKU、订单数量，支持最新四列模板及原八列表。下方保留其他排版原表的人工整理。</p></div>}
         <ol className={styles.workflowSteps} aria-label="资料处理步骤"><li aria-current="step">1 上传表格</li><li>2 核对并保存</li><li>3 确认{info.label}结果</li></ol>
         {manualEnabled ? <ManualTablePage key={kind} view="upload" initialKind={kind} /> : <StatusMessage kind="info" title="此环境尚未启用人工表格整理">已有标准模板与旧格式入口继续可用。</StatusMessage>}
-        <details className={styles.workflowTools}><summary>标准模板与已适配格式</summary><p>已有格式保持原规则。亚马逊官方经营、退货报告仍使用原报表入口。</p><div className={styles.actions}>{kind !== "inventory" ? <><Link to={`${info.home}/import`}>使用标准模板导入</Link><Link to={`/production/source-drafts?kind=${kind === "orders" ? "orders" : "shipments"}`}>上传已适配旧格式</Link></> : <Link to="/production/inventory/source">查看已有库存原表</Link>}</div></details>
+        <Disclosure className={styles.workflowTools}><summary>标准模板与已适配格式</summary><p>已有格式保持原规则。亚马逊官方经营、退货报告仍使用原报表入口。</p><div className={styles.actions}>{kind !== "inventory" ? <><Link to={`${info.home}/import`}>使用标准模板导入</Link><Link to={`/production/source-drafts?kind=${kind === "orders" ? "orders" : "shipments"}`}>上传已适配旧格式</Link></> : <Link to="/production/inventory/source">查看已有库存原表</Link>}</div></Disclosure>
       </div>}
       <p className={styles.workflowNote}><Link to={`${info.home}/materials`}>查看{info.label}资料记录</Link></p>
     </>}

@@ -23,3 +23,20 @@ it("prefills the shared explicit active plan scope, keeps it editable and return
 it("requires a scope decision for mixed planned warehouses instead of selecting the only name match",async()=>{
  mixed=true;mount();await choose();expect(await screen.findByRole("combobox",{name:"本次实收入库仓库"})).toHaveValue("");expect(api.write).not.toHaveBeenCalled();
 });
+
+it("returns to the exact orders selection after entering batch receipts",async()=>{
+ const back="/production/orders?factory=3&q=PO&page=2&progress=all&action_order=1";
+ const router=createMemoryRouter([{path:"/production/orders/receipts/new",element:<BatchReceiptPage canWrite/>},{path:"*",element:<p>来源页面</p>}],{initialEntries:[`/production/orders/receipts/new?return_to=${encodeURIComponent(back)}`]});
+ render(<AuthzGenerationProvider boundary={{principalId:1,roles:["admin"],siteId:1,siteConfigVersionId:1}} onRevoked={()=>undefined}><RouterProvider router={router}/></AuthzGenerationProvider>);
+ await userEvent.click(await screen.findByRole("link",{name:"返回订单跟进"}));
+ expect(router.state.location.pathname+router.state.location.search).toBe(back);
+ expect(api.write).not.toHaveBeenCalled();
+});
+
+it("shows production plans instead of demand when selecting receipt sources",async()=>{
+ const original=api.read.getMockImplementation()! as (path:string)=>Promise<unknown>;
+ api.read.mockImplementation((path:string)=>path.startsWith("/api/production/orders?")?Promise.resolve({items:orders().map(o=>({...o,expected_units:"100",lines:o.lines.map(l=>({...l,expected_units:"100",planned_production_units:"70"}))})),total:2,page:1,page_size:20}):original(path));
+ mount();await screen.findByRole("columnheader",{name:"计划生产"});
+ expect(screen.getAllByRole("cell",{name:"70"})).toHaveLength(2);
+ expect(screen.queryByRole("cell",{name:"100"})).not.toBeInTheDocument();
+});

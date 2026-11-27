@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { ProductionConfirmDialog } from "./ProductionConfirmDialog";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { writeApi } from "../../api/client";
@@ -27,7 +28,7 @@ function ReceiptFrame({ embedded, close, children }: { embedded?: boolean; close
   return embedded ? <section aria-label="到仓实收核验">{children}</section> : <ProductionOperationDialog title="目的仓实收" description="核对已确认出货、质量与目的仓；最后一次确认才会入库。" close={close}>{children}</ProductionOperationDialog>;
 }
 function ReceiptHistory({ embedded, children }: { embedded: boolean; children: ReactNode }) {
-  return embedded ? <details className={styles.panel}><summary>接收与差异历史</summary>{children}</details> : <section className={styles.panel}><h3>接收与差异历史</h3>{children}</section>;
+  return embedded ? <Disclosure className={styles.panel}><summary>接收与差异历史</summary>{children}</Disclosure> : <section className={styles.panel}><h3>接收与差异历史</h3>{children}</section>;
 }
 function ReceiptLayout({ compact, ...props }: ComponentProps<typeof GuidedOperationLayout> & { compact?: boolean }) {
   return compact ? <>{props.children}<div className={styles.actions}>{props.actions}</div><p>{props.footerNote}</p></> : <GuidedOperationLayout {...props} />;

@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { ProductionConfirmDialog } from "./ProductionConfirmDialog";
 import { useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -61,7 +62,7 @@ function WarehouseDirectory({ canWrite }: { canWrite: boolean }) {
   </section>;
 }
 function Profile({ record }: { record: DirectoryRecord }) {
-  return <><dl className={styles.profile}>{[["编号", record.id], ["地区", [record.country, record.region].filter(Boolean).join(" · ")], ["运营方", record.operator], ["联系人", record.contact], ["联系方式", record.phone], ["地址", record.address], ["备注", record.notes], [record.type ? "外部仓码" : "外部编号", record.external_code], ["时区", record.timezone], ["卖家账号 / 站点", [record.seller_account, record.marketplace].filter(Boolean).join(" / ")]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "未填写"}</dd></div>)}</dl><details className={styles.help}><summary>资料变更记录（最近100次）</summary>{record.history?.map(h => <article key={h.revision}><h3>修订 {h.revision} · {h.actor_name || "操作人待核"}</h3><p>{h.reason} · {h.created_at}</p><details><summary>查看前后值</summary><pre>{JSON.stringify({ 修改前: h.before_value, 修改后: h.after_value }, null, 2)}</pre></details></article>)}</details></>;
+  return <><dl className={styles.profile}>{[["编号", record.id], ["地区", [record.country, record.region].filter(Boolean).join(" · ")], ["运营方", record.operator], ["联系人", record.contact], ["联系方式", record.phone], ["地址", record.address], ["备注", record.notes], [record.type ? "外部仓码" : "外部编号", record.external_code], ["时区", record.timezone], ["卖家账号 / 站点", [record.seller_account, record.marketplace].filter(Boolean).join(" / ")]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "未填写"}</dd></div>)}</dl><Disclosure className={styles.help}><summary>资料变更记录（最近100次）</summary>{record.history?.map(h => <article key={h.revision}><h3>修订 {h.revision} · {h.actor_name || "操作人待核"}</h3><p>{h.reason} · {h.created_at}</p><Disclosure><summary>查看前后值</summary><pre>{JSON.stringify({ 修改前: h.before_value, 修改后: h.after_value }, null, 2)}</pre></Disclosure></article>)}</Disclosure></>;
 }
 function FactoryDetail({ record, canWrite, edit, refresh }: { record: DirectoryRecord; canWrite: boolean; edit: () => void; refresh: number }) {
   const [params, setParams] = useSearchParams(); const tab = params.get("tab") || "orders"; const [query, setQuery] = useState(""); const [page, setPage] = useState(1); const [status, setStatus] = useState("");
@@ -114,10 +115,10 @@ function DirectoryEditor({ kind, initial, onSaved, onClose, returnFocusTarget }:
             <div className={styles.formGrid}>{field("contact", "联系人")}{field("phone", "联系方式")}</div>
             {field("address", "详细地址", 500)}
           </section>
-          <details className={styles.factoryDisclosure}><summary>更多资料（选填）<span>{status === "ACTIVE" ? "启用中" : "已停用"}</span></summary>
+          <Disclosure className={styles.factoryDisclosure}><summary>更多资料（选填）<span>{status === "ACTIVE" ? "启用中" : "已停用"}</span></summary>
             <div className={styles.disclosureBody}><div className={styles.formGrid}>{statusField}{field("operator", "运营方（不是货主）")}{field("timezone", "时区（例如 Asia/Shanghai）")}{field("external_code", "外部编号（可选）")}</div>{field("notes", "备注", 2000)}</div>
-          </details>
-          <details className={styles.factoryDisclosure}><summary>常用仓库（选填）<span>{links.length ? `已选 ${links.length} 个` : "暂不选择也能建厂"}</span></summary>{relations}</details>
+          </Disclosure>
+          <Disclosure className={styles.factoryDisclosure}><summary>常用仓库（选填）<span>{links.length ? `已选 ${links.length} 个` : "暂不选择也能建厂"}</span></summary>{relations}</Disclosure>
         </> : <>
           <section className={styles.factorySection}>
             <FormField label="仓库 / 地点名称" required><Input required maxLength={120} placeholder="填写便于辨认的完整名称" value={values.name} onChange={e => setValues(v => ({ ...v, name: e.target.value }))} /></FormField>
@@ -129,8 +130,8 @@ function DirectoryEditor({ kind, initial, onSaved, onClose, returnFocusTarget }:
             <div className={styles.warehouseAddress}>{values.country==='中国'?<FactoryRegionPicker fixedCountry="中国" value={`中国${values.region?' / '+values.region:''}`} onChange={region=>setValues(v=>({...v,region:region.split(' / ').slice(1).join(' / ')}))}/>:field('region','所在地区')}{field("address", "地址", 500)}</div>
             <div className={styles.formGrid}>{field("contact", "联系人")}{field("phone", "联系方式")}</div>
           </section>
-          <details className={styles.factoryDisclosure}><summary>更多资料（选填）<span>{status === "ACTIVE" ? "启用中" : "已停用"}</span></summary><div className={styles.disclosureBody}><div className={styles.formGrid}>{statusField}{field("operator", "运营方（不是货主）")}{field("timezone", "时区（例如 Asia/Shanghai）")}{field("external_code", "外部仓码（可选）")}</div>{field("notes", "备注", 2000)}</div></details>
-          <details className={styles.factoryDisclosure}><summary>往来工厂（选填）<span>{links.length ? `已选 ${links.length} 家` : "可稍后补充"}</span></summary><p className={styles.directoryHint}>记录与本仓有往来的工厂，仅供查阅；不会自动指定订单、入库或转移货权。</p>{relations}</details>
+          <Disclosure className={styles.factoryDisclosure}><summary>更多资料（选填）<span>{status === "ACTIVE" ? "启用中" : "已停用"}</span></summary><div className={styles.disclosureBody}><div className={styles.formGrid}>{statusField}{field("operator", "运营方（不是货主）")}{field("timezone", "时区（例如 Asia/Shanghai）")}{field("external_code", "外部仓码（可选）")}</div>{field("notes", "备注", 2000)}</div></Disclosure>
+          <Disclosure className={styles.factoryDisclosure}><summary>往来工厂（选填）<span>{links.length ? `已选 ${links.length} 家` : "可稍后补充"}</span></summary><p className={styles.directoryHint}>记录与本仓有往来的工厂，仅供查阅；不会自动指定订单、入库或转移货权。</p>{relations}</Disclosure>
         </>}
         {!factories&&!initial&&['中国','CN','China'].includes(values.country||'')&&['FACTORY','OWN','THIRD_PARTY'].includes(type)&&<label><input type="checkbox" checked={withOpening} onChange={e=>setWithOpening(e.target.checked)}/>创建后导入期初库存</label>}
         {initial && <div className={styles.factorySection}><FormField label="修改 / 停用原因" required><Input required maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} /></FormField>{status === "INACTIVE" && <StatusMessage kind="warning" title="停用不删除历史">{factories ? `当前有 ${initial.open_order_count || "0"} 张含开放明细的已确认订单。旧单仍可跟进，新单不能选择此工厂。` : "停用后将阻止此仓新库存操作；已有草稿仍保留，不能确认过账。"}</StatusMessage>}</div>}

@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import type { ReactNode } from "react";
 import { Button, Checkbox, ErrorState, Input, Radio, Select, Skeleton, StatusBadge, StatusMessage } from "../../design-system";
 import type { DraftHead, ReviewWorkspace, ValidationRun, VersionSummary } from "../../api/types";
@@ -81,7 +82,7 @@ export function DraftReviewView({ context, head, published, workspace, validatio
         </section>
       </div>
 
-      <details className={css["draft-maintenance"]} name="draft-maintenance">
+      <Disclosure className={css["draft-maintenance"]} name="draft-maintenance">
         <summary>调整草稿日期</summary>
         <p>系统会先读取目标日期的活动草稿和发布版本；有冲突时由你明确选择，不会自动覆盖。</p>
         <div className={css["draft-maintenance__form"]}>
@@ -106,10 +107,10 @@ export function DraftReviewView({ context, head, published, workspace, validatio
             <Button variant={draftMoveDecision === "cancel" ? "secondary" : "primary"} loading={busyAction === "move"} disabled={busyAction === "move" || !draftMoveDecision || !moveReason.trim() || (draftMoveDecision === "merge" && !draftMoveMerge.ready)} onClick={() => { void confirmDraftMoveDecision(); }} type="button">{busyAction === "move" ? "正在处理…" : draftMoveDecision === "cancel" ? "确认取消" : "按所选方式更改日期"}</Button>
           </fieldset>
         )}
-      </details>
+      </Disclosure>
 
       {(onDiscarded || onReparseSource) && (
-        <details className={`${css["draft-maintenance"]} ${css["draft-disposition"]}`} name="draft-maintenance">
+        <Disclosure className={`${css["draft-maintenance"]} ${css["draft-disposition"]}`} name="draft-maintenance">
           <summary>重新解析或废弃草稿</summary>
           <p>旧草稿、人工修改和备注会完整保留在审计历史中，但不会自动套用到新的解析结果。</p>
           {onReparseSource && workspace && workspace.source_batches.length > 0 && <label className="field-stack">重新解析的来源批次<Select onChange={(event) => setReparseBatchId(Number(event.target.value))} value={reparseBatchId}>{workspace.source_batches.map((source) => <option key={source.batch_id} value={source.batch_id}>导入批次 #{source.batch_id}</option>)}</Select></label>}
@@ -120,7 +121,7 @@ export function DraftReviewView({ context, head, published, workspace, validatio
             {onDiscarded && <Button variant="secondary" loading={busyAction === "discard"} disabled={busyAction === "discard" || !discardConfirmed || !discardReason.trim()} onClick={() => { void discardDraft(false); }} type="button">只废弃当前草稿</Button>}
             {onReparseSource && reparseBatchId && <Button variant="primary" loading={busyAction === "discard"} disabled={busyAction === "discard" || !discardConfirmed || !discardReason.trim()} onClick={() => { void discardDraft(true); }} type="button">废弃并重新解析来源文件</Button>}
           </div>
-        </details>
+        </Disclosure>
       )}
 
       {notice && <StatusMessage kind="success" title="操作结果">{notice}</StatusMessage>}

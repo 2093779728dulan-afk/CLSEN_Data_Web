@@ -417,9 +417,9 @@ it("keeps imports in goods step and shows the actual warehouse before optional e
  expect(screen.getByLabelText(/^业务单号/)).toHaveValue("SIM-REVIEW");expect(api.write).not.toHaveBeenCalled();
 });
 
-it("uses an accessible disclosure icon and keeps optional plan selection through collapse and draft save",async()=>{
+it("uses an explicit details action and keeps optional plan selection through collapse and draft save",async()=>{
  const table=await openEditableDispatch("2");await userEvent.selectOptions(within(table).getByRole("combobox",{name:"出货SKU 1"}),"1001");await userEvent.type(within(table).getByRole("textbox",{name:"本次实际数量 1"}),"1");
- const toggle=within(table).getByRole("button",{name:"查看商品1详情"});expect(toggle).toHaveTextContent("");expect(toggle).toHaveAttribute("aria-expanded","false");
+ const toggle=within(table).getByRole("button",{name:"查看商品1详情"});expect(toggle).toHaveTextContent("详情");expect(toggle).toHaveAttribute("aria-expanded","false");
  toggle.focus();await userEvent.keyboard("{Enter}");expect(toggle).toHaveAttribute("aria-expanded","true");
  const plan=within(table).getByLabelText("来源 1 的预计出库安排（可选）");expect(plan).not.toBeVisible();
  await userEvent.click(within(table).getByText("出库安排（可选）"));expect(plan).toBeVisible();await userEvent.selectOptions(plan,"91");
@@ -503,4 +503,12 @@ it("prefers outstanding warehouse order attribution and provides the genuine ove
  await userEvent.click(screen.getByRole("button",{name:"确认已实际发货"}));
  await waitFor(()=>expect(api.write.mock.calls.some(([path])=>path==="/api/production/shipments")).toBe(true));
  expect(api.write.mock.calls.find(([path])=>path==="/api/production/shipments")?.[1].body).toMatchObject({save_mode:"confirm",dispatch_purpose:"WAREHOUSE_DISPATCH",overage_reason:"SIM-真实额外补发12件",sources:[{sku_id:"1001",actual_units:"12",allocations:[{order_line_id:"201",units:"12"}]}]});
+});
+
+it("keeps the orders context through warehouse dispatch and cancellation",async()=>{
+ warehouseStock();const back="/production/orders?factory=3&q=QA&page=2&action_order=10";
+ const router=mount(`/production/shipments/intake?return_to=${encodeURIComponent(back)}`);
+ await userEvent.click(await screen.findByRole("button",{name:"取消"}));
+ await waitFor(()=>expect(router.state.location.pathname+router.state.location.search).toBe(back));
+ expect(api.write).not.toHaveBeenCalled();
 });

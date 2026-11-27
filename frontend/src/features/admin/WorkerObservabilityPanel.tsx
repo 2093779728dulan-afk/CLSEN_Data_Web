@@ -1,12 +1,5 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronRight,
-  CircleHelp,
-  Clock3,
-  RefreshCw,
-  Wrench,
-} from "lucide-react";
+import { Disclosure } from "../../design-system";
+import { AlertTriangle, CheckCircle2, ChevronRight, CircleHelp, Clock3, RefreshCw, Wrench,  } from "lucide-react";
 
 import type {
   MaintenanceStatusResponse,
@@ -145,8 +138,8 @@ function WorkerInstance({ instance }: { instance: WorkerInstanceStatusResponse }
       <span><Timestamp value={instance.last_heartbeat_at} /></span>
       <span>{instance.heartbeat_age_seconds == null ? "无法确认" : `${instance.heartbeat_age_seconds} 秒`}</span>
       <span>#{instance.heartbeat_sequence}</span>
-      <details>
-        <summary>查看诊断 <ChevronRight aria-hidden="true" /></summary>
+      <Disclosure>
+        <summary>查看诊断 </summary>
         <dl>
           <div><dt>状态码</dt><dd>{instance.last_result_code ?? "—"}</dd></div>
           <div><dt>角色</dt><dd>{instance.role}</dd></div>
@@ -159,7 +152,7 @@ function WorkerInstance({ instance }: { instance: WorkerInstanceStatusResponse }
             </li>
           ))}
         </ul>
-      </details>
+      </Disclosure>
     </article>
   );
 }
@@ -173,10 +166,10 @@ function QueueRow({ queue }: { queue: QueueStatusResponse }) {
         <StatusMark label={unknown ? "无法确认" : consumerLabels[queue.consumer_health]} tone={unknown ? "warn" : consumerTone(queue.consumer_health)} />
         <span className="worker-observability__queue-headline">{queueHeadline(queue)}</span>
         <span><Timestamp value={queue.last_succeeded_at ?? queue.last_failed_at} /></span>
-        <details>
-          <summary>查看诊断 <ChevronRight aria-hidden="true" /></summary>
+        <Disclosure>
+          <summary>查看诊断 </summary>
           <QueueDiagnostic queue={queue} />
-        </details>
+        </Disclosure>
       </div>
     </article>
   );
@@ -216,15 +209,15 @@ export function WorkerObservabilityPanel({ onRefresh, pageRefreshedAt, refreshEr
 
       {refreshError && <p className="worker-observability__refresh-error" role="alert">状态可能已过期：{refreshError}</p>}
 
-      <details className="worker-observability__thresholds">
-        <summary>心跳阈值参考 <ChevronRight aria-hidden="true" /></summary>
+      <Disclosure className="worker-observability__thresholds">
+        <summary>心跳阈值参考 </summary>
         <div>
           <span><strong>{status.worker.thresholds.heartbeat_seconds}s</strong> 写入间隔</span>
           <span><strong>{status.worker.thresholds.stale_seconds}s</strong> 延迟</span>
           <span><strong>{status.worker.thresholds.offline_seconds}s</strong> 离线</span>
           <span><strong>{status.worker.thresholds.refresh_seconds}s</strong> 页面刷新</span>
         </div>
-      </details>
+      </Disclosure>
 
       <div className="worker-observability__workspace">
         <div className="worker-observability__rail">

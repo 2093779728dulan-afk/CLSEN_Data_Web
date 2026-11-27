@@ -740,7 +740,7 @@ it("shows planned production instead of order quantities and starts shipment ind
  expect(within(overview).getByRole("cell",{name:"70"})).toBeVisible();expect(within(overview).queryByRole("cell",{name:"100 / 70"})).not.toBeInTheDocument();
  expect(within(overview).queryByRole("columnheader",{name:"已出货"})).not.toBeInTheDocument();
  expect(overview).not.toHaveTextContent("已出货");expect(within(overview).queryByRole("link",{name:"本单出货"})).not.toBeInTheDocument();
- expect(within(overview).getByRole("link",{name:"仓库出货"})).toHaveAttribute("href","/production/shipments/intake");
+ expect(within(overview).getByRole("link",{name:"仓库出货"})).toHaveAttribute("href",`/production/shipments/intake?${new URLSearchParams({return_to:"/production/orders"})}`);
  for(const name of ["计划生产","已生产","已入库"])expect(within(overview).getByRole("columnheader",{name})).toBeInTheDocument();
 });
 
@@ -1169,7 +1169,7 @@ it("previews cumulative receipts compactly and expands imported quality quantiti
  await openOperation("receive");
  await userEvent.click(screen.getByRole("button", { name:"下一步" }));
  const table=screen.getByRole("table", { name:"本次入库产品" });
- expect(within(table).getAllByRole("columnheader").map(cell=>cell.textContent)).toEqual(["商品规格","下单","已生产","累计入库","本次入库"]);
+ expect(within(table).getAllByRole("columnheader").map(cell=>cell.textContent)).toEqual(["商品规格","计划生产","已生产","累计入库","本次入库"]);
  expect(screen.queryByLabelText("QA-Blue-M本次待检")).not.toBeInTheDocument();
  await userEvent.type(screen.getByLabelText("QA-Blue-M本次合格"),"10");
  expect(within(table).getByLabelText("QA-Blue-M已入库60件，确认后70件")).toBeVisible();
@@ -1199,4 +1199,32 @@ it("defaults production to demand, preserves an adjusted plan and submits its re
   await userEvent.click(within(dialog).getByRole("button",{name:"确认下单"}));
   await screen.findByText("生产单已下达");
   expect(api.write.mock.calls.at(-1)?.[1].body).toMatchObject({production_plan_reason:"使用现有库存",lines:[{sku_id:"1001",expected_units:"110",planned_production_units:"70"}]});
+});
+
+it("keeps the current orders context when opening batch receipts and warehouse dispatch",async()=>{
+ const entry="/production/orders?factory=3&q=QA&page=2&progress=all&action_order=10";
+ mount(entry);await screen.findByRole("region",{name:"工厂订单跟进总览"});
+ const receive=new URL(screen.getByRole("link",{name:"批量入库"}).getAttribute("href")!,"http://localhost");
+ expect(receive.searchParams.get("return_to")).toBe(entry);
+ const ship=new URL(screen.getByRole("link",{name:"仓库出货"}).getAttribute("href")!,"http://localhost");
+ expect(ship.searchParams.get("return_to")).toBe(entry);
+});
+
+it("uses the production plan throughout receipt entry and the confirmation remainder",async()=>{
+ const planned={...order,expected_units:"100",received_units:"0",lines:order.lines!.map(line=>({...line,expected_units:"100",planned_production_units:"70",produced_units:"40",received_units:"0",production_direct_units:"0"}))};
+ const original=api.read.getMockImplementation()!;api.read.mockImplementation((path:string)=>path==="/api/production/orders/10"?Promise.resolve(planned):original(path));
+ mount("/production/orders/10?tab=receive");const dialog=await openOperation("receive");
+ expect(within(dialog).getByRole("region",{name:"入库业务参照"})).toHaveTextContent("计划生产70件");
+ await userEvent.click(within(dialog).getByRole("button",{name:"下一步"}));
+ const table=within(dialog).getByRole("table",{name:"本次入库产品"});
+ expect(within(table).getByRole("columnheader",{name:"计划生产"})).toBeVisible();
+ expect(within(table).getByRole("cell",{name:"70"})).toBeVisible();
+ fireEvent.change(within(dialog).getByLabelText("QA-Blue-M本次合格"),{target:{value:"10"}});
+ await userEvent.click(within(dialog).getByRole("button",{name:"下一步"}));
+ fireEvent.change(within(dialog).getByLabelText(/入库依据 \/ 备注/),{target:{value:"虚构到仓"}});
+ await userEvent.click(within(dialog).getByRole("button",{name:"下一步"}));
+ const preview=within(dialog).getByRole("table",{name:"本次实收核对"});
+ expect(within(preview).getByRole("columnheader",{name:"计划剩余未入库"})).toBeVisible();
+ expect(within(preview).getByRole("cell",{name:"60件"})).toBeVisible();
+ expect(api.write).not.toHaveBeenCalled();
 });

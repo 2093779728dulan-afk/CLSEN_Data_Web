@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { X } from "lucide-react";
@@ -161,9 +162,9 @@ const RowEditor = memo(function RowEditor({ canEdit, dirty, identityBlocked, imp
       {canEdit && dirty && <Button disabled={tableSaving} onClick={onUndo} variant="quiet">撤销本行修改</Button>}
       {dirty ? <span className={styles.unsaved}>未保存</span> : saved ? <span className="catalog-save-success" role="status">已保存</span> : !canEdit ? <span>只读</span> : null}
     </td>
-    {section === "mappings" && <td className="catalog-mapping-details"><details><summary>查看归属、冲突与恢复</summary>
+    {section === "mappings" && <td className="catalog-mapping-details"><Disclosure><summary>查看归属、冲突与恢复</summary>
       <div className={styles.field}><CatalogIdentityOwners disabled={identityBlocked || tableSaving || dirty || !canEdit} importId={importId} row={row} revision={workflowRevision} onSaved={onSaved} /></div>
-    </details></td>}
+    </Disclosure></td>}
   </tr>;
 // Hidden rows retain manual-input/identity-recovery state; refresh their props before becoming interactive.
 }, (_previous, next) => !next.active);
@@ -385,7 +386,7 @@ export function CatalogImportSectionTable({ active = true, busy = false, canEdit
     if (active) return () => onSaveAction?.(undefined);
   }, [active, onSaveAction]);
   return <div className={`${styles.section} ${editorStyles.controls}`} ref={root} onKeyDown={keyboard} tabIndex={-1} role="region" aria-label="当前分类编辑区">
-    {canEdit&&suggestions.length>0&&<details open className={editorStyles.suggestions}><summary>可批量核对 {suggestions.length} 条明确来源建议</summary><p>核对唯一来源编码、颜色尺码或已明确目标，歧义项仍须单独判断。</p><label><input type="checkbox" disabled={busy||saving} checked={suggestions.slice(0,500).every(s=>suggestionKeys.includes(s.row.row_key))} onChange={e=>setSuggestionKeys(e.target.checked?suggestions.slice(0,500).map(s=>s.row.row_key):[])}/>选择本批建议（最多500条）</label><ul>{suggestions.slice(0,500).map(({row,patch})=><li key={row.row_key}><label><input type="checkbox" disabled={busy||saving} checked={suggestionKeys.includes(row.row_key)} onChange={e=>setSuggestionKeys(keys=>e.target.checked?[...keys,row.row_key]:keys.filter(k=>k!==row.row_key))}/><strong>{patch.internal_display_sku??sourceIdentity(section,row,productionSource).title}</strong><span>{Object.entries(patch).filter(([key])=>!['code_evidence','change_reason'].includes(key)).map(([key,value])=>`${FIELD_META[key]?.label??key}：${displayChange(row,key,value)}`).join(' · ')}</span></label></li>)}</ul><Button variant="secondary" disabled={busy||saving||!suggestionKeys.some(k=>suggestions.some(s=>s.row.row_key===k))} onClick={acceptSuggestions}>采用所选建议</Button></details>}
+    {canEdit&&suggestions.length>0&&<Disclosure open className={editorStyles.suggestions}><summary>可批量核对 {suggestions.length} 条明确来源建议</summary><p>核对唯一来源编码、颜色尺码或已明确目标，歧义项仍须单独判断。</p><label><input type="checkbox" disabled={busy||saving} checked={suggestions.slice(0,500).every(s=>suggestionKeys.includes(s.row.row_key))} onChange={e=>setSuggestionKeys(e.target.checked?suggestions.slice(0,500).map(s=>s.row.row_key):[])}/>选择本批建议（最多500条）</label><ul>{suggestions.slice(0,500).map(({row,patch})=><li key={row.row_key}><label><input type="checkbox" disabled={busy||saving} checked={suggestionKeys.includes(row.row_key)} onChange={e=>setSuggestionKeys(keys=>e.target.checked?[...keys,row.row_key]:keys.filter(k=>k!==row.row_key))}/><strong>{patch.internal_display_sku??sourceIdentity(section,row,productionSource).title}</strong><span>{Object.entries(patch).filter(([key])=>!['code_evidence','change_reason'].includes(key)).map(([key,value])=>`${FIELD_META[key]?.label??key}：${displayChange(row,key,value)}`).join(' · ')}</span></label></li>)}</ul><Button variant="secondary" disabled={busy||saving||!suggestionKeys.some(k=>suggestions.some(s=>s.row.row_key===k))} onClick={acceptSuggestions}>采用所选建议</Button></Disclosure>}
 
     <span className={styles.srOnly} role="status" aria-live="polite">{announcement}</span>
     {canEdit && isEditableSection(section) && <p className={styles.keyboardHelp}>Tab 切换字段 · Alt + ↑ / ↓ 切换行 · Ctrl / ⌘ + Enter 保存分类 · Esc 撤销当前文本字段</p>}
@@ -403,7 +404,7 @@ export function CatalogImportSectionTable({ active = true, busy = false, canEdit
             onChange={(field, value) => edit(row, field, value)} onSave={() => void save([row])} onSaved={onSaved} options={options}
             payload={drafts[row.row_key]?.payload ?? row.payload} productionSource={productionSource} row={row} saved={saved.has(row.row_key)} section={section} tableSaving={busy || saving} workflowRevision={workflowRevision} />)}
         </tbody></table></div>}
-    {dirtyCount > 0 && <details className={styles.changePreview}><summary>核对本次修改 · {dirtyCount} 行（含筛选隐藏的修改）</summary>
+    {dirtyCount > 0 && <Disclosure className={styles.changePreview}><summary>核对本次修改 · {dirtyCount} 行（含筛选隐藏的修改）</summary>
       <div className={styles.changes}>{dirtyRows.map(row => {
         const draft = drafts[row.row_key];
         if (!draft) return null;
@@ -411,7 +412,7 @@ export function CatalogImportSectionTable({ active = true, busy = false, canEdit
           {EDITABLE_FIELDS[section].filter(field => (draft.base[field] ?? null) !== (draft.payload[field] ?? null)).map(field => <div key={field}><dt>{FIELD_META[field]?.label ?? field}</dt><dd><del>{displayChange(row, field, draft.base[field])}</del><span aria-label="改为">→</span><ins>{displayChange(row, field, draft.payload[field])}</ins></dd></div>)}
         </dl></div>;
       })}</div>
-    </details>}
+    </Disclosure>}
     {canEdit && isEditableSection(section) && <div className={styles.saveBar}>
       <div><strong>{dirtyCount ? `${dirtyCount} 行未保存` : "当前分类无未保存修改"}</strong><p>仅更新草稿 · 筛选隐藏的修改也会保存</p></div>
       <Button disabled={!dirtyCount || busy || saving} loading={saving} loadingLabel="正在保存草稿" onClick={() => void save(dirtyRows.slice(0, 500))} variant="primary">

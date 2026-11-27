@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiRequestError, requestApi, writeApi, commandApi, createOperationKey } from "../../api/client";
@@ -140,7 +141,7 @@ export function CatalogSpecificationSourcePage({embedded=false,onGuardChange,onR
     {error && <StatusMessage kind="danger" title="操作未完成"><ul>{error.split("\n").map((line, index) => <li key={index}>{line}</li>)}</ul>输入会保留在当前页面。</StatusMessage>}
     {enabled === undefined ? <p role="status">{error ? "入口权限未读取成功，请刷新后重试。" : "正在读取入口权限…"}</p> : enabled === false ? <StatusMessage kind="warning" title="当前环境尚未启用商品建档">此入口需要环境启用，且使用管理员或资料管理员账号。</StatusMessage> : <>
       {!embedded&&<Link className={styles.action} to="/catalog/production-sources?entry=amazon-listing">导入亚马逊商品清单（Seller SKU／ASIN／FNSKU）</Link>}
-      <details aria-label="建档填写说明"><summary>模板与填写帮助</summary>
+      <Disclosure aria-label="建档填写说明"><summary>模板与填写帮助</summary>
         <p>适用于新商品建档或已有款式补充颜色、尺码。已有完整规格可在<Link to="/catalog">商品目录</Link>查找；件数、库位和收发记录请到<Link to="/production/stock">库存管理</Link>办理。</p>
         <LinkButton variant="secondary" reloadDocument to="/api/catalog/production-sources/template" download>下载商品建档模板（XLSX）</LinkButton>
         <p hidden>一行填写一个“款号＋颜色＋尺码”，不要填写各尺码的库存数量。模板已设为文本格式；从原表粘贴时请仅粘贴值，保留前导零。</p>
@@ -149,10 +150,10 @@ export function CatalogSpecificationSourcePage({embedded=false,onGuardChange,onR
           <div><strong>正式SKU · 选填</strong><p hidden>填写有依据的正式编码；以Amazon Seller SKU为正式码时，直接使用该编码原文。保留大小写、连字符和前导零，不自行拼接。未知可留空，审核时确认待补。</p></div>
           <div><strong>Seller SKU · 渠道关联</strong><p hidden>按账号和站点关联。下方选填渠道账号并提供依据，再审核生效。系统内部ID由系统生成，不需要填写。</p></div>
         </div>
-        <details><summary>统一格式要求</summary><p hidden>款号、颜色、尺码均用文本单元格，空格及全角英数字可整理为标准写法，颜色和尺码统一大小写；原文始终保留。正式SKU逐字保留，不自动改码。不可见字符、乱码、多个主档写法冲突仍须核对；不会合并相似颜色。字体、字号和列宽不影响识别。</p></details>
-      </details>
+        <Disclosure><summary>统一格式要求</summary><p hidden>款号、颜色、尺码均用文本单元格，空格及全角英数字可整理为标准写法，颜色和尺码统一大小写；原文始终保留。正式SKU逐字保留，不自动改码。不可见字符、乱码、多个主档写法冲突仍须核对；不会合并相似颜色。字体、字号和列宽不影响识别。</p></Disclosure>
+      </Disclosure>
       <div className={styles.methodTabs} role="group" aria-label="填写方式"><Button variant={inputMode==='sku'?'primary':'secondary'} disabled={locked} onClick={()=>setInputMode('sku')}>按SKU填写</Button><Button variant={inputMode==='columns'?'primary':'secondary'} disabled={locked} onClick={()=>setInputMode('columns')}>分列填写或导入</Button></div>
-      {inputMode==='sku'?<section className={styles.manualEntry}><h3>填写SKU，系统补齐规格</h3><FormField label={embedded && scope ? "Seller SKU清单（每行一个）" : "SKU清单（每行一个）"}><textarea rows={6} disabled={locked} value={skuText} placeholder={'1101-Navy-L\n1101-Navy-M'} onChange={event=>{changed();const value=event.target.value;setSkuText(value);setFormat('tsv');if(!sourceName)setSourceName(`手工建档-${new Date().toLocaleDateString('en-CA')}`);setText('款号\t颜色\t尺码\t正式SKU\n'+value.split(/\r?\n/).filter(Boolean).map(code=>{const spec=skuSuggestion(code);return spec?`${spec.style_code}\t${spec.color}\t${spec.size}\t${code}`:'';}).join('\n'));}}/></FormField><details><summary>资料名称（可选修改）</summary><FormField label="资料名称（必填）"><Input disabled={locked} value={sourceName} onChange={event=>{changed();setSourceName(event.target.value);}}/></FormField></details></section>:<>
+      {inputMode==='sku'?<section className={styles.manualEntry}><h3>填写SKU，系统补齐规格</h3><FormField label={embedded && scope ? "Seller SKU清单（每行一个）" : "SKU清单（每行一个）"}><textarea rows={6} disabled={locked} value={skuText} placeholder={'1101-Navy-L\n1101-Navy-M'} onChange={event=>{changed();const value=event.target.value;setSkuText(value);setFormat('tsv');if(!sourceName)setSourceName(`手工建档-${new Date().toLocaleDateString('en-CA')}`);setText('款号\t颜色\t尺码\t正式SKU\n'+value.split(/\r?\n/).filter(Boolean).map(code=>{const spec=skuSuggestion(code);return spec?`${spec.style_code}\t${spec.color}\t${spec.size}\t${code}`:'';}).join('\n'));}}/></FormField><Disclosure><summary>资料名称（可选修改）</summary><FormField label="资料名称（必填）"><Input disabled={locked} value={sourceName} onChange={event=>{changed();setSourceName(event.target.value);}}/></FormField></Disclosure></section>:<>
       <FormField label="资料名称（必填）"><Input disabled={locked} value={sourceName} onChange={event => { changed(); setSourceName(event.target.value); }} /></FormField>
       <FormField label="选择规格表（选填）" hint="选择后自动检查。单页XLSX或UTF-8 CSV/TSV，最多1MB、1000行；表头依次为款号、颜色、尺码，可选第四列正式SKU。编码和规格须为文本。"><input type="file" accept=".xlsx,.csv,.tsv" disabled={locked} onChange={event => { const selected = event.target.files?.[0]; event.target.value = ""; void file(selected); }} /></FormField>
       {format === "xlsx" ? <p>已读取 {sourceName}，请查看页面检查提示；修改原文件后可重新选择同名文件。<Button disabled={locked} variant="quiet" onClick={() => { changed(); setFormat("tsv"); setText("款号\t颜色\t尺码\t正式SKU\n"); }}>改为手工或粘贴</Button></p> : <>

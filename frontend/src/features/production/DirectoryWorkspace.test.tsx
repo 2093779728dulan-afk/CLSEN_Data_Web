@@ -303,10 +303,10 @@ it("keeps production and receipt facts visible without turning unknown productio
   expect(await within(dialog).findByRole("link", { name: "查看生产单" })).toHaveAttribute("href", "/production/orders/10");
   expect(within(dialog).getByRole("button", { name: "更换生产单" })).toBeInTheDocument();
   const reference = within(dialog).getByRole("region", { name: "入库业务参照" });
-  expect(reference).toHaveTextContent("下单计划4件");
+  expect(reference).toHaveTextContent("计划生产4件");
   expect(reference).toHaveTextContent("累计生产未登记");
   expect(reference).toHaveTextContent("累计已入库1件");
-  expect(reference).toHaveTextContent("订单未交数量3件");
+  expect(reference).toHaveTextContent("计划待入库3件");
   expect(reference).not.toHaveTextContent("累计生产0件");
   await userEvent.click(within(dialog).getByRole("button", { name: "下一步" }));
   expect(within(dialog).getByRole("button", { name: "导入表格" })).toBeInTheDocument();
@@ -326,7 +326,7 @@ it("shows over-receipt against the order before and after the current receipt", 
   api.read.mockImplementation(path => path === "/api/production/orders/10" ? Promise.resolve(source) : path.startsWith("/api/production/orders?") ? Promise.resolve({ items: [source], total: 1, page: 1 }) : original(path));
   mount("warehouses", "/production/warehouses/1?tab=records&receive=1&mode=receive&source_order=10");
   const dialog = await screen.findByRole("dialog", { name: "入库" });
-  expect(await within(dialog).findByRole("region", { name: "入库业务参照" })).toHaveTextContent("订单未交数量超额入库 5件");
+  expect(await within(dialog).findByRole("region", { name: "入库业务参照" })).toHaveTextContent("计划待入库超额入库 5件");
   await userEvent.click(within(dialog).getByRole("button", { name: "下一步" }));
   await userEvent.type(within(dialog).getByLabelText("QA-M本次合格"), "1");
   await userEvent.click(within(dialog).getByRole("button", { name: "下一步" }));
@@ -365,7 +365,7 @@ it("shows shipment progress, current stock and the result after this shipment", 
   mount("warehouses", "/production/warehouses/1?tab=records&ship=1&mode=ship&source_order=10");
   const dialog = await screen.findByRole("dialog", { name: "新建出货单" });
   const reference = await within(dialog).findByRole("region", { name: "出货业务参照" });
-  expect(reference).toHaveTextContent("下单计划10件");
+  expect(reference).toHaveTextContent("下单数量10件");
   expect(reference).toHaveTextContent("累计已发3件");
   expect(reference).toHaveTextContent("订单差额7件");
   expect(reference).toHaveTextContent("计划目的地虚构海外仓");
@@ -537,7 +537,7 @@ it("groups warehouse states and keeps owner context across the four workspace ta
 it("shows only on-hand quantities in the warehouse matrix and keeps availability in detail", async () => {
   installWarehouseCenterMocks(); mount("warehouses", "/production/warehouses/1?owner=1");
   const table = await screen.findByRole("table", { name: "本仓款色尺码库存" });
-  expect(within(table).getByRole("button", { name: "2301" })).toBeInTheDocument();
+  expect(within(table).getByRole("button", { name: "2301 · 收起" })).toBeInTheDocument();
   expect(within(table).getByRole("columnheader", { name: "款号" })).toBeInTheDocument();
   expect(within(table).getByRole("columnheader", { name: "颜色" })).toBeInTheDocument();
   expect(screen.queryByText(/短袖T恤/)).not.toBeInTheDocument();
@@ -548,7 +548,7 @@ it("shows only on-hand quantities in the warehouse matrix and keeps availability
   expect(screen.queryByText(/“—”为未登记，0为明确零库存/)).not.toBeInTheDocument();
   await userEvent.click(within(table).getByRole("button", { name: "2301 Blue M 库存明细 SKU 1001" }));
   expect(screen.getByRole("region", { name: "规格库存明细" })).toHaveTextContent("在库4当前可发3合格4待检0次品0预留1冻结0");
-  await userEvent.click(within(table).getByRole("button", { name: "2301" }));
+  await userEvent.click(within(table).getByRole("button", { name: "2301 · 收起" }));
   expect(within(table).getByText("2种颜色 · 已收起")).toBeInTheDocument();
   expect(within(table).getAllByLabelText("在库7件")).toHaveLength(2);
   expect(screen.queryByRole("region", { name: "规格库存明细" })).not.toBeInTheDocument();

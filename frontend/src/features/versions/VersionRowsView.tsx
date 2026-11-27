@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button, EmptyState, ErrorState, Pagination, Skeleton, Table } from "../../design-system";
 import type { VersionRowsResponse } from "./VersionRows";
 import css from "./VersionRowsView.module.css";
@@ -6,7 +6,7 @@ import css from "./VersionRowsView.module.css";
 type Props = { versionNo: number; reportDate: string; open: boolean; onToggle: () => void; page: number; onPageChange: (value: number) => void; response?: VersionRowsResponse; error?: string; onRetry: () => void };
 export function VersionRowsView({ versionNo, reportDate, open, onToggle, page, onPageChange, response, error, onRetry }: Props) {
   return <section className={css.rows} aria-label={`v${versionNo} 数据明细`}>
-    <Button icon={open ? <ChevronUp /> : <ChevronDown />} aria-expanded={open} onClick={onToggle}>{open ? "收起版本数据" : "查看此版本数据"}</Button>
+    <Button  aria-expanded={open} onClick={onToggle}>{open ? "收起版本数据" : "查看此版本数据"}</Button>
     {open && <>
       <h3>{reportDate} · v{versionNo} 数据明细 · 只读</h3>
       <p>固定查看所选版本，不随当前发布版本变化。受限字段不展示，金额与比率保留存储精度。</p>

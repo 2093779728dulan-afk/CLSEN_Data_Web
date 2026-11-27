@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useState } from "react";
 import { requestApi } from "../../api/client";
 import { useAuthzGeneration } from "../../app/AuthzGenerationContext";
@@ -30,10 +31,10 @@ export function ReportProductMatch({ versionId, revision }: { versionId: number;
   if (!result) return <p role="status">正在匹配报表商品…</p>;
   return <section aria-label="报表商品匹配">
     <p role="status">已匹配{result.matched}个商品{result.excluded > 0 && ` · 已排除${result.excluded}个`}{result.issues.length > 0 && ` · ${result.issues.length}个需处理`}</p>
-    {result.issues.length > 0 && <details><summary>查看需处理商品</summary>
+    {result.issues.length > 0 && <Disclosure><summary>查看需处理商品</summary>
       <Table title="需处理商品"><thead><tr><th>Seller SKU</th><th>问题</th></tr></thead><tbody>{result.issues.map((item, index) => <tr key={index}><td>{item.seller_sku}</td><td>{item.message}</td></tr>)}</tbody></Table>
       <Button variant="secondary" onClick={() => setRepair(true)}>补充商品关联</Button><Button variant="quiet" onClick={() => setRefresh(value => value + 1)}>刷新匹配结果</Button>
-    </details>}
+    </Disclosure>}
     {repair && <CatalogGuidedFlow initialMode="product" autoOpen onClosed={() => { setRepair(false); setRefresh(value => value + 1); }} />}
   </section>;
 }

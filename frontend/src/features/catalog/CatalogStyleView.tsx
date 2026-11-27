@@ -1,5 +1,6 @@
+import { Disclosure } from "../../design-system";
 import { CatalogPlatformStatus } from "./CatalogPlatformStatus";
-import { ArrowLeft, ChevronDown, ChevronRight, FileSearch, RefreshCw, Shirt } from "lucide-react";
+import { ArrowLeft, FileSearch, RefreshCw, Shirt } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { SafeSourceRefView } from "../../components/source-reference/SafeSourceRefView";
@@ -32,7 +33,7 @@ function EvidenceRow({ item, onNameSuggestion }: { item: CatalogEvidenceItem; on
     {item.title && <div className={styles.sourceField}><strong>标题</strong><SafeSourceRefView source={item.title} /></div>}
     {onNameSuggestion && item.title && !item.title.is_unsafe && !item.title.is_truncated && item.title.preview.trim() && item.title.preview.length <= 255 && <Button variant="quiet" onClick={() => onNameSuggestion({ name: item.title!.preview, source: `${item.report_type === "business_report" ? "经营报告" : "退货报告"} ${item.report_date} · 版本#${item.published_version_id} · 记录#${item.source_row_id}` })}>用此报告标题补名称</Button>}
     <div className={styles.locator}><Link to={`/versions?${reportQuery.toString()}`}>查看来源报告版本</Link><p>按报告归属日查找，并选择下方系统版本编号对应的记录。请按对应文件及记录序号核对，不可用系统记录编号定位 Excel 行。</p><p>来源文件：{item.source_filename ?? "未保留文件关联"}</p><p>原表记录序号：{item.source_record_number ?? "未提供"}（表头为第 1 条；CSV 多行单元格会导致文本物理行号不同）</p>{item.report_type === "return_report" && <><p>原始退货时间：{item.source_event_timestamp ?? "未保留"}</p><p>导入来源时区：{item.source_timezone ?? "未提供"}；原始时间如带 UTC 偏移，以该偏移为准。事件日期与报告归属日可能不同。</p></>}{item.title?.is_unsafe && <p>标题含需安全处理的字符，当前展示为安全摘要；此标记不代表 SKU 错误。</p>}</div>
-    <details className={styles.trace}><summary>系统追溯信息</summary><span>系统版本编号 {item.published_version_id} · 系统记录编号 {item.source_row_id}（非文件行号）</span><code>{item.evidence_digest.slice(-8)}</code></details>
+    <Disclosure className={styles.trace}><summary>系统追溯信息</summary><span>系统版本编号 {item.published_version_id} · 系统记录编号 {item.source_row_id}（非文件行号）</span><code>{item.evidence_digest.slice(-8)}</code></Disclosure>
   </li>;
 }
 
@@ -95,7 +96,7 @@ function VariantDetails({ sku, readers, styleCode, canEdit, onNameSuggestion }: 
       <div className={styles.variantSummary}><strong>{sku.seller_sku_count} 个 Seller SKU</strong><span>建档来源：<SourceSummary value={sku.source_summary} /></span></div>
     </div>
     <div className={styles.variantActions}>
-      <Button aria-controls={panelId} aria-expanded={expanded} icon={expanded ? <ChevronDown /> : <ChevronRight />} onClick={toggle}>{expanded ? "收起 Seller SKU" : "展开 Seller SKU"}</Button>
+      <Button aria-controls={panelId} aria-expanded={expanded}  onClick={toggle}>{expanded ? "收起 Seller SKU" : "展开 Seller SKU"}</Button>
       {canEdit && <LinkButton variant="quiet" to={`/catalog/production-sources?${new URLSearchParams({ style: styleCode, color: sku.standard_color, size: sku.standard_size })}`}>补充正式SKU与渠道关联</LinkButton>}
     </div>
     <div id={panelId} hidden={!expanded} className={styles.variantBody}>

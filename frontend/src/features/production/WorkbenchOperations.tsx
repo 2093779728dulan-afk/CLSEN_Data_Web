@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { TableImportReview } from "./TableImportReview";
 import { useTableBaseline } from "./useTableBaseline";
 import { withoutTableBaseline } from "./tableImportDiff";
@@ -63,20 +64,22 @@ function orderTotals(order: Document) {
 function BusinessReference({ kind, order, receiptBatch = false, receiptOrderReferences, orderSelector }: { kind: "receipt" | "shipment"; order: Document; receiptBatch?: boolean; receiptOrderReferences?: string[]; orderSelector?: ReactNode }) {
   const totals = orderTotals(order);
   const shipmentPending = order.difference_units ?? nonNegativeDifference(totals.expected, totals.shipped);
+  const receiptPlan = sumKnown((order.lines || []).map(line => line.planned_production_units ?? line.expected_units));
+  const receiptAccounted = sumKnown((order.lines || []).map(line => line.received_units == null ? null : (BigInt(line.received_units) + BigInt(line.production_direct_units || "0")).toString()));
   const facts = kind === "receipt" ? [
-    ["下单计划", unitFact(totals.expected)],
+    ["计划生产", unitFact(receiptPlan)],
     ["累计生产", unitFact(orderSelector && !order.lines?.length ? "0" : totals.produced, "未登记")],
     ["累计已入库", unitFact(totals.received)],
-    ["订单未交数量", orderSelector ? unitFact(order.lines?.length ? sumKnown(order.lines.map(line => receiptRemaining(line)?.toString())) : "0") : receiptDifference(totals.expected, totals.received)],
+    ["计划待入库", orderSelector ? unitFact(order.lines?.length ? sumKnown(order.lines.map(line => receiptRemaining(line)?.toString())) : "0") : receiptDifference(receiptPlan, receiptAccounted)],
   ] : [
-    ["下单计划", unitFact(totals.expected)],
+    ["下单数量", unitFact(totals.expected)],
     ["累计已发", unitFact(totals.shipped)],
     ["订单差额", shipmentDifference(shipmentPending)],
     ["计划目的地", order.destination || "未登记"],
   ];
   return <section className={styles.businessReference} aria-label={kind === "receipt" ? "入库业务参照" : "出货业务参照"}>
     <header><div><span>{receiptBatch ? "来源订单" : "生产工厂"}</span><h3>{receiptBatch ? receiptOrderReferences ? `${receiptOrderReferences.length} 笔订单` : "本批来源订单" : order.factory_name || "未登记"}</h3></div>{!orderSelector && <p>订单累计参照 · 未含本次</p>}</header>
-    {orderSelector || receiptBatch&&<details className={styles.sourceOrders}><summary>查看完整订单编号</summary><ul>{(receiptOrderReferences||[order.business_number]).map(reference=><li key={reference} title={reference}>{reference}</li>)}</ul></details>}
+    {orderSelector || receiptBatch&&<Disclosure className={styles.sourceOrders}><summary>查看完整订单编号</summary><ul>{(receiptOrderReferences||[order.business_number]).map(reference=><li key={reference} title={reference}>{reference}</li>)}</ul></Disclosure>}
     <dl>{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     {kind === "receipt" && !orderSelector && (receiptBatch ? order.lines?.some(line => line.received_units != null && BigInt(line.received_units) >= BigInt(line.expected_units)) : totals.expected != null && totals.received != null && BigInt(totals.received) >= BigInt(totals.expected)) && <StatusMessage kind="warning" title={receiptBatch ? "所选订单含已完成或超额入库的规格，请避免重复入库" : "本单已完成入库，请核对是否为补充或超额入库"}>如确实收到额外货物，可继续填写；请在“日期与依据”说明本次入库原因，避免重复入库。</StatusMessage>}
   </section>;
@@ -146,7 +149,7 @@ function ReceiptEditor({ order: sourceOrder, stock, stockError, canWrite, compac
   }
   const receiptScopes = stock?.scopes.filter(scope => scope.warehouse_status === "ACTIVE" && ["OWN", "FACTORY", "THIRD_PARTY"].includes(scope.warehouse_type || "")) || [];
   const receiptScope = receiptScopes.find(scope => `${scope.warehouse_id}:${scope.owner_id}` === warehouse);
-  const scopeWarning = warehouse && !receiptScope ? <StatusMessage kind="warning" title="请选择可办理生产入库的普通仓库">原仓库不支持普通生产入库。FBA请从出货批次开始到仓核验，使用接收报告；当前不会替换原仓库。</StatusMessage> : null;
+  const scopeWarning = warehouse && !receiptScope ? <StatusMessage kind="warning" title="请选择可办理生产入库的普通仓库">原计划仓库尚未建账、已停用或不支持普通生产入库，请核对后选择。FBA请从出货批次开始到仓核验；当前不会自动替换仓库。</StatusMessage> : null;
   const totals = Object.keys(qualities).map(quality => (order.lines || []).reduce((sum, line) => sum + quantity(amounts[`${line.id}:${quality}`] || ""), 0n));
   function invalidAmounts() {
     return (order.lines || []).some(line => Object.keys(qualities).some(quality => { const value = amounts[`${line.id}:${quality}`] || ""; return value !== "" && !/^(0|[1-9][0-9]{0,17})$/.test(value); }));
@@ -173,7 +176,7 @@ function ReceiptEditor({ order: sourceOrder, stock, stockError, canWrite, compac
         const overReceipt = selectBatchOrders && lineTotal > 0n && line.received_units != null && BigInt(line.received_units) + BigInt(line.production_direct_units || "0") + lineTotal > BigInt(line.expected_units);
         return <tr key={line.id} data-over-receipt={overReceipt || undefined} title={overReceipt ? "本次超收，请填写入库依据" : undefined}>
           <th scope="row"><ReceiptProduct line={line} /></th>
-          <td>{units(line.expected_units)}</td><td>{line.produced_units == null ? "未登记" : units(line.produced_units)}</td>
+          <td>{units(line.planned_production_units ?? line.expected_units)}</td><td>{line.produced_units == null ? "未登记" : units(line.produced_units)}</td>
           <td><ReceiptQuantityPreview before={line.received_units} added={valid ? lineTotal : 0n} label={line.sku_label} /></td>
           {editableQualities.map(([quality, label]) => <td key={quality}><Input aria-label={`${line.sku_label}本次${label}`} inputMode="numeric" pattern="0|[1-9][0-9]*" value={amounts[`${line.id}:${quality}`] || ""} onChange={event => changeReceiptAmount(line, quality, event.target.value)} /></td>)}
           {qualityExpanded && <td>{units(lineTotal.toString())}</td>}
@@ -188,14 +191,14 @@ function ReceiptEditor({ order: sourceOrder, stock, stockError, canWrite, compac
       <div className={styles.receiptHeading}><h3>本次入库产品</h3><span>确认后生效</span></div>
       <div className={styles.receiptTools}>{(!selectBatchOrders || !!selectedOrders.length) && importToolbar}<label title="展开待检和次品数量"><input type="checkbox" aria-label="填写待检或次品" checked={qualityExpanded} disabled={hasQuality} onChange={event => setShowQuality(event.target.checked)} />待检 / 次品</label></div>
     {(!selectBatchOrders || (order.lines || []).some(line => receiptRemaining(line) !== 0n)) && <Table aria-label="本次入库产品" className={styles.receiptTable}>
-      <thead><tr><th>商品规格</th><th>下单</th><th>已生产</th><th>累计入库</th>{editableQualities.map(([quality, label]) => <th key={quality}>{qualityExpanded ? `本次${label}` : "本次入库"}</th>)}{qualityExpanded && <th>本次合计</th>}</tr></thead>
+      <thead><tr><th>商品规格</th><th>计划生产</th><th>已生产</th><th>累计入库</th>{editableQualities.map(([quality, label]) => <th key={quality}>{qualityExpanded ? `本次${label}` : "本次入库"}</th>)}{qualityExpanded && <th>本次合计</th>}</tr></thead>
       <tbody>{receiptTableRows((order.lines || []).filter(line => !selectBatchOrders || receiptRemaining(line) !== 0n))}</tbody>
     </Table>}
-    {!!receivedLines.length && <details className={styles.receivedProducts} open={showReceived} onToggle={event => setShowReceived(event.currentTarget.open)}><summary>已收齐 · {receivedLines.length} 项</summary>{showReceived && <Table aria-label="已收齐入库产品" className={styles.receiptTable}><thead><tr><th>商品规格</th><th>下单</th><th>已生产</th><th>累计入库</th>{editableQualities.map(([quality, label]) => <th key={quality}>{qualityExpanded ? `本次${label}` : "本次入库"}</th>)}{qualityExpanded && <th>本次合计</th>}</tr></thead><tbody>{receiptTableRows(receivedLines)}</tbody></Table>}</details>}
+    {!!receivedLines.length && <Disclosure className={styles.receivedProducts} open={showReceived} onToggle={event => setShowReceived(event.currentTarget.open)}><summary>已收齐 · {receivedLines.length} 项</summary>{showReceived && <Table aria-label="已收齐入库产品" className={styles.receiptTable}><thead><tr><th>商品规格</th><th>计划生产</th><th>已生产</th><th>累计入库</th>{editableQualities.map(([quality, label]) => <th key={quality}>{qualityExpanded ? `本次${label}` : "本次入库"}</th>)}{qualityExpanded && <th>本次合计</th>}</tr></thead><tbody>{receiptTableRows(receivedLines)}</tbody></Table>}</Disclosure>}
     {overReceiptNotice}
     </div>
     <p className={styles.packingTotal}>本次入库 <strong>{units(totals.reduce((sum, value) => sum + value, 0n).toString())}</strong> 件{qualityExpanded && <> · 合格 {units(totals[0]!.toString())} · 待检 {units(totals[1]!.toString())} · 次品 {units(totals[2]!.toString())}</>}</p>
-    <details className={styles.receiptStockReference} onToggle={event => setShowStockReference(event.currentTarget.open)}><summary>库存参照</summary>{showStockReference && <Table title="本仓当前库存"><thead><tr><th>商品规格</th><th>本仓库存</th></tr></thead><tbody>{order.lines?.map(line => <tr key={line.id}><th scope="row"><ReceiptProduct line={line} /></th><td><Availability sku={line.sku_id} line={line.id} scope={warehouse} currentOnly /></td></tr>)}</tbody></Table>}</details>
+    <Disclosure className={styles.receiptStockReference} onToggle={event => setShowStockReference(event.currentTarget.open)}><summary>库存参照</summary>{showStockReference && <Table title="本仓当前库存"><thead><tr><th>商品规格</th><th>本仓库存</th></tr></thead><tbody>{order.lines?.map(line => <tr key={line.id}><th scope="row"><ReceiptProduct line={line} /></th><td><Availability sku={line.sku_id} line={line.id} scope={warehouse} currentOnly /></td></tr>)}</tbody></Table>}</Disclosure>
   </>;
   function saveDraft(andPreview = false) {
     if (audit.blocked) return;
@@ -235,7 +238,7 @@ function ReceiptEditor({ order: sourceOrder, stock, stockError, canWrite, compac
           {step === 0 && <>{!compact && <WarehouseField disabled={!!draft} label="本次实收入库仓库" scopes={receiptScopes} value={warehouse} onChange={value => { setWarehouse(value); setDirty(true); setPreview(undefined); }} />}{imported && <p role="status">已读取 {imported.filename}；再次导入会替换当前明细，尚未保存或入库。</p>}</>}
           {step === 1 && receiptTable}
           {step === 2 && <div className={wizardStyles.evidence}><FormField label="实际入库日期" required><Input required type="date" value={date} onChange={event => { setDate(event.target.value); setDirty(true); setPreview(undefined); }} /></FormField><FormField label="入库依据 / 备注" required><textarea required rows={3} maxLength={2000} value={reason} placeholder="例如：工厂送货单号、本次到仓说明" onChange={event => { setReason(event.target.value); setDirty(true); setPreview(undefined); }} /></FormField></div>}
-          {step === 3 && <>{overReceiptNotice}{importReview}<dl className={wizardStyles.summary}><div><dt>来源订单</dt><dd>{receiptBatch&&receiptOrderReferences?.length?`${receiptOrderReferences.length} 笔订单`:order.business_number || order.system_number}</dd></div><div><dt>入库范围</dt><dd>{scope ? scope.warehouse_name : "待核"}</dd></div><div><dt>入库日期</dt><dd>{date}</dd></div><div><dt>入库依据</dt><dd>{reason}</dd></div></dl><Table title="本次实收核对"><thead><tr><th>产品规格</th><th>操作前已入库</th><th>本次实收</th><th>预计累计</th><th>操作后待入库</th></tr></thead><tbody>{order.lines?.filter(line => Object.keys(qualities).some(quality => quantity(amounts[`${line.id}:${quality}`] || "") > 0n)).map(line => { const lineTotal = Object.keys(qualities).reduce((sum, quality) => sum + quantity(amounts[`${line.id}:${quality}`] || ""), 0n); const before = line.received_units; const after = before == null ? undefined : (BigInt(before) + lineTotal).toString(); return <tr key={line.id}><th scope="row"><ReceiptProduct line={line}/><small className={styles.qualityBreakdown}>合格 {units(amounts[`${line.id}:QUALIFIED`] || "0")} · 待检 {units(amounts[`${line.id}:PENDING`] || "0")} · 次品 {units(amounts[`${line.id}:DEFECTIVE`] || "0")}</small></th><td>{unitFact(before)}</td><td>{units(lineTotal.toString())}件</td><td>{unitFact(after)}</td><td>{selectBatchOrders ? unitFact(receiptRemaining({ ...line, received_units: after })?.toString()) : receiptDifference(line.expected_units, after)}</td></tr>; })}</tbody></Table>{draft && <p role="status">入库草稿 {draft.id} 已保存，尚未增加库存。{dirty ? "输入已修改，请重新保存并预览。" : "可继续核对库存影响。"}</p>}{preview && !dirty && <><StockImpact compact impacts={preview.impacts} skuName={id => order.lines?.find(line => line.sku_id === id)?.sku_label || id} warehouseName={id => stock?.scopes.find(item => item.warehouse_id === id)?.warehouse_name || id} /><StatusMessage kind="info" title="服务端预览完成，尚未入库">确认后才增加实物库存，待检和次品不增加当前可发。</StatusMessage></>}</>}
+          {step === 3 && <>{overReceiptNotice}{importReview}<dl className={wizardStyles.summary}><div><dt>来源订单</dt><dd>{receiptBatch&&receiptOrderReferences?.length?`${receiptOrderReferences.length} 笔订单`:order.business_number || order.system_number}</dd></div><div><dt>入库范围</dt><dd>{scope ? scope.warehouse_name : "待核"}</dd></div><div><dt>入库日期</dt><dd>{date}</dd></div><div><dt>入库依据</dt><dd>{reason}</dd></div></dl><Table title="本次实收核对"><thead><tr><th>产品规格</th><th>操作前已入库</th><th>本次实收</th><th>预计累计</th><th>计划剩余未入库</th></tr></thead><tbody>{order.lines?.filter(line => Object.keys(qualities).some(quality => quantity(amounts[`${line.id}:${quality}`] || "") > 0n)).map(line => { const lineTotal = Object.keys(qualities).reduce((sum, quality) => sum + quantity(amounts[`${line.id}:${quality}`] || ""), 0n); const before = line.received_units; const after = before == null ? undefined : (BigInt(before) + lineTotal).toString(); return <tr key={line.id}><th scope="row"><ReceiptProduct line={line}/><small className={styles.qualityBreakdown}>合格 {units(amounts[`${line.id}:QUALIFIED`] || "0")} · 待检 {units(amounts[`${line.id}:PENDING`] || "0")} · 次品 {units(amounts[`${line.id}:DEFECTIVE`] || "0")}</small></th><td>{unitFact(before)}</td><td>{units(lineTotal.toString())}件</td><td>{unitFact(after)}</td><td>{selectBatchOrders ? unitFact(receiptRemaining({ ...line, received_units: after })?.toString()) : receiptDifference(line.planned_production_units ?? line.expected_units, after == null ? undefined : (BigInt(after) + BigInt(line.production_direct_units || "0")).toString())}</td></tr>; })}</tbody></Table>{draft && <p role="status">入库草稿 {draft.id} 已保存，尚未增加库存。{dirty ? "输入已修改，请重新保存并预览。" : "可继续核对库存影响。"}</p>}{preview && !dirty && <><StockImpact compact impacts={preview.impacts} skuName={id => order.lines?.find(line => line.sku_id === id)?.sku_label || id} warehouseName={id => stock?.scopes.find(item => item.warehouse_id === id)?.warehouse_name || id} /><StatusMessage kind="info" title="服务端预览完成，尚未入库">确认后才增加实物库存，待检和次品不增加当前可发。</StatusMessage></>}</>}
         </fieldset>
         {scopeWarning}{stockError && <ReadState error={stockError} />}{error && <StatusMessage kind="danger" title={error} />}{audit.feedback}{command.feedback}{leave.prompt}
       </GuidedOperationLayout>
@@ -254,11 +257,11 @@ function ReceiptEditor({ order: sourceOrder, stock, stockError, canWrite, compac
 }
 
 export function ReceiptRecords({ order, stock }: { order: Document; stock?: WorkbenchStock }) {
-  return <details className={styles.tools}><summary>本单实收入库记录</summary>{order.receipts?.length ? <Table title="已保存的实收记录"><thead><tr><th>入库单</th><th>日期 / 仓库</th><th>产品规格</th><th>质量 / 数量</th><th>状态</th></tr></thead><tbody>{order.receipts.map((r, i) => <tr key={`${r.document_id}:${i}`}><td><Link to={`/production/stock/movements/${r.document_id}`}>入库单 {r.document_id}</Link></td><td>{r.business_date}<br />{stock?.scopes.find(s => s.warehouse_id === r.warehouse_id)?.warehouse_name || "仓库待核"}</td><td>{order.lines?.find(l => l.id === r.order_line_id)?.sku_label || "商品待核"}</td><td>{qualities[r.quality as keyof typeof qualities] || r.quality} · {units(r.units)}</td><td>{r.status === "POSTED" ? "已入库" : "已冲销"}</td></tr>)}</tbody></Table> : <p>尚无已过账的生产实收记录。草稿不计入累计入库。</p>}</details>;
+  return <Disclosure className={styles.tools}><summary>本单实收入库记录</summary>{order.receipts?.length ? <Table title="已保存的实收记录"><thead><tr><th>入库单</th><th>日期 / 仓库</th><th>产品规格</th><th>质量 / 数量</th><th>状态</th></tr></thead><tbody>{order.receipts.map((r, i) => <tr key={`${r.document_id}:${i}`}><td><Link to={`/production/stock/movements/${r.document_id}`}>入库单 {r.document_id}</Link></td><td>{r.business_date}<br />{stock?.scopes.find(s => s.warehouse_id === r.warehouse_id)?.warehouse_name || "仓库待核"}</td><td>{order.lines?.find(l => l.id === r.order_line_id)?.sku_label || "商品待核"}</td><td>{qualities[r.quality as keyof typeof qualities] || r.quality} · {units(r.units)}</td><td>{r.status === "POSTED" ? "已入库" : "已冲销"}</td></tr>)}</tbody></Table> : <p>尚无已过账的生产实收记录。草稿不计入累计入库。</p>}</Disclosure>;
 }
 export function ShipmentRecords({ order }: { order: Document }) {
   const [params] = useSearchParams();
-  return <details className={styles.tools}><summary>本单历次出货及装箱记录</summary>{order.shipments?.length ? order.shipments.map(s => <p key={s.id}><LinkButton variant="secondary" to={s.status === "DRAFT" ? `?${new URLSearchParams({ ...Object.fromEntries(params), operation: "guided", shipment: s.id })}` : `/production/shipments/${s.id}`}>{s.business_number || s.system_number}</LinkButton> · {s.business_date} · {s.status === "CONFIRMED" ? "已发货" : s.status === "DRAFT" ? "装箱草稿" : "已作废"}</p>) : <p>尚无关联出货。</p>}</details>;
+  return <Disclosure className={styles.tools}><summary>本单历次出货及装箱记录</summary>{order.shipments?.length ? order.shipments.map(s => <p key={s.id}><LinkButton variant="secondary" to={s.status === "DRAFT" ? `?${new URLSearchParams({ ...Object.fromEntries(params), operation: "guided", shipment: s.id })}` : `/production/shipments/${s.id}`}>{s.business_number || s.system_number}</LinkButton> · {s.business_date} · {s.status === "CONFIRMED" ? "已发货" : s.status === "DRAFT" ? "装箱草稿" : "已作废"}</p>) : <p>尚无关联出货。</p>}</Disclosure>;
 }
 
 export function ShipmentPanel(props: Props) {
@@ -368,7 +371,7 @@ function ShipmentEditor({ order, stock, stockError, canWrite, saved, scopeLocked
     </fieldset></form>
     {imported && <p role="status">已从 {imported.filename} 填入本批 {units(imported.total_units)} 件、{imported.box_count} 箱；导入本身未保存或发货。</p>}
     {initial?.status === "DRAFT" && canWrite && !advanced && <DraftShipmentConfirm document={initial} dirty={dirty} onStateChange={setConfirmOperation} saved={() => { leave.allowLeave(); saved(); }} />}
-    {initial?.history?.length ? <details className={styles.tools}><summary>本批出货修订记录</summary><RevisionHistory history={initial.history} /></details> : null}
+    {initial?.history?.length ? <Disclosure className={styles.tools}><summary>本批出货修订记录</summary><RevisionHistory history={initial.history} /></Disclosure> : null}
     {stockError && <ReadState error={stockError} />}{error && <StatusMessage kind="danger" title={error} />}{audit.feedback}{command.feedback}{leave.prompt}
   </>;
 }

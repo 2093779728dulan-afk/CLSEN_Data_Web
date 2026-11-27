@@ -81,7 +81,7 @@ describe("readable production identities and quantities", () => {
     expect(within(table).getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["商品与规格", "状态", "查看业务"]);
     const row = within(table).getAllByRole("row")[1]!;
     const title = within(row).getByText(sku.code!);
-    expect(title.closest("summary")?.textContent).toBe(sku.code);
+    expect(title.closest("summary")?.firstElementChild?.textContent).toBe(sku.code);
     expect(within(row).getByText(sku.label, { exact: true })).not.toBeVisible();
     await user.click(title);
     expect(within(row).getByText(sku.label, { exact: true })).toBeVisible();

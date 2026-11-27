@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
 import { FormField, Input, StatusMessage, Table } from "../../design-system";
 import styles from "./Production.module.css";
@@ -66,13 +67,13 @@ export function CatalogCandidateCell({ reference, sourceRow }: { reference?: Cat
   const products = lookup?.checked ? lookup.candidates : [];
   return <div className={styles.catalogCandidate}><span>{row.status === "UNMATCHED" && products.length ? "找到产品 · SKU待核" : labels[row.status]}</span>
     {lookup && <small className={styles.secondary}>{lookup.basis === "SOURCE_COLUMN" ? "原表款号" : "编码前缀线索"}：{lookup.code}</small>}
-    {!!products.length && <details><summary>查看产品候选（{products.length}）</summary>{products.map(product => <div key={product.style_id}><strong>{product.code} · {product.name}</strong><p>A款式ID {product.style_id} · 修订{product.style_revision} · {product.status === "enabled" ? "启用" : "已停用"}</p><p>含{product.skus.length}个SKU；在上方按产品号查看颜色、尺码与SKU ID。</p></div>)}</details>}
-    {!!row.candidates.length && <details><summary>查看主档候选（{row.candidates.length}）</summary>{row.candidates.map(candidate => <div key={candidate.sku_id}>
+    {!!products.length && <Disclosure><summary>查看产品候选（{products.length}）</summary>{products.map(product => <div key={product.style_id}><strong>{product.code} · {product.name}</strong><p>A款式ID {product.style_id} · 修订{product.style_revision} · {product.status === "enabled" ? "启用" : "已停用"}</p><p>含{product.skus.length}个SKU；在上方按产品号查看颜色、尺码与SKU ID。</p></div>)}</Disclosure>}
+    {!!row.candidates.length && <Disclosure><summary>查看主档候选（{row.candidates.length}）</summary>{row.candidates.map(candidate => <div key={candidate.sku_id}>
       <strong>{candidate.code}</strong><p>{candidate.color} / {candidate.size}</p>
       <p>A · {reference?.source?.site_code} · SKU ID {candidate.sku_id} · 款式ID {candidate.style_id} · 修订{candidate.sku_revision}</p>
       <p>{candidate.match_routes.map(route => route === "INTERNAL_IDENTITY" ? "目录规范编码相同" : "已发布卖家SKU映射").join("、")}</p>
       {candidate.source_scopes.map(scope => <p key={`${scope.report_source_scope_id}:${scope.marketplace_scope_code}`}>来源范围 {scope.marketplace_scope_code} / {scope.report_source_scope_id}</p>)}
-    </div>)}</details>}
+    </div>)}</Disclosure>}
     {!!row.excluded_scopes.length && <small className={styles.secondary}>需核对来源范围的忽略决定，不能自动恢复映射。</small>}
     <small className={styles.secondary}>尚未正式绑定</small>
   </div>;

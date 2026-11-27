@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Download } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -73,9 +74,9 @@ export function OrderTableImport({ context, ready, locked, skus, sourceField, on
     <div className={styles.importUpload}><FormField label="下单XLSX文件（不超过2MB）" hint="最新版只读取下单日期、款号、SKU和订单数量；原八列表中的出货日期、品名、颜色及图片忽略。旧v1/v2/v3模板继续支持。"><Input type="file" accept=".xlsx" disabled={locked || busy} onChange={e => { setFile(e.target.files?.[0]); setResult(undefined); setError(undefined); }} /></FormField></div>
     <div className={styles.importActions}><div className={styles.actions}><Button variant="primary" disabled={!file || !ready || locked || busy} loading={busy} onClick={() => void upload()}>读取并预览</Button><Button variant="quiet" disabled={locked || busy} onClick={onCancel}>{cancelLabel}</Button></div><p role="status">{!ready ? "请先选择生产工厂和入库仓库及货权" : !file ? "请选择文件后预览" : "先预览核对，再生成草稿；不会直接下单。"}</p></div>
     <div className={styles.importHelp}>
-      <details className={styles.importCatalog}><summary>商品规格填写参考</summary><Table title="商品规格填写参考"><thead><tr><th>商品规格ID（v3）</th><th>款号 / 颜色 / 尺码</th><th>SKU编码（v1/v2）</th></tr></thead><tbody>{skus.filter(s => s.status === "active").map(s => <tr key={s.sku_id}><td>{s.sku_id}</td><td>{s.label}</td><td>{s.code || "尚未登记，请使用v3"}</td></tr>)}</tbody></Table></details>
-      <details className={styles.importDisclosure}><summary>来源及区别说明（可选）</summary><div>{sourceField}</div></details>
-      <details className={styles.importDisclosure}><summary>填写规则、旧模板与其他原表</summary><div><p>默认v4模板仅四列：下单日期、款号、SKU、订单数量。也支持这四列齐全的原八列下单表，按表头选择唯一业务页，排除合计及旧测算页。日期以单元格为准；SKU按当前目录及来源范围匹配，不按编码拆分猜测身份。每份一张订单、同一下单日期，数量为正整数。</p><p>导出的下单表回导先核对原订单，不新增第二笔；内容更改请回原订单更正。无编码商品可使用原v3规格ID模板，旧v1/v2及原表整理继续保留。</p><div className={styles.actions}><a href="/api/production/files/orders/template?version=v3">规格ID模板（v3）</a><a href="/api/production/files/orders/template">SKU编码模板（v1）</a><a href="/api/production/files/orders/template?version=v2">含来源模板（v2）</a><Link to="/production/orders/intake?method=table">其他原表整理</Link></div></div></details>
+      <Disclosure className={styles.importCatalog}><summary>商品规格填写参考</summary><Table title="商品规格填写参考"><thead><tr><th>商品规格ID（v3）</th><th>款号 / 颜色 / 尺码</th><th>SKU编码（v1/v2）</th></tr></thead><tbody>{skus.filter(s => s.status === "active").map(s => <tr key={s.sku_id}><td>{s.sku_id}</td><td>{s.label}</td><td>{s.code || "尚未登记，请使用v3"}</td></tr>)}</tbody></Table></Disclosure>
+      <Disclosure className={styles.importDisclosure}><summary>来源及区别说明（可选）</summary><div>{sourceField}</div></Disclosure>
+      <Disclosure className={styles.importDisclosure}><summary>填写规则、旧模板与其他原表</summary><div><p>默认v4模板仅四列：下单日期、款号、SKU、订单数量。也支持这四列齐全的原八列下单表，按表头选择唯一业务页，排除合计及旧测算页。日期以单元格为准；SKU按当前目录及来源范围匹配，不按编码拆分猜测身份。每份一张订单、同一下单日期，数量为正整数。</p><p>导出的下单表回导先核对原订单，不新增第二笔；内容更改请回原订单更正。无编码商品可使用原v3规格ID模板，旧v1/v2及原表整理继续保留。</p><div className={styles.actions}><a href="/api/production/files/orders/template?version=v3">规格ID模板（v3）</a><a href="/api/production/files/orders/template">SKU编码模板（v1）</a><a href="/api/production/files/orders/template?version=v2">含来源模板（v2）</a><Link to="/production/orders/intake?method=table">其他原表整理</Link></div></div></Disclosure>
     </div>
     {result && !preview && <StatusMessage kind="info" title="整单信息已变更，请重新预览" />}
     {error && <StatusMessage kind="danger" title="预览未完成">{error}</StatusMessage>}

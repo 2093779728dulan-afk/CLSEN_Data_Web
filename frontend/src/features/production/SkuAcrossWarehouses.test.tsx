@@ -40,8 +40,8 @@ it.each(['','?view=summary','?view=sku','?stock_layout=matrix'])('uses one multi
   expect(screen.getByRole('button',{name:'展开款号2121'})).toHaveAttribute('aria-expanded','false');
   expect(screen.queryByRole('button',{name:'SKU清单'})).not.toBeInTheDocument();expect(api.read.mock.calls.some(([path])=>path.includes('sku-locations'))).toBe(false);
 });
-it('independently opens multiple styles by SVG and keyboard without blank detail rows',async()=>{
-  mount();const first=await screen.findByRole('button',{name:'展开款号1112'});await userEvent.click(first.querySelector('svg')!);
+it('independently opens multiple styles by text action and keyboard without blank detail rows',async()=>{
+  mount();const first=await screen.findByRole('button',{name:'展开款号1112'});expect(first.querySelector('svg')).toBeNull();await userEvent.click(first);
   await userEvent.click(screen.getByRole('button',{name:'展开款号2121'}));expect(screen.getByRole('table')).toHaveTextContent('Black');expect(screen.getByRole('table')).toHaveTextContent('Camel');
   const rows=within(screen.getByRole('table')).getAllByRole('row').length;
   const cell=screen.getByRole('button',{name:'1112-Black-L · SIM FBA · SIM owner · 查看明细'});expect(cell).toHaveTextContent(/^16$/);expect(screen.queryByRole('columnheader',{name:'在库合计'})).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'收起款号1112'})).not.toHaveTextContent('SKU');const detailRow=cell.closest('tr')!;expect(within(detailRow).getByRole('rowheader',{name:'1112'})).toBeInTheDocument();expect(within(detailRow).getByText('Black')).toBeInTheDocument();expect(within(detailRow).getByRole('cell',{name:'L'})).toBeInTheDocument();expect(screen.getByRole('table').querySelector('[rowspan]')).toBeNull();await userEvent.click(cell);

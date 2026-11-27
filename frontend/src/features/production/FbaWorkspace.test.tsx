@@ -150,7 +150,7 @@ it("explains restoring sellability and keeps entered rows when searching",async(
 });
 it("retains untracked balances and unknown platform observation for viewers",async()=>{
  mount(<FbaWorkspace record={record} owner="1" canWrite={false} refresh={0} reload={()=>undefined}/>,false);
- await screen.findByRole("button",{name:"1112"});expect(screen.getByRole("table",{name:"FBA在库库存"})).toBeVisible();const primary=screen.getByRole("table",{name:"FBA在库库存"});expect(within(primary).getAllByRole("columnheader").map(cell=>cell.textContent)).toEqual(["款号","颜色","尺码待核","合计"]);expect(within(primary).getByRole("button",{name:"查看SIM-M库存变动"})).toHaveTextContent("5");expect(within(primary).getByRole("button",{name:"查看SIM-S库存变动"})).toHaveTextContent("16");expect(within(primary).getByRole("cell",{name:"SIM-M"})).toBeVisible();expect(screen.getByLabelText("FBA账面库存汇总")).toHaveTextContent("21");expect(screen.getByRole("table",{name:"FBA库存对账",hidden:true})).not.toBeVisible();
+ await screen.findByRole("button",{name:/^1112 · (?:查看|收起)$/});expect(screen.getByRole("table",{name:"FBA在库库存"})).toBeVisible();const primary=screen.getByRole("table",{name:"FBA在库库存"});expect(within(primary).getAllByRole("columnheader").map(cell=>cell.textContent)).toEqual(["款号","颜色","尺码待核","合计"]);expect(within(primary).getByRole("button",{name:"查看SIM-M库存变动"})).toHaveTextContent("5");expect(within(primary).getByRole("button",{name:"查看SIM-S库存变动"})).toHaveTextContent("16");expect(within(primary).getByRole("cell",{name:"SIM-M"})).toBeVisible();expect(screen.getByLabelText("FBA账面库存汇总")).toHaveTextContent("21");expect(screen.getByRole("table",{name:"FBA库存对账",hidden:true})).not.toBeVisible();
  await userEvent.click(screen.getByText("库存记录与对账"));await userEvent.click(screen.getByText("查看详细对账"));
  const table=screen.getByRole("table",{name:"FBA库存对账"});expect(within(table).getByText("SIM-M")).toBeVisible();expect(within(table).getByText(/未跟踪 · 保留余额/)).not.toBeVisible();expect(within(table).getAllByText("未知，未填零")).toHaveLength(2);expect(screen.getByText(/不能宣称与Amazon实时余额相符/)).not.toBeVisible();
  await openView("销售与退货");expect(screen.queryByRole("button",{name:"确认销售出库"})).not.toBeInTheDocument();expect(api.write).not.toHaveBeenCalled();
@@ -159,7 +159,7 @@ it.each(["unknown","missing","zero"] as const)("keeps %s on-hand distinct from a
  const original=api.read.getMockImplementation()!;
  api.read.mockImplementation((path,options)=>path.includes("fba/state")?Promise.resolve({...state,inventory_view:{"7":{...state.inventory_view!["7"]!,on_hand:mode==="zero"?"16":null,groups:state.inventory_view!["7"]!.groups.map(g=>({...g,on_hand:mode==="zero"?"16":null,items:g.items.map(i=>i.sku_id==="12"?{...i,on_hand:mode==="zero"?"0":null}:i)}))}},stock:{items:mode==="missing"?state.stock.items.slice(0,1):state.stock.items.map(item=>item.sku_id==="12"?{...item,on_hand_units:mode==="zero"?"0":null}:item)}}):original(path,options));
  mount(<FbaWorkspace record={record} owner="1" canWrite={false} refresh={0} reload={()=>undefined}/>,false);
- await screen.findByRole("button",{name:"1112"});const table=screen.getByRole("table",{name:"FBA在库库存"});if(mode==="zero") expect(within(table).queryByRole("button",{name:"查看SIM-M库存变动"})).not.toBeInTheDocument(); else expect(within(table).getByRole("button",{name:"查看SIM-M库存变动"})).toHaveTextContent("待核");expect(within(table).getByRole("row",{name:new RegExp(`本仓合计.*${mode==="zero"?"16":"待核"}`)})).toBeVisible();expect(screen.getByLabelText("FBA账面库存汇总")).toHaveTextContent(mode==="zero"?"16":"待核");expect(api.write).not.toHaveBeenCalled();
+ await screen.findByRole("button",{name:/^1112 · (?:查看|收起)$/});const table=screen.getByRole("table",{name:"FBA在库库存"});if(mode==="zero") expect(within(table).queryByRole("button",{name:"查看SIM-M库存变动"})).not.toBeInTheDocument(); else expect(within(table).getByRole("button",{name:"查看SIM-M库存变动"})).toHaveTextContent("待核");expect(within(table).getByRole("row",{name:new RegExp(`本仓合计.*${mode==="zero"?"16":"待核"}`)})).toBeVisible();expect(screen.getByLabelText("FBA账面库存汇总")).toHaveTextContent(mode==="zero"?"16":"待核");expect(api.write).not.toHaveBeenCalled();
 });
 it("lets a manager select a whole style without sending stock or opening quantities",async()=>{
  mount(<FbaWorkspace record={record} owner="1" canWrite refresh={0} reload={()=>undefined}/>);
@@ -256,7 +256,7 @@ it("requires explicit identity reaffirmation after a catalog update",async()=>{
 
 it("opens backend movement facts from stock and reuses the report import entry without writes",async()=>{
  mount(<FbaWorkspace record={record} owner="1" canWrite={false} refresh={0} reload={()=>undefined}/>,false);
- await screen.findByRole("button",{name:"1112"});await userEvent.click(screen.getByRole("button",{name:"查看SIM-S库存变动"}));
+ await screen.findByRole("button",{name:/^1112 · (?:查看|收起)$/});await userEvent.click(screen.getByRole("button",{name:"查看SIM-S库存变动"}));
  const detail=screen.getByRole("region",{name:"SIM-S库存变动"});
  expect(within(detail).getByText("销售出库")).not.toBeVisible();
  await userEvent.click(within(detail).getByText("变动记录"));
@@ -310,11 +310,11 @@ it("shows the style-color-size matrix expanded and retains collapse, search and 
     })) } : value;
   });
   mount(<FbaWorkspace record={record} owner="1" canWrite={false} refresh={0} reload={() => undefined} />, false);
-  await screen.findByRole("button", { name: "1112" });
+  await screen.findByRole("button", { name:/^1112 · (?:查看|收起)$/ });
   const table = screen.getByRole("table", { name: "FBA在库库存" });
   expect(within(table).getAllByRole("columnheader").map(header => header.textContent)).toEqual(["款号", "颜色", "S", "M", "合计"]);
-  const black = within(table).getByRole("row", { name: /1112 Black 16 .*16/ });
-  const brown = within(table).getByRole("row", { name: /1112 Brown .*5 5/ });
+  const black = within(table).getByRole("row", { name: /1112 · 收起 Black 16 .*16/ });
+  const brown = within(table).getByRole("row", { name: /1112(?: · 查看| · 收起)? Brown .*5 5/ });
   expect(black).toBeVisible();
   expect(brown).toBeVisible();
   expect(within(table).getByRole("row", { name: "本仓合计 16 5 21" })).toBeVisible();
@@ -324,12 +324,12 @@ it("shows the style-color-size matrix expanded and retains collapse, search and 
   const detail = screen.getByRole("region", { name: "SIM-S库存变动" });
   expect(detail.closest("tr")?.previousElementSibling).toBe(black);
   expect(detail).toHaveTextContent("已出库3");
-  await userEvent.click(screen.getByRole("button", { name: "1112" }));
+  await userEvent.click(screen.getByRole("button", { name:/^1112 · (?:查看|收起)$/ }));
   expect(screen.getByText("2种颜色 · 已收起")).toBeVisible();
   expect(within(table).queryByRole("button", { name: "查看SIM-S库存变动" })).not.toBeInTheDocument();
-  expect(within(table).getByRole("row", { name: /1112 2种颜色 · 已收起 16 5 21/ })).toBeVisible();
+  expect(within(table).getByRole("row", { name: /1112 · 查看 2种颜色 · 已收起 16 5 21/ })).toBeVisible();
   await userEvent.type(screen.getByRole("searchbox", { name: "查找FBA款号或规格" }), "Brown");
-  expect(within(table).getByRole("row", { name: /1112 Brown .*5 5/ })).toBeVisible();
+  expect(within(table).getByRole("row", { name: /1112(?: · 查看| · 收起)? Brown .*5 5/ })).toBeVisible();
   expect(within(table).getByRole("row", { name: "筛选合计 5 5" })).toBeVisible();
   expect(screen.getByLabelText("FBA账面库存汇总")).toHaveTextContent("21");
   expect(within(table).queryByRole("button", { name: "查看SIM-S库存变动" })).not.toBeInTheDocument();
@@ -477,13 +477,13 @@ it("hides zero stock rows without losing later nonzero or unknown stock updates"
  const view = { ...base, groups: [{...base.groups[0]!, items:[base.groups[0]!.items[0]!, {...base.groups[0]!.items[1]!,on_hand:"0",available:"0"}]}, {style_id:"9",on_hand:"0",items:[zero]}] };
  const tree = (quantity: string | null) => <MemoryRouter><FbaInventoryOverview scope={state.scopes[0]!} catalog={items} view={{...view,groups:[view.groups[0]!,{...view.groups[1]!,items:[{...zero,on_hand:quantity}]}]}}/></MemoryRouter>;
  const mounted=render(tree("0"));
- expect(screen.queryByRole('button',{name:'9999'})).not.toBeInTheDocument();
+ expect(screen.queryByRole('button',{name:/^9999 · (?:查看|收起)$/})).not.toBeInTheDocument();
  expect(within(screen.getByRole('table',{name:'FBA在库库存'})).queryByText('White')).not.toBeInTheDocument();
  expect(within(screen.getByRole('table',{name:'FBA在库库存'})).queryByText('0',{exact:true})).not.toBeInTheDocument();
- mounted.rerender(tree("5"));expect(screen.getByRole('button',{name:'9999'})).toBeVisible();
+ mounted.rerender(tree("5"));expect(screen.getByRole('button',{name:/^9999 · (?:查看|收起)$/})).toBeVisible();
  expect(screen.getByRole('button',{name:'查看ZERO-M库存变动'})).toHaveTextContent('5');
- mounted.rerender(tree("0"));expect(screen.queryByRole('button',{name:'9999'})).not.toBeInTheDocument();
- mounted.rerender(tree(null));expect(screen.getByRole('button',{name:'9999'})).toBeVisible();
+ mounted.rerender(tree("0"));expect(screen.queryByRole('button',{name:/^9999 · (?:查看|收起)$/})).not.toBeInTheDocument();
+ mounted.rerender(tree(null));expect(screen.getByRole('button',{name:/^9999 · (?:查看|收起)$/})).toBeVisible();
  expect(screen.getByRole('button',{name:'查看ZERO-M库存变动'})).toHaveTextContent('待核');
 });
 
@@ -547,7 +547,7 @@ it("distinguishes an existing zero size from an absent catalog size and keeps st
  expect(cells[3]).toHaveAttribute("title","未建档此尺码");
  expect(cells[3]).toHaveTextContent("");
  expect(screen.queryByRole("button",{name:"查看SIM-M库存变动"})).not.toBeInTheDocument();
- await userEvent.click(screen.getByRole("button",{name:"1112"}));
+ await userEvent.click(screen.getByRole("button",{name:/^1112 · (?:查看|收起)$/}));
  expect(screen.queryByTitle("未建档此尺码")).not.toBeInTheDocument();
  expect(screen.getByRole("row",{name:/本仓合计/}).querySelector('[title="未建档此尺码"]')).toBeNull();
 });

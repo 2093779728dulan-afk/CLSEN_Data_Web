@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
 import { Table } from "../../design-system";
 import { receiptOrderGroups } from "./orderProgress";
@@ -12,9 +13,9 @@ export function ReceiptBatchSelection({ groups, selected, disabled, onChange }: 
     <th scope="row"><label><input type="checkbox" aria-label={`选择订单${group.id} ${group.label}`} checked={selected.includes(group.id)} disabled={disabled} onChange={event => onChange(group.id, event.target.checked)} /><span title={group.label}>{group.label}<small>{group.factory}</small></span></label></th>
     <td>{group.expected.toLocaleString("zh-CN")}</td><td>{group.received?.toLocaleString("zh-CN") ?? ""}</td><td>{group.remaining?.toLocaleString("zh-CN") ?? ""}</td>
   </tr>)}</tbody></Table>;
-  return <details className={styles.receiptOrderSelection} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+  return <Disclosure className={styles.receiptOrderSelection} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>选择订单 · 已选 {selected.length}/{groups.length}</summary>
     {groups.some(group => !group.complete) && rows(groups.filter(group => !group.complete))}
-    {!!completed.length && <details><summary>已收齐 · {completed.length} 单</summary>{rows(completed)}</details>}
-  </details>;
+    {!!completed.length && <Disclosure><summary>已收齐 · {completed.length} 单</summary>{rows(completed)}</Disclosure>}
+  </Disclosure>;
 }

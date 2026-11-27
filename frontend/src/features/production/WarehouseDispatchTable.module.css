@@ -35,3 +35,5 @@
 .add { align-self:flex-start; flex-shrink:0; min-height:32px; font-size:13px; }
 .srOnly { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 @media(max-width:600px) { .availableColumn { width:64px; }.quantityColumn { width:84px; }.actionColumn { width:76px; }.table th,.table td { padding:6px 4px; }.table th { font-size:11px; }.table select,.table input { font-size:12px; }.details dl { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.rowActions .expand { width: auto; min-width: calc(var(--space-6) * 2); padding-inline: var(--space-2); }

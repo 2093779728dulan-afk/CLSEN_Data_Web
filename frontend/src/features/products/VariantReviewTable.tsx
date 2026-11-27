@@ -1,3 +1,4 @@
+import { Disclosure } from "../../design-system";
 import { useState } from "react";
 import { Button, Select } from "../../design-system";
 import { SafeSourceRefView } from "../../components/source-reference/SafeSourceRefView";
@@ -47,7 +48,7 @@ export function VariantReviewTable({ response }: { response: StyleCardResponse }
           <td>{averagePrice(row.metrics.sales, row.metrics.units)}{(row.metrics.sales.is_partial || row.metrics.units.is_partial) && <small>部分数据</small>}</td>
           <td><MetricValueView compact kind="returns" metric={row.metrics.returns} />{sort === "returns" && <small>同期退销比 {returnSalesRatio(row.metrics.returns, row.metrics.units)}{(row.metrics.returns.is_partial || row.metrics.units.is_partial) && " · 部分数据"}</small>}</td>
           <td><MetricValueView compact kind="sessions" metric={row.metrics.sessions} /></td><td><MetricValueView compact percentage kind="conversion" metric={row.metrics.conversion} /></td>
-          <td><details><summary>{row.seller_sku_aliases.length} 个来源别名</summary>{row.seller_sku_aliases.map(alias => <SafeSourceRefView key={alias.source_ref_id} source={{digest:alias.sha256,is_truncated:alias.is_truncated,is_unsafe:alias.is_unsafe,preview:alias.preview,source_ref_id:alias.source_ref_id}} />)}</details></td>
+          <td><Disclosure><summary>{row.seller_sku_aliases.length} 个来源别名</summary>{row.seller_sku_aliases.map(alias => <SafeSourceRefView key={alias.source_ref_id} source={{digest:alias.sha256,is_truncated:alias.is_truncated,is_unsafe:alias.is_unsafe,preview:alias.preview,source_ref_id:alias.source_ref_id}} />)}</Disclosure></td>
         </tr>)}{rows.length === 0 && <tr><td colSpan={10}>没有匹配的实际变体，请调整颜色或尺码筛选。</td></tr>}</tbody>
       </table>
     </div>

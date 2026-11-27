@@ -1,5 +1,6 @@
+import { Disclosure } from "../../design-system";
 import { Fragment, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+
 import { Button, Input, LinkButton, StatusMessage, Table } from "../../design-system";
 import type { FbaInventoryView, FbaScope } from "./fbaTypes";
 import type { Sku } from "./types";
@@ -67,22 +68,22 @@ export function FbaInventoryOverview({ view, scope, catalog, children }: {
       ["已入库", item.received], ["已出库", item.fulfilled], ["实物退回", item.returned], ["账面可发", item.available],
       ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{amount(value)}</dd></div>)}</dl>
     </div>
-    {!!movements.length && <details className={styles.movementHistory}>
-      <summary><ChevronRight size={14} aria-hidden="true" /><span>变动记录</span><span className={styles.movementCount}>{movements.length}</span></summary>
-      <div className={styles.movementList}>{movements.map(movement => <details className={styles.movementRecord} key={movement.id}>
+    {!!movements.length && <Disclosure className={styles.movementHistory}>
+      <summary><span>变动记录</span><span className={styles.movementCount}>{movements.length}</span></summary>
+      <div className={styles.movementList}>{movements.map(movement => <Disclosure className={styles.movementRecord} key={movement.id}>
         <summary aria-label={`${movementNames[movement.kind]} ${amount(movement.units)}件 · ${movement.occurred_at.slice(0, 10)}`}>
           <time dateTime={movement.occurred_at}>{movement.occurred_at.slice(0, 10)}</time>
           <span>{movementNames[movement.kind]}{movement.kind === "RETURN" ? ` · ${qualities[movement.quality || ""] || "质量待核"}` : ""}</span>
           <strong>{BigInt(movement.units) > 0n ? "+" : ""}{amount(movement.units)}</strong>
-          <ChevronRight size={14} aria-hidden="true" />
+
         </summary>
         <div className={styles.movementEvidence}>
           <p>{movement.reason}</p><p>来源：{movement.reference}</p><time dateTime={movement.occurred_at}>{movement.occurred_at}</time>
           {movement.batch_id && <LinkButton variant="quiet" to={stockUrl("receipts", movement.batch_id)}>查看接收原件</LinkButton>}
           {!!movement.report_version_ids.length && <LinkButton variant="quiet" to="/ledger/published-details">查看报告记录</LinkButton>}
         </div>
-      </details>)}</div>
-    </details>}
+      </Disclosure>)}</div>
+    </Disclosure>}
     {!movements.length && <p>暂无已确认变动</p>}
   </section>;
   };
@@ -113,9 +114,9 @@ export function FbaInventoryOverview({ view, scope, catalog, children }: {
             <tr className={index === 0 ? warehouseStyles.productStart : undefined}>
               <th scope="row" className={warehouseStyles.styleIdentity}>
                 {index === 0 ? <Button variant="quiet" aria-expanded={!collapsed}
-                  icon={collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+
                   onClick={() => setClosed(current => current.includes(group.style_id) ? current.filter(id => id !== group.style_id) : [...current, group.style_id])}
-                >{title}</Button> : <span>{title}</span>}
+                >{title} · {collapsed ? "查看" : "收起"}</Button> : <span>{title}</span>}
               </th>
               <td className={warehouseStyles.colorIdentity}>{color ?? <span className={warehouseStyles.collapsedColors}>{colors.length}种颜色 · 已收起</span>}</td>
               {sizes.map(size => {
@@ -147,18 +148,18 @@ export function FbaInventoryOverview({ view, scope, catalog, children }: {
       </tr></tfoot>
     </Table>}
     {!groups.length && <p>{query ? "没有匹配的款号或规格" : "暂无已登记规格"}</p>}
-    {!!view.issues.length && <details className={styles.inventoryIssues}>
+    {!!view.issues.length && <Disclosure className={styles.inventoryIssues}>
       <summary>待核 {view.issues.length} 项</summary>
       {view.issues.map(issue => <p key={issue.id}><LinkButton variant="quiet" to={stockUrl(issue.view, issue.batch_id)}>
         {issue.sku_id ? `${catalog.find(sku => sku.sku_id === issue.sku_id)?.code || issue.sku_id} · ` : ""}{issue.label}
       </LinkButton></p>)}
-    </details>}
-    <details className={styles.balanceDetails}>
+    </Disclosure>}
+    <Disclosure className={styles.balanceDetails}>
       <summary>库存记录与对账</summary>
       <div className={styles.balanceDetailsBody}>
         <LinkButton to="/">发布总表</LinkButton>
         {view.latest_movement_at && <p>最近变动 {view.latest_movement_at.slice(0, 10)}</p>}{children}
       </div>
-    </details>
+    </Disclosure>
   </section>;
 }
