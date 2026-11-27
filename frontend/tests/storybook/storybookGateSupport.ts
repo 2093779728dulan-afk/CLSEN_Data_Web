@@ -112,7 +112,7 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
       await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
     }
     if (/--(reference|rebase|saving|failure|blocked)$/.test(storyId)) {
-      await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
+      await page.locator("summary").filter({ hasText: "高级操作 · 调整目录基准" }).click();
       if (!storyId.endsWith("--blocked")) await page.getByRole("textbox", { name: "替代导出编号（export ID）", exact: true }).fill("8002");
     }
     if (/--(saving|failure)$/.test(storyId)) {
@@ -201,7 +201,7 @@ export async function prepareInteractiveStory(page: Page, storyId: string): Prom
     else await expect(dialog.getByRole("textbox", { name: "发布说明", exact: true })).toBeDisabled();
   }
   if (storyId === "patterns-merge-decision-matrix--hidden-fields") {
-    await page.getByRole("article", { name: "重复记录 1", exact: true }).getByText("查看两行的全部字段", { exact: true }).click();
+    await page.getByRole("article", { name: "重复记录 1", exact: true }).locator("summary").filter({ hasText: "查看两行的全部字段" }).click();
   }
 
   if (/^pages-workspace-shell--navigation(-failure)?$/.test(storyId) && (page.viewportSize()?.width ?? 1280) <= 860) {

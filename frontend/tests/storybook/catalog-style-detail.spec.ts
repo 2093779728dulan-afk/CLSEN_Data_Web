@@ -12,7 +12,7 @@ for (const width of [1280, 390]) {
     const search = page.getByRole("searchbox", { name: "查找实际变体" });
     await search.fill("米白");
     await expect(page.getByRole("article")).toHaveCount(1);
-    await expect(page.getByRole("article")).toContainText("系统身份 SKU #2003");
+    await expect(page.getByRole("article")).toContainText("系统内部ID #2003");
     await page.getByRole("button", { name: "重置筛选", exact: true }).click();
     await expect(search).toBeFocused();
     await expect(page.getByRole("article")).toHaveCount(3);
@@ -26,7 +26,7 @@ for (const width of [1280, 390]) {
     await expect(first.getByText("报告归属日：2026-07-03", { exact: true })).toBeVisible();
     await expect(first.getByText(/原始退货时间/)).toContainText("2026-07-02T23:00:00-07:00");
     await expect(first.getByRole("button", { name: "复制 SKU", exact: true })).toHaveCount(1);
-    await first.getByText("系统追溯信息", { exact: true }).first().click();
+    await first.locator("summary").filter({ hasText: "系统追溯信息" }).first().click();
     await expect(first.getByText("系统版本编号 7 · 系统记录编号 44（非文件行号）", { exact: true })).toBeVisible();
     await expect(first.getByRole("link", { name: "查看来源报告版本" }).first()).toHaveAttribute("href", "/versions?report_date=2026-07-02&report_type=business_report");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -17,7 +17,7 @@ concurrency:
 jobs:
   public-evidence:
     name: Verify public CI source and complete jobs
-    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    runs-on: ubuntu-24.04
     # Allow the public MySQL job's 120-minute budget plus queue/API overhead.
     timeout-minutes: 145
     # Override only this job's GitHub proxy; preserve the runner's global config.
@@ -53,7 +53,7 @@ jobs:
     name: pr-required
     if: always() && github.event_name == 'pull_request'
     needs: [public-evidence]
-    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    runs-on: ubuntu-24.04
     steps:
       - name: Require verified public evidence for PR
         shell: pwsh
@@ -70,7 +70,7 @@ jobs:
     name: master-required
     if: always() && github.event_name == 'push'
     needs: [public-evidence]
-    runs-on: [self-hosted, Linux, X64, clsen-rag-ov]
+    runs-on: ubuntu-24.04
     steps:
       - name: Require verified public evidence for master
         shell: pwsh

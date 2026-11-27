@@ -390,23 +390,22 @@ def test_release_workflow_splits_trusted_provenance_from_private_gate() -> None:
     assert "APP_PLAN_BASELINE_ROOT" not in gate_source
 
 
-def test_enabled_workflow_jobs_do_not_select_github_hosted_runners() -> None:
-    # Only the public, ephemeral Windows VM may use setup-python. Private jobs
-    # do no installation and retain their self-hosted/release separation.
+def test_compatibility_uses_hosted_runners_without_relocating_release_secrets() -> None:
+    # Lightweight compatibility checks use hosted runners. The optional private
+    # release workflow keeps its separate runner and secret boundary.
     windows = _load_workflow(PUBLIC_PROFILES)["jobs"]["backend-windows"]
     assert windows["runs-on"] == "windows-2025"
     assert "actions/setup-python" in _job_source(windows)
     for job in _load_workflow(COMPATIBILITY)["jobs"].values():
+        assert job["runs-on"] == "ubuntu-24.04"
         assert "actions/setup-python" not in _job_source(job)
     release = _load_workflow(RELEASE)["jobs"]["release-gates"]
     assert "clsen-release" in release["runs-on"]
     assert "clsen-windows-ci" not in release["runs-on"]
-    for workflow_path in (COMPATIBILITY, RELEASE):
-        jobs = _load_workflow(workflow_path)["jobs"]
-        for job_name, job in jobs.items():
-            runs_on = job["runs-on"]
-            assert isinstance(runs_on, list), job_name
-            assert "self-hosted" in runs_on, job_name
+    for job_name, job in _load_workflow(RELEASE)["jobs"].items():
+        runs_on = job["runs-on"]
+        assert isinstance(runs_on, list), job_name
+        assert "self-hosted" in runs_on, job_name
 
 
 def test_release_secrets_are_step_scoped_and_profiles_are_release_only() -> None:

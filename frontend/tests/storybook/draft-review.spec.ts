@@ -18,13 +18,13 @@ for (const width of [1280, 768, 390]) {
     await dialog.getByRole("button", { name: "返回审核", exact: true }).last().click();
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    await page.getByText("调整草稿日期", { exact: true }).click();
+    await page.locator("summary").filter({ hasText: "调整草稿日期" }).click();
     await page.getByLabel("目标报告日", { exact: true }).fill("2026-08-11");
     await page.getByRole("button", { name: "检查目标日期", exact: true }).click();
     await page.getByRole("radio", { name: "取消，保留当前所属日期", exact: true }).check();
     await page.getByRole("button", { name: "确认取消", exact: true }).click();
     await expect(page.getByText("已取消，所属日期保留。", { exact: true })).toBeVisible();
-    await page.getByText("重新解析或废弃草稿", { exact: true }).click();
+    await page.locator("summary").filter({ hasText: "重新解析或废弃草稿" }).click();
     const discard = page.getByRole("button", { name: "只废弃当前草稿", exact: true });
     await expect(discard).toBeDisabled();
     await page.getByRole("checkbox", { name: "我确认当前草稿将被废弃，历史记录不会删除。", exact: true }).check();

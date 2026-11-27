@@ -8,11 +8,11 @@ for (const viewport of VIEWPORTS) {
     page.on("request", r => { if (new URL(r.url()).pathname.startsWith("/api/")) api.push(r.url()); }); page.on("pageerror", e => errors.push(e.message));
     await openStory(page, "pages-admin-maintenance--reference");
     await expect(page.getByRole("article", { name: "备份 501", exact: true })).toContainText("已恢复验证");
-    const thresholds = page.getByText("心跳阈值参考", { exact: true }); await thresholds.focus(); await thresholds.press("Enter");
+    const thresholds = page.locator("summary").filter({ hasText: "心跳阈值参考" }); await thresholds.focus(); await thresholds.press("Enter");
     await expect(page.getByText("写入间隔", { exact: false })).toBeVisible();
-    const instance = page.locator(".worker-observability__instance").first(); const instanceToggle = instance.getByText("查看诊断", { exact: true });
+    const instance = page.locator(".worker-observability__instance").first(); const instanceToggle = instance.locator("summary").filter({ hasText: "查看诊断" });
     await instanceToggle.focus(); await instanceToggle.press("Enter"); await expect(instance.getByText("状态码", { exact: true })).toBeVisible();
-    const queue = page.locator(".worker-observability__queue").first(); await queue.getByText("查看诊断", { exact: true }).click();
+    const queue = page.locator(".worker-observability__queue").first(); await queue.locator("summary").filter({ hasText: "查看诊断" }).click();
     await expect(queue.getByText("不适用", { exact: true }).first()).toBeVisible();
     const region = await queue.locator(".worker-observability__diagnostic").boundingBox(); expect(region!.x).toBeGreaterThanOrEqual(0); expect(region!.x + region!.width).toBeLessThanOrEqual(viewport.width);
     await page.getByRole("button", { name: "刷新状态", exact: true }).click(); await expect(instance.getByText("状态码", { exact: true })).toBeVisible();

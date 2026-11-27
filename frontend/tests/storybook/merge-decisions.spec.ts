@@ -27,7 +27,7 @@ for (const width of [1280, 768, 390]) {
     await openStory(page, "patterns-merge-decision-matrix--hidden-fields");
     const pair = page.getByRole("article", { name: "重复记录 1", exact: true });
     await expect(pair.getByText("7 个字段不同", { exact: true })).toBeVisible();
-    await pair.getByText("查看两行的全部字段", { exact: true }).click();
+    await pair.locator("summary").filter({ hasText: "查看两行的全部字段" }).click();
     const full = pair.getByRole("table", { name: "重复记录 1 全部字段", exact: true });
     await expect(full.getByText("第七个差异字段，必须在全部字段中可查看", { exact: true })).toBeVisible();
     const scroll = pair.getByRole("region", { name: "重复记录 1 完整字段，可横向滚动", exact: true }); await scroll.focus(); await expect(scroll).toBeFocused();

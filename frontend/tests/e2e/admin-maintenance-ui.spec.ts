@@ -31,7 +31,7 @@ for (const width of [1280, 390]) {
     await page.getByRole("button", { name: "备份与任务", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("虚构维护状态读取失败");
     fixture.state.fail = false; await page.getByRole("button", { name: "重新读取维护状态", exact: true }).click();
     await expect(page.getByRole("article", { name: "备份 501", exact: true })).toContainText("4 个原始对象"); await expect(page.getByText("进程在线，catalog_import 消费者失败", { exact: true })).toBeVisible();
-    const queue = page.locator(".worker-observability__queue").last(); await queue.getByText("查看诊断", { exact: true }).click(); await expect(queue.getByText(/消费者连续失败/)).toBeVisible();
+    const queue = page.locator(".worker-observability__queue").last(); await queue.locator("summary").filter({ hasText: "查看诊断" }).click(); await expect(queue.getByText(/消费者连续失败/)).toBeVisible();
     fixture.state.hold = true; await page.getByRole("button", { name: "刷新状态", exact: true }).click();
     await expect(page.getByRole("button", { name: "刷新中…", exact: true })).toBeDisabled(); expect(fixture.reads).toHaveLength(3); await expect(queue.getByText(/消费者连续失败/)).toBeVisible();
     fixture.state.fail = true; fixture.state.hold = false; fixture.release(); await expect(page.getByRole("alert")).toContainText("状态可能已过期"); await expect(page.getByRole("article", { name: "备份 501", exact: true })).toContainText("4 个原始对象");

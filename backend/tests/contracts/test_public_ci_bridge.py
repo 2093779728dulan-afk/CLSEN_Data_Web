@@ -238,7 +238,7 @@ def test_private_workflow_only_checks_public_evidence_and_keeps_stable_gates() -
     }
     assert workflow["permissions"] == {"actions": "read", "contents": "read"}
     execution = workflow["jobs"]["public-evidence"]
-    assert execution["runs-on"] == ["self-hosted", "Linux", "X64", "clsen-rag-ov"]
+    assert execution["runs-on"] == "ubuntu-24.04"
     assert execution["timeout-minutes"] == "145"
     source = json.dumps(execution)
     assert "verify_public_ci.py" in source
@@ -248,6 +248,7 @@ def test_private_workflow_only_checks_public_evidence_and_keeps_stable_gates() -
     assert "--wait-seconds 8400" in source
     for name in ("pr-required", "master-required"):
         assert workflow["jobs"][name]["needs"] == ["public-evidence"]
+        assert workflow["jobs"][name]["runs-on"] == "ubuntu-24.04"
 
 
 def test_source_selection_is_whitelisted_and_never_enumerates_root_data(

@@ -56,7 +56,7 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeVisible();
     const reason = page.getByRole("textbox", { name: "批准原因", exact: true });
     await reason.fill("ab"); await expect(page.getByRole("button", { name: "确认批准目录", exact: true })).toBeDisabled();
-    await reason.fill("虚构本批商品目录批准依据"); await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
+    await reason.fill("虚构本批商品目录批准依据"); await page.locator("summary").filter({ hasText: "高级操作 · 调整目录基准" }).click();
     const id = page.getByRole("textbox", { name: "替代导出编号（export ID）", exact: true });
     await id.fill("8002"); await page.getByRole("button", { name: "调整到新基准", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("输入内容已保留"); await expect(id).toHaveValue("8002"); await expect(reason).toHaveValue("虚构本批商品目录批准依据");
@@ -86,7 +86,7 @@ test("actual unsaved draft blocks workflow fields and high risk cannot approve",
   await page.getByLabel("demo-style-1 standard_name", { exact: true }).fill("虚构新名称");
   await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "生成批准预览", exact: true })).toHaveCount(0);
-  await page.getByText("高级操作 · 调整目录基准", { exact: true }).click();
+  await page.locator("summary").filter({ hasText: "高级操作 · 调整目录基准" }).click();
   await expect(page.getByRole("textbox", { name: "替代导出编号（export ID）", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "撤销本行修改", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "批准原因", exact: true })).toBeEnabled();
@@ -99,7 +99,7 @@ test("actual unsaved draft blocks workflow fields and high risk cannot approve",
 test("actual rejection and withdrawal use the shared entered reason and latest revision", async ({ page, baseURL }) => {
   const { commands, imported } = await fixture(page, baseURL!);
   imported.permissions.can_withdraw = true; imported.permissions.can_preview = false; await page.reload();
-  await page.getByText("退回或撤回本批", { exact: true }).click();
+  await page.locator("summary").filter({ hasText: "退回或撤回本批" }).click();
   await page.getByRole("textbox", { name: "退回或撤回原因（至少10字）", exact: true }).fill("虚构本批商品拒绝与撤回依据");
   await page.getByRole("button", { name: "拒绝", exact: true }).click();
   await expect(page.getByText("当前修订 4", { exact: true })).toBeVisible();

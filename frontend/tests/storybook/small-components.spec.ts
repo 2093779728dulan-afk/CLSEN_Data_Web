@@ -157,7 +157,7 @@ test(`global defaults respect native interaction and component state ownership a
   const nativeButton = page.getByRole("button", { name: "原生操作", exact: true });
   await nativeButton.focus();
   expect(await nativeButton.evaluate(element => getComputedStyle(element).outlineWidth)).toBe("2px");
-  const summary = page.getByText("操作说明", { exact: true });
+  const summary = page.locator("summary").filter({ hasText: "操作说明" });
   await summary.focus();
   expect(await summary.evaluate(element => getComputedStyle(element).outlineOffset)).toBe("2px");
   await summary.press("Enter");

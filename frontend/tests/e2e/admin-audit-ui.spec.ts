@@ -35,7 +35,7 @@ for (const width of [1280, 390]) {
     await page.goto("/admin"); await page.getByRole("button", { name: "内部审计", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("虚构审计首次读取失败"); state.readFailure = false;
     await page.getByRole("button", { name: "重新载入管理资料", exact: true }).click(); await expect(page.getByRole("article")).toHaveCount(20);
-    const event = page.getByRole("article", { name: "审计事件 900", exact: true }); await event.getByText("查看脱敏详情", { exact: true }).click();
+    const event = page.getByRole("article", { name: "审计事件 900", exact: true }); await event.locator("summary").filter({ hasText: "查看脱敏详情" }).click();
     await expect(event.locator("pre")).toContainText("保留的脱敏字段"); await expect(event.locator("pre")).toContainText('"status"');
     await expect(event.locator("pre")).not.toContainText("synthetic-secret");
     await page.getByRole("button", { name: "下一页", exact: true }).click(); await expect(page.getByRole("article")).toHaveCount(3); expect(queries.at(-1)).toBe("?limit=20&offset=20");

@@ -217,7 +217,7 @@ test("global defaults preserve component focus and native disclosure focus in th
   await button.focus();
   expect(await button.evaluate(element => element.matches(":focus-visible"))).toBe(true);
   expect(await button.evaluate(element => getComputedStyle(element).outlineOffset)).toBe("2px");
-  const disclosure = page.getByText("高级操作 · 调整目录基准", { exact: true });
+  const disclosure = page.locator("summary").filter({ hasText: "高级操作 · 调整目录基准" });
   await disclosure.focus();
   expect(await disclosure.evaluate(element => getComputedStyle(element).outlineWidth)).toBe("2px");
   await disclosure.press("Enter");

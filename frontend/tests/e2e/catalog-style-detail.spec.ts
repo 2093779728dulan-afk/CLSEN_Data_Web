@@ -92,7 +92,7 @@ for (const width of [1280, 390]) {
     await expect(evidence.getByRole("button", { name: "复制 SKU" })).toHaveCount(0);
     await expect(evidence.getByText("[含危险字符的来源]", { exact: true })).toBeVisible();
     await expect(evidence.getByText("已截断", { exact: true })).toBeVisible();
-    await evidence.getByText("系统追溯信息", { exact: true }).click();
+    await evidence.locator("summary").filter({ hasText: "系统追溯信息" }).click();
     await expect(evidence.getByText("系统版本编号 7 · 系统记录编号 44（非文件行号）", { exact: true })).toBeVisible();
     await expect(evidence.getByRole("link", { name: "查看来源报告版本" })).toHaveAttribute("href", "/versions?report_date=2026-07-03&report_type=return_report");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

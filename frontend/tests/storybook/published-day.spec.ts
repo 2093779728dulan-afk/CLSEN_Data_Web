@@ -19,7 +19,7 @@ for (const width of [1280, 390]) {
     }
     await page.getByRole("combobox", { name: "趋势指标", exact: true }).selectOption("return_quantity");
     await expect(page.getByRole("img", { name: /退货数月内每日趋势/ })).toBeVisible();
-    await page.getByText("查看逐日数据 · 退货数", { exact: true }).click();
+    await page.locator("summary").filter({ hasText: "查看逐日数据 · 退货数" }).click();
     const table = page.getByRole("table", { name: "退货数 · 2026-09-01 至 2026-09-12", exact: true });
     await expect(table.getByRole("row", { name: /2026-09-03/ })).toContainText("未发布或暂无指标值");
     await expect(table.getByRole("row", { name: /2026-09-12/ })).toContainText("5");
@@ -37,7 +37,7 @@ test("published day distinguishes partial/zero, failure recovery, loading, empty
   await openStory(page, "pages-published-day-detail--partial");
   await expect(page.getByRole("region", { name: "当前发布指标", exact: true })).toContainText("报告未发布");
   await page.getByRole("combobox", { name: "趋势指标", exact: true }).selectOption("return_quantity");
-  await page.getByText("查看逐日数据 · 退货数", { exact: true }).click();
+  await page.locator("summary").filter({ hasText: "查看逐日数据 · 退货数" }).click();
   await expect(page.getByRole("table").getByRole("row", { name: /2026-09-12/ })).toContainText("未发布或暂无指标值");
   await openStory(page, "pages-published-day-detail--zero-values");
   await expect(page.getByRole("region", { name: "当前发布指标", exact: true })).toContainText("US$0.00");

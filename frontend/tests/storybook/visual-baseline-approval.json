@@ -884,6 +884,27 @@
         "independent_comparison": "pending new fixed-source public CI",
         "user_verified_new_scope": false
       }
+    },
+    {
+      "approved_by": "Codex - user approved UI scope on 2026-11-27; not user acceptance",
+      "reason": "Reviewed affected disclosure controls, production plan display and narrow-screen layouts against first CI diffs; keep existing thresholds and retain failed evidence.",
+      "generated_at": "2026-11-27T08:13:45.929Z",
+      "font": "Noto Sans SC Variable 5.3.0",
+      "playwright": "1.62.1",
+      "story_filter": "(pages-admin-audit--busy|pages-admin-audit--details|pages-admin-audit--filter-failure|pages-admin-audit--filtered|pages-admin-audit--reference|pages-admin-maintenance--backup-failure|pages-admin-maintenance--consumer-failure|pages-admin-maintenance--diagnostics|pages-admin-maintenance--empty|pages-admin-maintenance--heartbeat-delayed|pages-admin-maintenance--query-unknown|pages-admin-maintenance--reference|pages-admin-maintenance--refresh-failure|pages-admin-maintenance--refreshing|pages-catalog-import-review--pending-changes|pages-catalog-import-review--read-only|pages-catalog-import-review--reference|pages-catalog-import-review--save-failure|pages-catalog-import-review--validation-issues|pages-catalog-operations--no-publication-evidence|pages-catalog-operations--pending-failure|pages-catalog-operations--unmatched|pages-catalog-operations--unmatched-empty|pages-catalog-product-list--batch-table|pages-catalog-product-list--empty|pages-catalog-product-list--no-results|pages-catalog-product-list--read-only|pages-catalog-product-list--reference|pages-catalog-product-list--refresh-failure|pages-catalog-product-list--refreshing|pages-catalog-style-detail--evidence|pages-draft-review--action-failure|pages-draft-review--admin-required|pages-draft-review--blocking|pages-draft-review--loading|pages-draft-review--read-failure|pages-draft-review--ready-for-publish|pages-draft-review--reference|pages-draft-review--validated|pages-draft-review--validating|pages-draft-review--warning|pages-product-detail--color-failure|pages-product-detail--read-only|pages-product-detail--reference|pages-product-detail--refreshing|pages-production--allocation-history|pages-production--closed-tracking|pages-production--demand-history|pages-production--long-values|pages-production--order-detail|pages-production--order-list|pages-production--period-summary|pages-production--shipment-detail|pages-production--summary|pages-production-read-only--inventory-filtered-empty|pages-published-day-detail--empty|pages-published-day-detail--partial|pages-published-day-detail--reference|pages-published-day-detail--single-day|pages-published-day-detail--zero-values|pages-version-history--rows-open|patterns-catalog-issue-summary--blocking|patterns-catalog-issue-summary--empty|patterns-catalog-issue-summary--long-values|patterns-catalog-issue-summary--many-issues|patterns-catalog-issue-summary--parse-failed|patterns-catalog-issue-summary--read-only|patterns-catalog-issue-summary--reference|patterns-catalog-issue-summary--unknown-code|patterns-catalog-issue-summary--unlocatable|patterns-catalog-issue-summary--warning|patterns-catalog-section-editors--mappings|patterns-catalog-section-editors--save-failure|patterns-catalog-unmatched-sources--empty|patterns-catalog-unmatched-sources--empty-page|patterns-catalog-unmatched-sources--future-range|patterns-catalog-unmatched-sources--long-preview|patterns-catalog-unmatched-sources--multi-currency|patterns-catalog-unmatched-sources--no-evidence|patterns-catalog-unmatched-sources--pending-failure|patterns-catalog-unmatched-sources--pending-loading|patterns-catalog-unmatched-sources--reference|patterns-catalog-workflow-forms--blocked|patterns-catalog-workflow-forms--failure|patterns-catalog-workflow-forms--high-risk|patterns-catalog-workflow-forms--rebase|patterns-catalog-workflow-forms--reference|patterns-catalog-workflow-forms--saving|patterns-merge-decision-matrix--disabled|patterns-merge-decision-matrix--hidden-fields|patterns-merge-decision-matrix--identical|patterns-merge-decision-matrix--in-dialog|patterns-merge-decision-matrix--reference|patterns-merge-decision-matrix--return-report) matches",
+      "platform": "linux",
+      "source_sha": "828dee4181249c6f7c94c154eaa0f257965b64e6 plus browser selector repairs",
+      "source_run": "45959397006/attempt1",
+      "baselines": {
+        "generation_passed": 282,
+        "changed_files": 281,
+        "independent_comparison": "pending fresh fixed-source public CI",
+        "user_verified_new_scope": false
+      },
+      "review_evidence": [
+        "order-flow-publish-20261127-01/artifacts/visual4-review.jpg",
+        "order-flow-publish-20261127-01/artifacts/production-review.jpg"
+      ]
     }
   ]
 }

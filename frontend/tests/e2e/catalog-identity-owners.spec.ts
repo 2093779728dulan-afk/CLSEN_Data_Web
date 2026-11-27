@@ -36,7 +36,7 @@ async function fixture(page: Page, baseURL: string) {
   await expect(page.getByRole("heading", { name: "商品主档审核", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: /^SKU 映射/ }).click();
   await page.getByRole("checkbox", { name: "仅看待处理", exact: true }).uncheck();
-  await page.getByText("查看归属、冲突与恢复", { exact: true }).click();
+  await page.locator("summary").filter({ hasText: "查看归属、冲突与恢复" }).click();
   return { state, writes, identityReads: () => identityReads };
 }
 
@@ -71,7 +71,7 @@ for (const width of [1280, 390]) {
     await expect(panel.getByRole("region", { name: "已忽略记录", exact: true })).toContainText("虚构旧忽略记录");
     expect(writes).toHaveLength(2); expect(writes[0]!.key).not.toBe(writes[1]!.key);
     await page.reload(); await page.getByRole("tab", { name: /^SKU 映射/ }).click();
-    await page.getByText("查看归属、冲突与恢复", { exact: true }).click(); await expect(reason).toHaveCount(0);
+    await page.locator("summary").filter({ hasText: "查看归属、冲突与恢复" }).click(); await expect(reason).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }

@@ -13,7 +13,7 @@ for (const viewport of VIEWPORTS) {
     await expect(page.getByRole("article")).toHaveCount(3); await expect(page.getByRole("button", { name: "下一页", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "上一页", exact: true }).click();
     const event = page.getByRole("article", { name: "审计事件 900", exact: true });
-    const summary = event.getByText("查看脱敏详情", { exact: true }); await summary.focus(); await summary.press("Enter");
+    const summary = event.locator("summary").filter({ hasText: "查看脱敏详情" }); await summary.focus(); await summary.press("Enter");
     await expect(event.locator("pre")).toContainText('"roles"'); await summary.press("Enter"); await expect(event.locator("pre")).toBeHidden();
     await page.getByRole("textbox", { name: "事件类型", exact: true }).fill("admin.user_updated");
     await page.getByRole("button", { name: "应用筛选", exact: true }).click(); await expect(page.getByRole("article")).toHaveCount(12);
